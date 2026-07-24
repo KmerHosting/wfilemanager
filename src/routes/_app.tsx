@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Download, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
+import { Download, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app")({
@@ -133,19 +133,18 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
       <Dialog open={promptOpen && Boolean(update?.updateAvailable) && !blocking} onOpenChange={setPromptOpen}>
         <DialogContent className="overflow-hidden border-border bg-background p-0 shadow-xl sm:max-w-[520px]">
           <div className="border-b border-border bg-muted/30 px-5 py-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-3 flex items-center justify-between gap-3 pr-9">
               <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
                 Stable update
               </Badge>
               <span className="font-mono text-xs text-muted-foreground">{update?.currentVersion} → {latestVersion}</span>
             </div>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="h-4 w-4 text-primary" />
+              <DialogTitle className="text-base">
                 New wFileManager release available
               </DialogTitle>
               <DialogDescription>
-                An administrator should review and install verified stable releases to keep the instance secure and current.
+                An administrator should install verified stable releases to keep the instance secure and current.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -181,9 +180,6 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
           <DialogFooter className="gap-2 border-t border-border bg-muted/20 px-5 py-4">
             <Button type="button" variant="outline" onClick={() => setPromptOpen(false)}>
               Later
-            </Button>
-            <Button type="button" variant="outline" onClick={() => window.location.assign("/about")}>
-              Review details
             </Button>
             <Button type="button" onClick={() => void installUpdate()} disabled={starting || checking}>
               {checking || starting ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
