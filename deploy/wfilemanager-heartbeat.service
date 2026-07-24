@@ -1,5 +1,5 @@
 [Unit]
-Description=wFileManager managed Supabase heartbeat
+Description=wFileManager managed Pro heartbeat
 After=network-online.target wfilemanager.service
 Wants=network-online.target
 
@@ -13,3 +13,4 @@ PrivateTmp=true
 ProtectSystem=strict
 ReadWritePaths=/var/lib/wfilemanager
 ProtectHome=read-only
+SuccessExitStatus=75
