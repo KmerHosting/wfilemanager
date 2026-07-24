@@ -47,7 +47,7 @@ function Setup() {
   const passwordError = form.password ? administratorPasswordError(form.password) : null;
   const confirmationError = form.confirm && form.password !== form.confirm ? "Passwords do not match." : null;
   const activationError = IS_PRO && form.activationToken.trim().length < 12
-    ? "A paid Pro activation token is required. Contact support@kmerhosting.com after payment."
+    ? "Paid Pro token required. Contact support@kmerhosting.com."
     : null;
 
   useEffect(() => {
@@ -64,7 +64,7 @@ function Setup() {
   );
 
   return (
-    <AuthShell title="Set up wFileManager" desc="Create the first local administrator account.">
+    <AuthShell title="Set up wFileManager" desc="Create the first administrator.">
       <div className="mb-6">
         <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>Step {step + 1} of {STEPS.length}: <span className="text-foreground">{current.label}</span></span>
@@ -77,15 +77,15 @@ function Setup() {
 
       {current.key === "welcome" && (
         <Card><CardContent className="space-y-4 pt-6 text-sm">
-          <p>This creates the first administrator for this wFileManager installation. The account is stored in the selected application database and is separate from Linux system accounts.</p>
-          <p className="text-muted-foreground">Administrator terminal access requires re-entering this application password and does not create a dedicated Linux user.</p>
+          <p>Create the first wFileManager admin account.</p>
+          <p className="text-muted-foreground">It is not a Linux user. Terminal access uses this same app password.</p>
           {IS_PRO && (
             <div className="rounded-md border border-border bg-muted/30 p-3">
               <div className="mb-2 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-primary" />
-                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Pro activation required</Badge>
+                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Pro token required</Badge>
               </div>
-              <p className="text-muted-foreground">Pro setup now requires a paid activation token. Unpaid Pro subscriptions are suspended after more than 7 days overdue and deleted after 30 days overdue.</p>
+              <p className="text-muted-foreground">Pro needs a paid token. Unpaid plans are suspended after 7 days and deleted after 30 days.</p>
             </div>
           )}
         </CardContent></Card>
@@ -95,16 +95,16 @@ function Setup() {
         <div className="grid gap-3">
           {IS_PRO && (
             <div className="grid gap-1.5 rounded-md border border-border bg-muted/20 p-3">
-              <Label>Paid Pro activation token</Label>
+              <Label>Pro activation token</Label>
               <Input
                 type="password"
                 autoComplete="off"
                 value={form.activationToken}
                 onChange={(e) => setForm({ ...form, activationToken: e.target.value })}
-                placeholder="Enter the token provided after payment"
+                placeholder="Paste your paid token"
               />
               <p className={activationError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
-                {activationError || "This token verifies the paid Pro subscription before managed application data is created."}
+                {activationError || "Used once to activate Pro managed data."}
               </p>
             </div>
           )}
@@ -123,12 +123,11 @@ function Setup() {
 
       {current.key === "review" && (
         <Card><CardContent className="pt-6 text-sm"><dl className="grid grid-cols-3 gap-y-2">
-          <dt className="text-muted-foreground">Administrator</dt><dd className="col-span-2">{form.name} ({form.username})</dd>
+          <dt className="text-muted-foreground">Admin</dt><dd className="col-span-2">{form.name} ({form.username})</dd>
           <dt className="text-muted-foreground">Email</dt><dd className="col-span-2">{form.email || "Not set"}</dd>
-          <dt className="text-muted-foreground">Edition</dt><dd className="col-span-2">{IS_PRO ? "Pro — paid activation required" : "Community — SQLite"}</dd>
-          {IS_PRO && <><dt className="text-muted-foreground">Billing policy</dt><dd className="col-span-2">Suspend after +7 unpaid days · delete after +30 unpaid days</dd></>}
-          <dt className="text-muted-foreground">Access</dt><dd className="col-span-2">Full administrator access to this instance</dd>
-          <dt className="text-muted-foreground">Linux account</dt><dd className="col-span-2">No Linux user is created</dd>
+          <dt className="text-muted-foreground">Plan</dt><dd className="col-span-2">{IS_PRO ? "Pro" : "Community"}</dd>
+          {IS_PRO && <><dt className="text-muted-foreground">Billing</dt><dd className="col-span-2">+7 days suspend · +30 days delete</dd></>}
+          <dt className="text-muted-foreground">Linux user</dt><dd className="col-span-2">Not created</dd>
         </dl></CardContent></Card>
       )}
 
