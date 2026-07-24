@@ -16,6 +16,7 @@ import {
   Globe2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { SERVER_INFO } from "@/lib/demo/data";
 import { useAuth } from "@/lib/auth";
 import { localApi } from "@/lib/local-api";
@@ -30,6 +31,9 @@ type Item = {
   adminOnly?: boolean;
   newTab?: boolean;
 };
+
+const DATA_BACKEND = String(import.meta.env.VITE_WFILEMANAGER_DATABASE_MODE || "sqlite").toLowerCase();
+const IS_PRO = DATA_BACKEND === "supabase";
 
 const NAV: { label: string; items: Item[] }[] = [
   {
@@ -61,7 +65,7 @@ const NAV: { label: string; items: Item[] }[] = [
     items: [
       { to: "/docs", label: "Documentation", icon: BookOpen },
       { to: "/about", label: "About & updates", icon: Info },
-      { href: "mailto:support.wfilemanager@kmerhosting.com", label: "Support", icon: LifeBuoy },
+      { href: "mailto:support@kmerhosting.com", label: "Support", icon: LifeBuoy },
       { href: "https://wfilemanager.com", label: "Website", icon: Globe2, newTab: true },
     ],
   },
@@ -97,7 +101,10 @@ export function AppSidebar({ className }: { className?: string }) {
     <aside className={cn("flex h-full w-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:w-60", className)}>
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
         <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-tight">wFileManager</span>
+          <div className="flex items-center gap-1.5">
+            {IS_PRO && <Badge className="h-5 px-1.5 text-[10px] font-semibold tracking-widest">PRO</Badge>}
+            <span className="text-sm font-semibold tracking-tight">wFileManager</span>
+          </div>
           <span className="text-[10px] tracking-wide text-muted-foreground">From KmerHosting LLC</span>
         </div>
       </div>
@@ -134,6 +141,13 @@ export function AppSidebar({ className }: { className?: string }) {
 
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-primary" /><span>v{version}</span></div>
+        {IS_PRO && (
+          <div className="relative mt-3 overflow-hidden rounded-md border border-primary/30 bg-primary/5 p-3 pr-12 shadow-sm">
+            <div className="absolute -right-8 top-2 rotate-45 bg-primary px-8 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary-foreground shadow-sm">AI</div>
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-primary">AI generated</div>
+            <div className="mt-1 text-[10px] leading-snug text-muted-foreground">Pro managed control layer</div>
+          </div>
+        )}
       </div>
     </aside>
   );
