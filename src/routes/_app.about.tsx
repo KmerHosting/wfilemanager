@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Info, Github, BookOpen, Bug, RefreshCw, Download, RotateCcw, ShieldAlert, Mail } from "lucide-react";
+import { Info, Github, BookOpen, Bug, RefreshCw, Download, RotateCcw, ShieldAlert, Mail, CreditCard, Database } from "lucide-react";
 import { SERVER_INFO } from "@/lib/demo/data";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
 import { formatBytes, formatRelative } from "@/lib/format";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { wfilemanagerApi, type ProPlanDetails } from "@/lib/wfilemanager-api";
 
 export const Route = createFileRoute("/_app/about")({
   head: () => ({ meta: [{ title: "About & updates — wFileManager" }] }),
@@ -47,11 +48,26 @@ const edition = IS_PRO
       support: "Community support",
     };
 
+function formatPlanDate(value?: string | null) {
+  if (!value) return "Not available";
+  return new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+function planDaysRemaining(plan: ProPlanDetails | null) {
+  if (!plan) return "Not available";
+  if (typeof plan.daysRemaining === "number") return `${plan.daysRemaining} day${plan.daysRemaining === 1 ? "" : "s"}`;
+  if (!plan.paidUntil) return "Not available";
+  const days = Math.max(0, Math.ceil((new Date(plan.paidUntil).getTime() - Date.now()) / 86_400_000));
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
 function About() {
   const { user } = useAuth();
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [checking, setChecking] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [plan, setPlan] = useState<ProPlanDetails | null>(null);
+  const [planLoaded, setPlanLoaded] = useState(false);
   const active = Boolean(update && ACTIVE_PHASES.has(update.state.status));
 
   const checkUpdates = async (notify = true) => {
@@ -74,6 +90,25 @@ function About() {
     return () => window.clearInterval(timer);
   }, [active]);
 
+  useEffect(() => {
+    if (!IS_PRO || !user) return;
+    let mounted = true;
+    setPlanLoaded(false);
+    void wfilemanagerApi.me()
+      .then((result) => {
+        if (mounted) setPlan(result.instance.plan || null);
+      })
+      .catch(() => {
+        if (mounted) setPlan(null);
+      })
+      .finally(() => {
+        if (mounted) setPlanLoaded(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
   const install = async () => {
     setStarting(true);
     try {
@@ -95,6 +130,8 @@ function About() {
       toast.error(value instanceof Error ? value.message : "Unable to start rollback");
     } finally { setStarting(false); }
   };
+
+  const storagePercent = Math.min(100, Math.max(0, plan?.storagePercent ?? 0));
 
   return (
     <div className="mx-auto w-full max-w-4xl p-6">
@@ -142,6 +179,47 @@ function About() {
           </div>
         </CardContent>
       </Card>
+
+      {IS_PRO && (
+        <Card className="mt-4 overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+              <CreditCard className="h-4 w-4 text-primary" />
+              Pro plan
+              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Managed</Badge>
+            </CardTitle>
+            <CardDescription>Billing period and managed application-data storage.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!planLoaded && <p className="text-sm text-muted-foreground">Loading Pro plan details…</p>}
+            {planLoaded && !plan && <p className="text-sm text-muted-foreground">Pro plan details are not available for this session.</p>}
+            {plan && (
+              <>
+                <dl className="grid gap-3 text-sm md:grid-cols-3">
+                  <dt className="text-muted-foreground">Subscription status</dt><dd className="md:col-span-2 capitalize">{plan.subscriptionStatus || "Not available"}</dd>
+                  <dt className="text-muted-foreground">Days remaining</dt><dd className="md:col-span-2 font-medium">{planDaysRemaining(plan)}</dd>
+                  <dt className="text-muted-foreground">Next payment</dt><dd className="md:col-span-2">{formatPlanDate(plan.nextPaymentAt || plan.paidUntil)}</dd>
+                  <dt className="text-muted-foreground">Paid until</dt><dd className="md:col-span-2">{formatPlanDate(plan.paidUntil)}</dd>
+                  <dt className="text-muted-foreground">Order reference</dt><dd className="md:col-span-2 font-mono text-xs">{plan.orderReference || "Not available"}</dd>
+                  <dt className="text-muted-foreground">Application data status</dt><dd className="md:col-span-2 capitalize">{plan.dataStatus || "Not available"}</dd>
+                </dl>
+
+                <div className="rounded-md border border-border bg-muted/20 p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <div className="flex items-center gap-2 font-medium"><Database className="h-4 w-4 text-primary" />Managed storage</div>
+                    <span className="font-mono text-xs text-muted-foreground">{storagePercent}%</span>
+                  </div>
+                  <Progress value={storagePercent} />
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{formatBytes(plan.storageUsedBytes || 0)} used</span>
+                    <span>{formatBytes(plan.storageQuotaBytes || 0)} quota</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mt-4">
         <CardHeader>
