@@ -41,6 +41,19 @@ Pro provides:
 
 Additional managed storage costs **$1 USD per 100 MB per year**.
 
+## Pro activation and billing lifecycle
+
+A Pro instance requires a paid activation token before the first administrator setup can complete. The token is issued after payment and is claimed by one instance.
+
+Billing lifecycle:
+
+- before payment: Pro setup is blocked;
+- after payment: the activation token enables setup and sets the paid-through date;
+- more than **7 days unpaid**: the Pro account is suspended and active sessions are revoked;
+- more than **30 days unpaid**: the Pro managed application data and account are permanently deleted.
+
+This lifecycle is based on payment status, not on server heartbeat inactivity. Missing server heartbeats do not delete paid Pro data by themselves.
+
 ## Storage scope
 
 Pro storage does not include files from the server filesystem. wFileManager is a management layer above the filesystem; it does not replace a server backup system.
