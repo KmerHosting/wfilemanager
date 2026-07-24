@@ -26,8 +26,8 @@ describe("Pro managed application-data billing lifecycle", () => {
 
     expect(setupApi).toContain("wfilemanager_pro_activation_tokens");
     expect(setupApi).toContain("A paid Pro activation token is required before setup.");
-    expect(setupRoute).toContain("Paid Pro activation token");
-    expect(setupRoute).toContain("Suspend after +7 unpaid days · delete after +30 unpaid days");
+    expect(setupRoute).toContain("Pro activation token");
+    expect(setupRoute).toContain("+7 days suspend · +30 days delete");
   });
 
   test("does not create inactivity warning notifications or email jobs", async () => {
