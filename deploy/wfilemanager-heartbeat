@@ -4,6 +4,7 @@ set -Eeuo pipefail
 ENV_FILE="${WFILEMANAGER_ENV_FILE:-/etc/wfilemanager/wfilemanager.env}"
 INSTANCE_SECRET_FILE="${WFILEMANAGER_INSTANCE_SECRET_FILE:-/etc/wfilemanager/instance-secret.key}"
 RECOVERY_KEY_FILE="${WFILEMANAGER_RECOVERY_KEY_FILE:-/etc/wfilemanager/root-reset.key}"
+SOFT_LIFECYCLE_EXIT=75
 
 [[ -f "$ENV_FILE" ]] || exit 0
 set -a
@@ -33,8 +34,8 @@ elif [[ -s "$RECOVERY_KEY_FILE" ]]; then
   AUTH_HEADER=(-H "x-wfilemanager-recovery-key: $RECOVERY_KEY")
   echo "wFileManager heartbeat is using the legacy recovery-key fallback; regenerate the Pro instance secret during the next recovery or reinstall." >&2
 else
-  echo "wFileManager instance secret is missing" >&2
-  exit 1
+  echo "wFileManager heartbeat skipped: no instance secret or Recovery Kit key is available." >&2
+  exit "$SOFT_LIFECYCLE_EXIT"
 fi
 
 BODY="$(jq -cn --arg hostname "$HOSTNAME_VALUE" --arg baseUrl "$BASE_URL" '{hostname:$hostname,baseUrl:$baseUrl}')"
@@ -51,8 +52,28 @@ HTTP_STATUS="$(curl -sS --connect-timeout 10 --max-time 45 \
 
 if [[ "$HTTP_STATUS" != "200" ]]; then
   MESSAGE="$(jq -r '.error // empty' "$RESPONSE_FILE" 2>/dev/null || true)"
-  echo "wFileManager heartbeat failed (HTTP ${HTTP_STATUS:-unknown}${MESSAGE:+: $MESSAGE})" >&2
-  exit 1
+  case "$HTTP_STATUS" in
+    401|402|403|404|410|423)
+      echo "wFileManager heartbeat skipped (HTTP ${HTTP_STATUS}${MESSAGE:+: $MESSAGE})." >&2
+      echo "This usually means the Pro instance is not activated, billing is suspended, the remote account was deleted, or the local Recovery Kit does not match the remote account." >&2
+      exit "$SOFT_LIFECYCLE_EXIT"
+      ;;
+    *)
+      echo "wFileManager heartbeat failed (HTTP ${HTTP_STATUS:-unknown}${MESSAGE:+: $MESSAGE})" >&2
+      exit 1
+      ;;
+  esac
 fi
 
-jq -e '.success == true and .status == "active"' "$RESPONSE_FILE" >/dev/null
+if jq -e '.success == true and .status == "active"' "$RESPONSE_FILE" >/dev/null; then
+  exit 0
+fi
+
+if jq -e '.paymentRequired == true' "$RESPONSE_FILE" >/dev/null; then
+  echo "wFileManager heartbeat skipped: Pro payment is required for this instance." >&2
+  exit "$SOFT_LIFECYCLE_EXIT"
+fi
+
+echo "wFileManager heartbeat returned an unexpected response." >&2
+cat "$RESPONSE_FILE" >&2
+exit 1
