@@ -115,10 +115,13 @@ delete_remote_pro_data() {
     echo "Choose a local-only uninstall, or recover the correct Recovery Kit and retry deletion." >&2
     return 1
   fi
-  if ! jq -e '.success == true and .deleted == true' "$response_file" >/dev/null 2>&1; then
+  if ! jq -e '.success == true and ((.deleted == true) or (.alreadyAbsent == true))' "$response_file" >/dev/null 2>&1; then
     rm -f "$response_file"
     echo "Remote Pro deletion response was not valid." >&2
     return 1
+  fi
+  if jq -e '.alreadyAbsent == true' "$response_file" >/dev/null 2>&1; then
+    echo "No remote Pro managed application-data account exists for this instance key. Continuing local removal."
   fi
   rm -f "$response_file"
 }
@@ -236,7 +239,7 @@ remove_packages_if_requested
 
 echo
 if [[ "$REMOTE_DELETE" == "true" ]]; then
-  echo "wFileManager was removed locally and the Pro managed application data/account was deleted."
+  echo "wFileManager was removed locally and the Pro managed application data/account was deleted or was already absent."
 elif [[ "$DATABASE_MODE" == "supabase" || "$PLAN" == "pro" ]]; then
   echo "wFileManager was removed locally. Pro managed application data and subscription were kept for recovery."
 else
