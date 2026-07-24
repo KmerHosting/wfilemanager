@@ -30,6 +30,38 @@ export interface AuthUser {
   permissions?: string[];
 }
 
+export interface ProPlanDetails {
+  servicePlan: string | null;
+  subscriptionStatus: string | null;
+  dataStatus: string | null;
+  paidUntil: string | null;
+  nextPaymentAt: string | null;
+  daysRemaining: number | null;
+  storageUsedBytes: number;
+  storageQuotaBytes: number;
+  storagePercent: number;
+  orderReference: string | null;
+  customerEmail: string | null;
+  activatedAt: string | null;
+  pastDueAt: string | null;
+  suspendedAt: string | null;
+}
+
+export interface WFileManagerInstance {
+  id: string;
+  name: string;
+  hostname?: string;
+  databaseMode?: string;
+  status?: InstanceLifecycleStatus;
+  servicePlan?: string | null;
+  subscriptionStatus?: string | null;
+  dataStatus?: string | null;
+  paidUntil?: string | null;
+  storageUsedBytes?: number;
+  storageQuotaBytes?: number;
+  plan?: ProPlanDetails | null;
+}
+
 export interface WFileManagerRole {
   id: string;
   instanceId: string;
@@ -81,13 +113,7 @@ export interface InstanceStatusResponse {
   status?: InstanceLifecycleStatus;
   frozenAt?: string | null;
   deleteAfterAt?: string | null;
-  instance?: {
-    id: string;
-    name: string;
-    hostname?: string;
-    databaseMode?: string;
-    status?: InstanceLifecycleStatus;
-  };
+  instance?: WFileManagerInstance;
 }
 
 function token() {
@@ -153,7 +179,7 @@ export const wfilemanagerApi = {
   status: () => request<InstanceStatusResponse>("status"),
   setup: (data: SetupPayload) => request<{ success: true; user: AuthUser }>("setup", { method: "POST", body: JSON.stringify(data) }),
   login: (login: string, password: string, remember: boolean) => request<{ token: string; expiresAt: string; user: AuthUser }>("login", { method: "POST", body: JSON.stringify({ login, password, remember }) }),
-  me: () => request<{ user: AuthUser; instance: { id: string; name: string; hostname?: string; databaseMode?: string; status?: InstanceLifecycleStatus } }>("me"),
+  me: () => request<{ user: AuthUser; instance: WFileManagerInstance }>("me"),
   logout: () => request<{ success: true }>("logout", { method: "POST" }),
   users: () => request<{ users: AuthUser[] }>("users"),
   createUser: (data: { displayName: string; username: string; email?: string; password: string; roleId?: string; status?: string; mustChangePassword?: boolean }) =>
