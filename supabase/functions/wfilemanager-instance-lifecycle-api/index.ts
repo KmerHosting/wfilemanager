@@ -202,6 +202,21 @@ Deno.serve(async (request: Request) => {
     const recoveryKey = recoveryKeyFrom(request, body);
     const instanceSecret = instanceSecretFrom(request, body);
 
+    if (action === "delete") {
+      if (request.method !== "POST" && request.method !== "DELETE") {
+        return json({ error: "Method not allowed" }, 405);
+      }
+      const instance = await loadInstance(instanceKey);
+      if (!instance) {
+        return json({
+          success: true,
+          deleted: false,
+          alreadyAbsent: true,
+          message: "No Pro managed application-data account exists for this instance key.",
+        });
+      }
+    }
+
     let authorized: Authorization | null = null;
     if (action === "heartbeat") {
       authorized = await authorizeHeartbeat(instanceKey, instanceSecret, recoveryKey);
@@ -350,14 +365,11 @@ Deno.serve(async (request: Request) => {
     }
 
     if (action === "delete") {
-      if (request.method !== "POST" && request.method !== "DELETE") {
-        return json({ error: "Method not allowed" }, 405);
-      }
       const { data, error } = await supabase.rpc("wfilemanager_delete_instance", {
         p_instance_id: authorized.instance.id,
       });
       if (error) throw error;
-      return json({ success: true, deleted: Boolean(data) });
+      return json({ success: true, deleted: Boolean(data), alreadyAbsent: !data });
     }
 
     return json({ error: "Not found" }, 404);
