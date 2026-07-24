@@ -8,19 +8,30 @@ async function source(relativePath: string) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
-describe("managed Supabase recovery lifecycle", () => {
-  test("freezes after 30 days and deletes after 90 days", async () => {
-    const migration = await source("supabase/migrations/20260723183000_wfilemanager_supabase_recovery_lifecycle.sql");
+describe("Pro managed application-data billing lifecycle", () => {
+  test("suspends after 7 unpaid days and deletes after 30 unpaid days", async () => {
+    const migration = await source("supabase/migrations/20260724213000_wfilemanager_pro_billing_enforcement.sql");
 
+    expect(migration).toContain("interval '7 days'");
     expect(migration).toContain("interval '30 days'");
-    expect(migration).toContain("interval '90 days'");
-    expect(migration).toContain("status = 'frozen'");
+    expect(migration).toContain("subscription_status = 'suspended'");
+    expect(migration).toContain("data_status = 'suspended'");
     expect(migration).toContain("wfilemanager_delete_instance");
-    expect(migration).toContain("wfilemanager-instance-lifecycle");
+    expect(migration).toContain("pro-payment-7-day-suspend-30-day-delete");
+  });
+
+  test("requires paid activation before Pro setup creates managed data", async () => {
+    const setupApi = await source("supabase/functions/wfilemanager-setup-api/index.ts");
+    const setupRoute = await source("src/routes/setup.tsx");
+
+    expect(setupApi).toContain("wfilemanager_pro_activation_tokens");
+    expect(setupApi).toContain("A paid Pro activation token is required before setup.");
+    expect(setupRoute).toContain("Paid Pro activation token");
+    expect(setupRoute).toContain("Suspend after +7 unpaid days · delete after +30 unpaid days");
   });
 
   test("does not create inactivity warning notifications or email jobs", async () => {
-    const migration = (await source("supabase/migrations/20260723183000_wfilemanager_supabase_recovery_lifecycle.sql")).toLowerCase();
+    const migration = (await source("supabase/migrations/20260724213000_wfilemanager_pro_billing_enforcement.sql")).toLowerCase();
 
     expect(migration).not.toContain("insert into public.wfilemanager_notifications");
     expect(migration).not.toContain("send_email");
@@ -38,13 +49,13 @@ describe("managed Supabase recovery lifecycle", () => {
     expect(installer).toContain("/root/wfilemanager-recovery-kit.txt");
   });
 
-  test("heartbeat runs twice daily and uses the recovery secret", async () => {
+  test("heartbeat runs twice daily and uses a separate instance secret", async () => {
     const timer = await source("deploy/wfilemanager-heartbeat.timer");
     const heartbeat = await source("deploy/wfilemanager-heartbeat");
 
     expect(timer).toContain("OnUnitActiveSec=12h");
     expect(timer).toContain("Persistent=true");
-    expect(heartbeat).toContain("x-wfilemanager-recovery-key");
+    expect(heartbeat).toContain("x-wfilemanager-instance-secret");
     expect(heartbeat).toContain("/heartbeat");
   });
 

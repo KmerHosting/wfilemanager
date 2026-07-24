@@ -35,11 +35,12 @@ Application-data plan: Pro — managed application data
 Keep this file outside the server. It can recover or permanently delete the managed application data after the server is reinstalled or lost. Recovery rotates this key,
 so replace every old copy after a successful recovery.
 
-Lifecycle policy:
-- A valid server heartbeat keeps the instance marked active.
-- Missing heartbeats may freeze remote sessions for security.
-- Active paid Pro application data is not deleted solely because the server is offline.
-- Permanent deletion requires an explicit removal request or the applicable service-retention policy after cancellation or expiration.
+Billing lifecycle policy:
+- Pro requires a paid activation token before first setup.
+- If payment is overdue, the instance enters a grace period.
+- More than 7 days unpaid suspends the Pro account and revokes active sessions.
+- More than 30 days unpaid permanently deletes the Pro managed application data and account.
+- Server filesystem files are never included in Pro managed application-data recovery.
 
 To recover or delete the remote data, run the official installer and choose the
 corresponding Pro managed-data action.
