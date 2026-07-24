@@ -1,4 +1,4 @@
-# Application-data modes
+# Editions, billing and data scope
 
 wFileManager separates application records from the files managed on the server filesystem.
 
@@ -10,7 +10,7 @@ Application records include:
 - application settings;
 - related wFileManager metadata.
 
-Files, directories, databases and other content displayed by the file manager remain on your server in both modes.
+Files, directories, databases and other content displayed by the file manager remain on your server in both editions.
 
 ## Community — SQLite on your server
 
@@ -23,6 +23,8 @@ Application records are stored locally in:
 ```
 
 You are responsible for database backups, restores, migrations, maintenance and recovery after reinstalling or replacing the server.
+
+Community uninstall removes the local application, local SQLite records and configuration from the server. It never calls the Pro managed backend.
 
 Community includes all wFileManager features and community support.
 
@@ -54,6 +56,15 @@ Billing lifecycle:
 
 This lifecycle is based on payment status, not on server heartbeat inactivity. Missing server heartbeats do not delete paid Pro data by themselves.
 
+## Pro uninstall choices
+
+Pro uninstall has two separate paths:
+
+- **local-only uninstall** removes the server installation and keeps the paid Pro managed application data and subscription for recovery;
+- **permanent Pro deletion** deletes the remote managed application data and instance account, then removes the local installation.
+
+Permanent Pro deletion requires the saved Recovery Kit. If the Recovery Kit does not match the remote account, remote deletion is rejected and the local uninstall is stopped unless the operator explicitly chooses local-only uninstall.
+
 ## Storage scope
 
 Pro storage does not include files from the server filesystem. wFileManager is a management layer above the filesystem; it does not replace a server backup system.
@@ -65,6 +76,10 @@ Maintain an independent backup and recovery strategy for:
 - server databases;
 - configuration outside wFileManager application records;
 - mounted storage and external volumes.
+
+## Terms of Use
+
+Use of wFileManager is subject to the project Terms of Use in `TERMS.md` and on the official website. The Terms define edition scope, Pro payment lifecycle, uninstall behavior and operator responsibility.
 
 ## Installation requirement
 
