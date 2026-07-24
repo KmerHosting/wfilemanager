@@ -27,25 +27,21 @@ const IS_PRO = DATA_BACKEND === "supabase";
 const edition = IS_PRO
   ? {
       name: "Pro",
-      badge: "Managed application data",
-      backend: "KmerHosting managed backend",
-      price: "$50 USD per instance per year",
-      storage: "100 MB included · +$1 USD/year per additional 100 MB",
-      responsibility: "KmerHosting manages wFileManager application records, backups and recovery metadata.",
-      recovery: "Recovery Kit reconnects users, roles, sessions, authentication records, notifications and settings after a server reinstall.",
-      excludes: "Server filesystem files, directories, databases and uploads are not included and require a separate server backup.",
-      support: "Priority support",
+      badge: "Managed",
+      backend: "KmerHosting Cloud",
+      price: "$50/year",
+      storage: "100 MB included",
+      backup: "App data backup + recovery",
+      excludes: "Server files and databases",
     }
   : {
       name: "Community",
-      badge: "SQLite on your server",
-      backend: "Local SQLite database",
-      price: "Free forever",
+      badge: "Local",
+      backend: "SQLite on this server",
+      price: "Free",
       storage: "/var/lib/wfilemanager/wfilemanager.db",
-      responsibility: "You manage the local database, backups, restores, migrations and server maintenance.",
-      recovery: "Recovery depends on your own server and SQLite backup strategy.",
-      excludes: "Server filesystem files, directories, databases and uploads still require a separate server backup.",
-      support: "Community support",
+      backup: "You manage backups",
+      excludes: "Server files and databases",
     };
 
 function formatPlanDate(value?: string | null) {
@@ -132,23 +128,23 @@ function About() {
   };
 
   const storagePercent = Math.min(100, Math.max(0, plan?.storagePercent ?? 0));
+  const storageFull = Boolean(plan && plan.storageQuotaBytes > 0 && plan.storageUsedBytes >= plan.storageQuotaBytes);
 
   return (
     <div className="mx-auto w-full max-w-4xl p-6">
       <div className="mb-6 flex items-center gap-3">
         <Info className="h-5 w-5" />
-        <div><h1 className="text-xl font-semibold tracking-tight">About & updates</h1><p className="text-sm text-muted-foreground">wFileManager — A project from KmerHosting LLC</p></div>
+        <div><h1 className="text-xl font-semibold tracking-tight">About & updates</h1><p className="text-sm text-muted-foreground">wFileManager — KmerHosting LLC</p></div>
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Application</CardTitle><CardDescription>A modern web-based file manager for Linux servers.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="text-base">Application</CardTitle><CardDescription>Web file manager for Linux servers.</CardDescription></CardHeader>
         <CardContent>
           <dl className="grid grid-cols-3 gap-y-2 text-sm">
             <dt className="text-muted-foreground">Version</dt><dd className="col-span-2 font-mono">{update?.currentVersion || SERVER_INFO.wfmVersion}</dd>
             <dt className="text-muted-foreground">Edition</dt><dd className="col-span-2"><Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">{edition.name}</Badge></dd>
             <dt className="text-muted-foreground">License</dt><dd className="col-span-2">MIT</dd>
-            <dt className="text-muted-foreground">Supported OS</dt><dd className="col-span-2">Ubuntu 20.04 LTS and newer</dd>
-            <dt className="text-muted-foreground">Recommended</dt><dd className="col-span-2"><Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Ubuntu 24.04 LTS</Badge></dd>
+            <dt className="text-muted-foreground">OS</dt><dd className="col-span-2">Ubuntu 20.04+</dd>
             <dt className="text-muted-foreground">Publisher</dt><dd className="col-span-2">KmerHosting LLC</dd>
             <dt className="text-muted-foreground">Support</dt><dd className="col-span-2"><a className="font-medium text-primary hover:underline" href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a></dd>
           </dl>
@@ -158,24 +154,22 @@ function About() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-            Edition details
+            Edition
             <Badge variant="outline">{edition.badge}</Badge>
           </CardTitle>
-          <CardDescription>Current installation plan and data responsibility.</CardDescription>
+          <CardDescription>Plan and data storage.</CardDescription>
         </CardHeader>
         <CardContent>
           <dl className="grid gap-3 text-sm md:grid-cols-3">
-            <dt className="text-muted-foreground">Current edition</dt><dd className="md:col-span-2 font-medium">{edition.name}</dd>
-            <dt className="text-muted-foreground">Application data backend</dt><dd className="md:col-span-2">{edition.backend}</dd>
+            <dt className="text-muted-foreground">Plan</dt><dd className="md:col-span-2 font-medium">{edition.name}</dd>
+            <dt className="text-muted-foreground">Data</dt><dd className="md:col-span-2">{edition.backend}</dd>
             <dt className="text-muted-foreground">Price</dt><dd className="md:col-span-2">{edition.price}</dd>
             <dt className="text-muted-foreground">Storage</dt><dd className="md:col-span-2 font-mono text-xs">{edition.storage}</dd>
-            <dt className="text-muted-foreground">Responsibility</dt><dd className="md:col-span-2">{edition.responsibility}</dd>
-            <dt className="text-muted-foreground">Recovery</dt><dd className="md:col-span-2">{edition.recovery}</dd>
+            <dt className="text-muted-foreground">Backup</dt><dd className="md:col-span-2">{edition.backup}</dd>
             <dt className="text-muted-foreground">Not included</dt><dd className="md:col-span-2">{edition.excludes}</dd>
-            <dt className="text-muted-foreground">Support level</dt><dd className="md:col-span-2">{edition.support}</dd>
           </dl>
           <div className="mt-4 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-            Community and Pro expose the same file-manager features. The difference is where wFileManager application records are stored and who is responsible for their backup and recovery.
+            Community and Pro have the same file-manager features. Only app-data hosting changes.
           </div>
         </CardContent>
       </Card>
@@ -188,20 +182,24 @@ function About() {
               Pro plan
               <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Managed</Badge>
             </CardTitle>
-            <CardDescription>Billing period and managed application-data storage.</CardDescription>
+            <CardDescription>Billing and managed storage.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!planLoaded && <p className="text-sm text-muted-foreground">Loading Pro plan details…</p>}
-            {planLoaded && !plan && <p className="text-sm text-muted-foreground">Pro plan details are not available for this session.</p>}
+            {!planLoaded && <p className="text-sm text-muted-foreground">Loading plan…</p>}
+            {planLoaded && !plan && <p className="text-sm text-muted-foreground">Plan details unavailable.</p>}
             {plan && (
               <>
+                {storageFull && (
+                  <Alert variant="destructive">
+                    <AlertDescription>Managed storage is full. Access may be blocked. Contact support@kmerhosting.com to increase your Pro quota.</AlertDescription>
+                  </Alert>
+                )}
                 <dl className="grid gap-3 text-sm md:grid-cols-3">
-                  <dt className="text-muted-foreground">Subscription status</dt><dd className="md:col-span-2 capitalize">{plan.subscriptionStatus || "Not available"}</dd>
-                  <dt className="text-muted-foreground">Days remaining</dt><dd className="md:col-span-2 font-medium">{planDaysRemaining(plan)}</dd>
+                  <dt className="text-muted-foreground">Subscription</dt><dd className="md:col-span-2 capitalize">{plan.subscriptionStatus || "Not available"}</dd>
+                  <dt className="text-muted-foreground">Days left</dt><dd className="md:col-span-2 font-medium">{planDaysRemaining(plan)}</dd>
                   <dt className="text-muted-foreground">Next payment</dt><dd className="md:col-span-2">{formatPlanDate(plan.nextPaymentAt || plan.paidUntil)}</dd>
-                  <dt className="text-muted-foreground">Paid until</dt><dd className="md:col-span-2">{formatPlanDate(plan.paidUntil)}</dd>
-                  <dt className="text-muted-foreground">Order reference</dt><dd className="md:col-span-2 font-mono text-xs">{plan.orderReference || "Not available"}</dd>
-                  <dt className="text-muted-foreground">Application data status</dt><dd className="md:col-span-2 capitalize">{plan.dataStatus || "Not available"}</dd>
+                  <dt className="text-muted-foreground">Order ref</dt><dd className="md:col-span-2 font-mono text-xs">{plan.orderReference || "Not available"}</dd>
+                  <dt className="text-muted-foreground">Data status</dt><dd className="md:col-span-2 capitalize">{plan.dataStatus || "Not available"}</dd>
                 </dl>
 
                 <div className="rounded-md border border-border bg-muted/20 p-4">
@@ -269,7 +267,7 @@ function About() {
         </CardContent>
       </Card>
 
-      <Alert className="mt-4 border-amber-500/40 bg-amber-500/5"><ShieldAlert className="h-4 w-4 text-amber-500" /><AlertDescription className="space-y-1 text-sm"><p className="font-medium text-foreground">Safety notice</p><p>wFileManager can operate with elevated privileges. Verify every path, permission and terminal command before confirmation. Incorrect operations can cause permanent data loss, service interruption or full system compromise.</p></AlertDescription></Alert>
+      <Alert className="mt-4 border-amber-500/40 bg-amber-500/5"><ShieldAlert className="h-4 w-4 text-amber-500" /><AlertDescription className="space-y-1 text-sm"><p className="font-medium text-foreground">Safety notice</p><p>wFileManager can operate with elevated privileges. Verify paths and terminal commands before confirmation.</p></AlertDescription></Alert>
     </div>
   );
 }
