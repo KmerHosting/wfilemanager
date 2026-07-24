@@ -141,13 +141,6 @@ export function AppSidebar({ className }: { className?: string }) {
 
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-primary" /><span>v{version}</span></div>
-        {IS_PRO && (
-          <div className="relative mt-3 overflow-hidden rounded-md border border-primary/30 bg-primary/5 p-3 pr-12 shadow-sm">
-            <div className="absolute -right-8 top-2 rotate-45 bg-primary px-8 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary-foreground shadow-sm">AI</div>
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-primary">AI generated</div>
-            <div className="mt-1 text-[10px] leading-snug text-muted-foreground">Pro managed control layer</div>
-          </div>
-        )}
       </div>
     </aside>
   );
