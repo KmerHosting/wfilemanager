@@ -31,7 +31,7 @@ The installer asks for:
 
 1. the public domain;
 2. the application-data plan;
-3. Pro creation, recovery or deletion action when Pro managed data is selected.
+3. Pro creation, recovery or remote deletion action when Pro managed data is selected.
 
 After installation, open:
 
@@ -39,15 +39,19 @@ After installation, open:
 https://your-domain.example/setup
 ```
 
+The setup screen creates the first wFileManager administrator. This is an application account, not a Linux user. Terminal access uses the same application password and requires re-confirmation.
+
 The first administrator password must contain at least 12 alphanumeric characters, uppercase, lowercase and a number. Identical consecutive characters are rejected.
 
 ## Editions and data storage
 
-The edition controls where wFileManager stores its own application records: users, roles, sessions, authentication records, notifications and settings. It does not back up the files displayed by the file manager.
+The edition controls where wFileManager stores its own application records: users, roles, sessions, authentication records, notifications, settings and internal metadata. It does not back up the files displayed by the file manager.
+
+Community and Pro expose the same file-manager features. The difference is where application data is stored and who is responsible for recovery.
 
 ### Community — SQLite on your server
 
-Community is free forever. It does not require a paid licence or subscription.
+Community is free forever. It does not require a paid licence, subscription or activation token.
 
 Application records are stored locally in:
 
@@ -55,38 +59,45 @@ Application records are stored locally in:
 /var/lib/wfilemanager/wfilemanager.db
 ```
 
-The server administrator is responsible for:
-
-- SQLite database backups;
-- restores and migrations;
-- database maintenance;
-- recovery after a server reinstall or replacement;
-- monitoring local disk availability and filesystem health.
-
-Community includes all wFileManager application features. The difference is data responsibility, not feature access.
+The server administrator is responsible for SQLite backups, restore, migration, local disk availability and recovery after a server reinstall or replacement.
 
 ### Pro — managed application data
 
 Pro costs **$50 USD per instance per year** and includes **100 MB** of managed application storage.
 
-Pro manages wFileManager application records separately from the server, including:
+Pro manages wFileManager application records separately from the server:
 
-- application users;
-- roles and permissions;
+- users, roles and permissions;
 - sessions and authentication records;
-- notifications;
-- settings and related internal records;
-- managed backups and recovery metadata.
+- notifications and settings;
+- managed backup and recovery metadata.
 
 Each additional **100 MB** of managed application storage costs **$1 USD per year**.
 
-Pro recovery covers wFileManager application records only. Files, directories, databases, uploads and other content on the server filesystem require an independent server backup and recovery strategy.
+Pro does not include server filesystem files, directories, databases, uploads or other server content. Those require a separate server backup.
 
-For Pro activation or storage expansion, contact:
+For Pro activation, renewal or storage expansion, contact:
 
 ```text
 support@kmerhosting.com
 ```
+
+## Pro activation, renewal and suspension
+
+New Pro installations require a paid activation token during `/setup`. The support team creates the token after payment confirmation. The token is used once and then claimed by the instance.
+
+Renewal does not require a new setup token. After payment, support extends the instance `paid_until` date in the managed backend.
+
+Pro lifecycle:
+
+```text
+paid_until valid        access allowed
+paid_until expired      grace period
++7 unpaid days          access suspended
++30 unpaid days         managed app data and account deleted
+```
+
+If managed storage reaches its quota, access is blocked with a clear message asking the customer to contact support to increase the Pro quota.
 
 ## Pro Recovery Kit
 
@@ -120,6 +131,7 @@ A successful recovery rotates the recovery key, rotates heartbeat credentials an
 - Sessions, notifications and presence.
 - Administrator-only root PTY terminal with current-password verification.
 - Stable updates with checksum verification, health checks and rollback.
+- Pro plan display with days left, next payment date, order reference and managed storage usage.
 
 Application users are not Linux users. Creating an account, signing in or changing an application password never creates an operating-system account and never grants sudo access.
 
@@ -159,6 +171,12 @@ sudo wfilemanager-reset-admin-password
 Update the application:
 
 ```bash
+sudo /usr/local/lib/wfilemanager/update.sh install
+```
+
+Or through systemd:
+
+```bash
 sudo systemctl start wfilemanager-updater@install.service
 ```
 
@@ -168,6 +186,12 @@ Roll back to the previous verified release:
 sudo systemctl start wfilemanager-updater@rollback.service
 ```
 
+Read update state:
+
+```bash
+cat /var/lib/wfilemanager/update/state.json | jq .
+```
+
 Uninstall wFileManager:
 
 ```bash
@@ -175,6 +199,20 @@ curl -fsSL https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/rel
 ```
 
 The update system verifies the release archive, builds a separate release, switches atomically, restarts the service and checks application health. An unhealthy release is rolled back automatically.
+
+Production updates run build, typecheck and health check. Release tests are skipped by default during server updates. To force tests during an update, set:
+
+```bash
+WFILEMANAGER_RUN_RELEASE_TESTS=true sudo /usr/local/lib/wfilemanager/update.sh install
+```
+
+## Uninstall behavior
+
+Community uninstall removes the local SQLite installation and local service files. There is no remote managed data to delete.
+
+Pro uninstall offers local-only removal and permanent remote deletion. Local-only removal keeps the Pro subscription data for recovery. Permanent deletion removes managed application records and requires explicit confirmation.
+
+If remote Pro deletion fails, the uninstaller stops before deleting local recovery material.
 
 ## Persistent locations
 
@@ -239,14 +277,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Support
 
-For installation, Pro activation or operational questions, contact:
-
 ```text
 support@kmerhosting.com
 ```
 
-## License
-
 Developed by KmerHosting LLC.
-
-MIT. See [LICENSE](./LICENSE).
