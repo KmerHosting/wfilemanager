@@ -31,6 +31,10 @@ function randomHex(length = 32) {
   return bytesToHex(bytes);
 }
 
+async function sha256(value: string) {
+  return bytesToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))));
+}
+
 async function passwordHash(password: string, saltHex: string, iterations = 210000) {
   const pairs = saltHex.match(/.{1,2}/g);
   if (!pairs) throw new Error("Invalid password salt");
@@ -70,6 +74,54 @@ function safeUser(user: Record<string, unknown>) {
   };
 }
 
+function paidThrough(periodDays: number) {
+  return new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString();
+}
+
+async function claimActivationToken(params: {
+  activationToken: string;
+  instanceKey: string;
+  instanceId: string;
+  now: string;
+}) {
+  const activationHash = await sha256(params.activationToken.trim());
+  const { data: token, error } = await supabase
+    .from("wfilemanager_pro_activation_tokens")
+    .select("id,period_days,storage_quota_bytes,instance_key,expires_at,status")
+    .eq("token_hash", activationHash)
+    .eq("status", "available")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!token) return { ok: false as const, error: "A valid paid Pro activation token is required." };
+  if (token.instance_key && token.instance_key !== params.instanceKey) {
+    return { ok: false as const, error: "This Pro activation token belongs to another instance." };
+  }
+  if (token.expires_at && new Date(token.expires_at).getTime() < Date.now()) {
+    await supabase.from("wfilemanager_pro_activation_tokens").update({ status: "expired", updated_at: params.now }).eq("id", token.id);
+    return { ok: false as const, error: "This Pro activation token has expired." };
+  }
+
+  const { error: claimError } = await supabase
+    .from("wfilemanager_pro_activation_tokens")
+    .update({
+      status: "claimed",
+      instance_key: params.instanceKey,
+      claimed_by_instance_id: params.instanceId,
+      claimed_at: params.now,
+      updated_at: params.now,
+    })
+    .eq("id", token.id)
+    .eq("status", "available");
+  if (claimError) throw claimError;
+
+  return {
+    ok: true as const,
+    periodDays: Number(token.period_days || 365),
+    storageQuotaBytes: Number(token.storage_quota_bytes || 104857600),
+  };
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -83,6 +135,7 @@ Deno.serve(async (request: Request) => {
     const displayName = String(body.displayName || "Administrator").trim();
     const rootResetTokenHash = String(body.rootResetTokenHash || "").trim().toLowerCase();
     const instanceSecretHash = String(body.instanceSecretHash || "").trim().toLowerCase();
+    const activationToken = String(body.activationToken || "").trim();
 
     if (!instanceKey) return json({ error: "Installation identity is missing" }, 400);
     if (username.length < 3) return json({ error: "Username must contain at least 3 characters" }, 400);
@@ -106,11 +159,19 @@ Deno.serve(async (request: Request) => {
     if (instance?.status === "frozen") {
       return json({ error: "This installation is frozen. Recover it with the saved Recovery Kit before signing in." }, 423);
     }
+    if (instance?.subscription_status === "suspended" || instance?.data_status === "suspended") {
+      return json({ error: "This Pro subscription is suspended because payment is more than 7 days overdue." }, 402);
+    }
+    if (instance?.data_status === "deleted" || instance?.subscription_status === "expired") {
+      return json({ error: "This Pro managed application-data account has expired or was deleted." }, 410);
+    }
     if (instance?.status === "disabled") {
       return json({ error: "This installation is disabled" }, 403);
     }
 
-    if (!instance) {
+    const newInstance = !instance;
+    if (newInstance) {
+      if (!activationToken) return json({ error: "A paid Pro activation token is required before setup." }, 402);
       const created = await supabase.from("wfilemanager_instances").insert({
         instance_key: instanceKey,
         name: String(body.instanceName || "wFileManager"),
@@ -120,23 +181,11 @@ Deno.serve(async (request: Request) => {
         service_plan: "pro",
         subscription_status: "active",
         data_status: "active",
+        activated_at: now,
         last_seen_at: now,
       }).select().single();
       if (created.error) throw created.error;
       instance = created.data;
-    } else {
-      const updated = await supabase.from("wfilemanager_instances").update({
-        hostname: body.hostname ? String(body.hostname) : instance.hostname,
-        base_url: body.baseUrl ? String(body.baseUrl) : instance.base_url,
-        status: "active",
-        data_status: "active",
-        last_seen_at: now,
-        frozen_at: null,
-        delete_after_at: null,
-        updated_at: now,
-      }).eq("id", instance.id).select().single();
-      if (updated.error) throw updated.error;
-      instance = updated.data;
     }
 
     const { count, error: countError } = await supabase
@@ -145,6 +194,36 @@ Deno.serve(async (request: Request) => {
       .eq("instance_id", instance.id);
     if (countError) throw countError;
     if ((count || 0) > 0) return json({ error: "This instance is already configured" }, 409);
+
+    let activation: { ok: true; periodDays: number; storageQuotaBytes: number } | null = null;
+    if (newInstance || !instance.paid_until) {
+      if (!activationToken) return json({ error: "A paid Pro activation token is required before setup." }, 402);
+      const claimed = await claimActivationToken({ activationToken, instanceKey, instanceId: instance.id, now });
+      if (!claimed.ok) return json({ error: claimed.error }, 402);
+      activation = claimed;
+    }
+
+    const paidUntil = activation ? paidThrough(activation.periodDays) : instance.paid_until;
+    const quotaBytes = activation ? activation.storageQuotaBytes : instance.storage_quota_bytes;
+
+    const updated = await supabase.from("wfilemanager_instances").update({
+      hostname: body.hostname ? String(body.hostname) : instance.hostname,
+      base_url: body.baseUrl ? String(body.baseUrl) : instance.base_url,
+      status: "active",
+      subscription_status: "active",
+      data_status: "active",
+      paid_until: paidUntil,
+      storage_quota_bytes: quotaBytes,
+      activated_at: instance.activated_at || now,
+      past_due_at: null,
+      suspended_at: null,
+      frozen_at: null,
+      delete_after_at: null,
+      updated_at: now,
+      last_seen_at: now,
+    }).eq("id", instance.id).select().single();
+    if (updated.error) throw updated.error;
+    instance = updated.data;
 
     const permissions = [
       "browse", "view", "preview", "read", "create_files", "create_directories", "edit", "rename",
@@ -218,12 +297,14 @@ Deno.serve(async (request: Request) => {
         password_policy: "admin_v2",
         recovery_key_enrolled: true,
         heartbeat_secret_enrolled: Boolean(instanceSecretHash),
+        paid_activation_claimed: Boolean(activation),
+        paid_until: paidUntil,
       },
       ip_address: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       user_agent: request.headers.get("user-agent") || null,
     });
 
-    return json({ success: true, user: safeUser(userResult.data) }, 201);
+    return json({ success: true, user: safeUser(userResult.data), paidUntil }, 201);
   } catch (error) {
     console.error(error);
     return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
