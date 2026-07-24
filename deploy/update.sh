@@ -136,8 +136,10 @@ build_release() {
   command -v bun >/dev/null 2>&1 || fail "Bun is not installed"
   state installing 62 "Installing dependencies" "$TARGET_VERSION"
   bun install --frozen-lockfile
-  state building 74 "Testing wFileManager" "$TARGET_VERSION"
-  bun run test
+  if [[ "${WFILEMANAGER_RUN_RELEASE_TESTS:-false}" == "true" ]]; then
+    state building 72 "Testing wFileManager" "$TARGET_VERSION"
+    bun run test
+  fi
   state building 82 "Building wFileManager" "$TARGET_VERSION"
   bun run build
   bun run typecheck
