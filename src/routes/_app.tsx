@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_app")({
 });
 
 const UPDATE_CHECK_INTERVAL_MS = 1_800;
+const UPDATE_START_GRACE_MS = 6_000;
 const UPDATE_BLOCKING_PHASES = new Set([
   "downloading",
   "verifying",
@@ -42,9 +43,17 @@ function isUpdateBlocking(update: UpdateInfo | null) {
 }
 
 function formatUpdatePhase(update: UpdateInfo | null, starting: boolean) {
-  if (starting) return "Starting update";
-  if (!update) return "Preparing update";
+  if (isUpdateBlocking(update)) return update!.state.status.replace(/-/g, " ");
+  if (starting) return "starting update";
+  if (!update) return "preparing update";
   return update.state.status.replace(/-/g, " ");
+}
+
+function formatUpdateMessage(update: UpdateInfo | null, starting: boolean) {
+  if (isUpdateBlocking(update)) return update?.state.message || "The updater is running.";
+  if (update?.state.status === "failed") return update.state.error || update.state.message || "Update failed.";
+  if (starting) return "Waiting for the updater to report progress…";
+  return update?.state.message || "The updater is preparing the verified release package.";
 }
 
 function AppLayout() {
@@ -83,49 +92,80 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [checking, setChecking] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [startingSince, setStartingSince] = useState<number | null>(null);
   const [promptOpen, setPromptOpen] = useState(false);
-  const blocking = starting || isUpdateBlocking(update);
+  const activeUpdate = isUpdateBlocking(update);
+  const blocking = starting || activeUpdate;
 
-  const checkUpdates = useCallback(async (showError = false) => {
-    if (!isAdmin) return;
+  const checkUpdates = useCallback(async (showError = false, allowPrompt = true) => {
+    if (!isAdmin) return null;
     setChecking(true);
     try {
       const result = await localApi.updateInfo();
       setUpdate(result);
-      if (result.updateAvailable && !isUpdateBlocking(result)) {
+      if (allowPrompt && result.updateAvailable && !isUpdateBlocking(result)) {
         setPromptOpen(true);
       }
+      return result;
     } catch (value) {
       if (showError) toast.error(value instanceof Error ? value.message : "Unable to check for updates");
+      return null;
     } finally {
       setChecking(false);
     }
   }, [isAdmin]);
 
   useEffect(() => {
-    void checkUpdates(false);
+    void checkUpdates(false, true);
   }, [checkUpdates]);
 
   useEffect(() => {
     if (!blocking) return;
-    const timer = window.setInterval(() => void checkUpdates(false), UPDATE_CHECK_INTERVAL_MS);
+    const timer = window.setInterval(() => void checkUpdates(false, false), UPDATE_CHECK_INTERVAL_MS);
     return () => window.clearInterval(timer);
   }, [blocking, checkUpdates]);
 
+  useEffect(() => {
+    if (!starting || activeUpdate || !update) return;
+
+    if (update.state.status === "completed") {
+      setStarting(false);
+      setStartingSince(null);
+      setPromptOpen(false);
+      toast.success("Update completed.");
+      return;
+    }
+
+    if (update.state.status === "failed") {
+      setStarting(false);
+      setStartingSince(null);
+      toast.error(update.state.error || update.state.message || "Update failed.");
+      return;
+    }
+
+    if (startingSince && Date.now() - startingSince > UPDATE_START_GRACE_MS) {
+      setStarting(false);
+      setStartingSince(null);
+      toast.error(update.state.message && update.state.message !== "No update is running" ? update.state.message : "No update is running.");
+    }
+  }, [activeUpdate, starting, startingSince, update]);
+
   const installUpdate = async () => {
     setStarting(true);
+    setStartingSince(Date.now());
     setPromptOpen(false);
     try {
       await localApi.installUpdate();
       toast.success("Update started. The interface is locked until the update finishes or rolls back.");
-      await checkUpdates(false);
+      await checkUpdates(false, false);
     } catch (value) {
       toast.error(value instanceof Error ? value.message : "Unable to start the update");
       setStarting(false);
+      setStartingSince(null);
     }
   };
 
-  const progress = Math.min(100, Math.max(0, update?.state.progress ?? (starting ? 5 : 0)));
+  const progress = Math.min(100, Math.max(0, activeUpdate ? update?.state.progress ?? 0 : starting ? update?.state.progress || 5 : update?.state.progress ?? 0));
   const latestVersion = update?.latestVersion || "new stable version";
 
   return (
@@ -198,9 +238,6 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
         >
           <div className="w-full max-w-lg rounded-xl border border-border bg-background shadow-2xl">
             <div className="border-b border-border bg-muted/30 px-5 py-4">
-              <Badge variant="outline" className="mb-3 border-primary/40 bg-primary/10 text-primary">
-                Interface locked
-              </Badge>
               <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
                 <RefreshCw className="h-4 w-4 animate-spin text-primary" />
                 wFileManager update in progress
@@ -216,7 +253,7 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
               </div>
               <Progress value={progress} />
               <p className="text-xs text-muted-foreground">
-                {update?.state.message || "The updater is preparing the verified release package."}
+                {formatUpdateMessage(update, starting)}
               </p>
             </div>
           </div>
