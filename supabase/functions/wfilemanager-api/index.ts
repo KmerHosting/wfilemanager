@@ -130,6 +130,52 @@ async function audit(params: {
   });
 }
 
+function asNumber(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function daysUntil(value: unknown) {
+  if (typeof value !== "string" || !value) return null;
+  return Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000));
+}
+
+async function proPlanDetails(instance: Record<string, unknown>) {
+  if (instance.service_plan !== "pro") return null;
+
+  const { data: token } = await supabase
+    .from("wfilemanager_pro_activation_tokens")
+    .select("order_reference,customer_email,claimed_at")
+    .eq("claimed_by_instance_id", instance.id)
+    .order("claimed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const storageUsedBytes = asNumber(instance.storage_used_bytes, 0);
+  const storageQuotaBytes = asNumber(instance.storage_quota_bytes, 104_857_600);
+  const storagePercent = storageQuotaBytes > 0
+    ? Math.min(100, Math.round((storageUsedBytes / storageQuotaBytes) * 100))
+    : 0;
+  const paidUntil = typeof instance.paid_until === "string" ? instance.paid_until : null;
+
+  return {
+    servicePlan: typeof instance.service_plan === "string" ? instance.service_plan : null,
+    subscriptionStatus: typeof instance.subscription_status === "string" ? instance.subscription_status : null,
+    dataStatus: typeof instance.data_status === "string" ? instance.data_status : null,
+    paidUntil,
+    nextPaymentAt: paidUntil,
+    daysRemaining: daysUntil(paidUntil),
+    storageUsedBytes,
+    storageQuotaBytes,
+    storagePercent,
+    orderReference: token?.order_reference || null,
+    customerEmail: token?.customer_email || null,
+    activatedAt: typeof instance.activated_at === "string" ? instance.activated_at : null,
+    pastDueAt: typeof instance.past_due_at === "string" ? instance.past_due_at : null,
+    suspendedAt: typeof instance.suspended_at === "string" ? instance.suspended_at : null,
+  };
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
 
@@ -255,6 +301,7 @@ Deno.serve(async (request: Request) => {
     }
 
     if (action === "me") {
+      const plan = await proPlanDetails(auth.instance);
       return json({
         user: safeUser(auth.user),
         instance: {
@@ -262,6 +309,13 @@ Deno.serve(async (request: Request) => {
           name: auth.instance.name,
           hostname: auth.instance.hostname,
           status: auth.instance.status,
+          servicePlan: auth.instance.service_plan || null,
+          subscriptionStatus: auth.instance.subscription_status || null,
+          dataStatus: auth.instance.data_status || null,
+          paidUntil: auth.instance.paid_until || null,
+          storageUsedBytes: asNumber(auth.instance.storage_used_bytes, 0),
+          storageQuotaBytes: asNumber(auth.instance.storage_quota_bytes, 104_857_600),
+          plan,
         },
       });
     }
