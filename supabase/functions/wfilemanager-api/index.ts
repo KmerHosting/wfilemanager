@@ -13,6 +13,8 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...cors, "Content-Type": "application/json" },
 });
 
+const STORAGE_FULL_MESSAGE = "Managed storage is full. Access is blocked. Contact support@kmerhosting.com to increase your Pro quota.";
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -20,6 +22,11 @@ const supabase = createClient(
 );
 
 const encoder = new TextEncoder();
+
+type AuthResult =
+  | { session: Record<string, unknown>; user: Record<string, unknown>; instance: Record<string, unknown> }
+  | { response: Response }
+  | null;
 
 function bytesToHex(bytes: Uint8Array) {
   return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -82,7 +89,40 @@ async function touchInstance(instanceId: string) {
   }).eq("id", instanceId).eq("status", "active");
 }
 
-async function authenticate(request: Request, instanceKey: string) {
+function asNumber(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function isProStorageFull(instance: Record<string, unknown>) {
+  if (instance.service_plan !== "pro") return false;
+  const quota = asNumber(instance.storage_quota_bytes, 0);
+  const used = asNumber(instance.storage_used_bytes, 0);
+  return quota > 0 && used >= quota;
+}
+
+function storageBlockedResponse(instance: Record<string, unknown>) {
+  return json({
+    error: STORAGE_FULL_MESSAGE,
+    code: "pro_storage_full",
+    storageUsedBytes: asNumber(instance.storage_used_bytes, 0),
+    storageQuotaBytes: asNumber(instance.storage_quota_bytes, 0),
+    supportEmail: "support@kmerhosting.com",
+  }, 402);
+}
+
+async function refreshStorageUsage(instance: Record<string, unknown>) {
+  if (instance.service_plan !== "pro" || !instance.id) return instance;
+  const { data, error } = await supabase.rpc("wfilemanager_refresh_storage_usage", {
+    target_instance_id: instance.id,
+  });
+  if (!error && typeof data === "number") {
+    return { ...instance, storage_used_bytes: data };
+  }
+  return instance;
+}
+
+async function authenticate(request: Request, instanceKey: string): Promise<AuthResult> {
   const header = request.headers.get("Authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   if (!token) return null;
@@ -97,12 +137,14 @@ async function authenticate(request: Request, instanceKey: string) {
   if (error || !data) return null;
   const user = data.wfilemanager_users;
   if (!user || user.status !== "active") return null;
-  const instance = await getInstance(instanceKey);
-  if (!instance || instance.id !== data.instance_id || instance.status !== "active") return null;
+  const rawInstance = await getInstance(instanceKey);
+  if (!rawInstance || rawInstance.id !== data.instance_id || rawInstance.status !== "active") return null;
+  const instance = await refreshStorageUsage(rawInstance);
+  if (isProStorageFull(instance)) return { response: storageBlockedResponse(instance) };
   const now = new Date().toISOString();
   await Promise.all([
     supabase.from("wfilemanager_sessions").update({ last_seen_at: now }).eq("id", data.id),
-    touchInstance(instance.id),
+    touchInstance(String(instance.id)),
   ]);
   return { session: data, user, instance };
 }
@@ -128,11 +170,6 @@ async function audit(params: {
     ip_address: params.request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
     user_agent: params.request.headers.get("user-agent") || null,
   });
-}
-
-function asNumber(value: unknown, fallback = 0) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : fallback;
 }
 
 function daysUntil(value: unknown) {
@@ -188,21 +225,23 @@ Deno.serve(async (request: Request) => {
     if (action === "status") {
       const instance = await getInstance(instanceKey);
       if (!instance) return json({ configured: false, instanceKey });
+      const refreshedInstance = await refreshStorageUsage(instance);
       const { count } = await supabase
         .from("wfilemanager_users")
         .select("id", { count: "exact", head: true })
-        .eq("instance_id", instance.id)
+        .eq("instance_id", refreshedInstance.id)
         .eq("is_admin", true);
       return json({
         configured: (count || 0) > 0,
-        status: instance.status,
-        frozenAt: instance.frozen_at,
-        deleteAfterAt: instance.delete_after_at,
+        status: refreshedInstance.status,
+        frozenAt: refreshedInstance.frozen_at,
+        deleteAfterAt: refreshedInstance.delete_after_at,
+        storageFull: isProStorageFull(refreshedInstance),
         instance: {
-          id: instance.id,
-          name: instance.name,
-          hostname: instance.hostname,
-          status: instance.status,
+          id: refreshedInstance.id,
+          name: refreshedInstance.name,
+          hostname: refreshedInstance.hostname,
+          status: refreshedInstance.status,
         },
       });
     }
@@ -213,16 +252,18 @@ Deno.serve(async (request: Request) => {
 
     if (action === "login") {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-      const instance = await getInstance(instanceKey);
-      if (!instance) return json({ error: "Instance is not configured" }, 404);
-      if (instance.status === "frozen") {
+      const rawInstance = await getInstance(instanceKey);
+      if (!rawInstance) return json({ error: "Instance is not configured" }, 404);
+      if (rawInstance.status === "frozen") {
         return json({
           error: "This installation is frozen after 30 days without a valid server heartbeat. Recover it with the saved Recovery Kit.",
           status: "frozen",
-          deleteAfterAt: instance.delete_after_at,
+          deleteAfterAt: rawInstance.delete_after_at,
         }, 423);
       }
-      if (instance.status !== "active") return json({ error: "This installation is disabled" }, 403);
+      if (rawInstance.status !== "active") return json({ error: "This installation is disabled" }, 403);
+      const instance = await refreshStorageUsage(rawInstance);
+      if (isProStorageFull(instance)) return storageBlockedResponse(instance);
 
       const login = String(body.login || body.username || "").trim().toLowerCase();
       const { data: user } = await supabase
@@ -233,7 +274,7 @@ Deno.serve(async (request: Request) => {
         .maybeSingle();
       if (!user || user.status !== "active") {
         await audit({
-          instanceId: instance.id,
+          instanceId: String(instance.id),
           username: login,
           action: "auth.login",
           result: "failure",
@@ -246,7 +287,7 @@ Deno.serve(async (request: Request) => {
       const hash = await passwordHash(String(body.password || ""), user.password_salt, user.password_iterations || 210000);
       if (hash !== user.password_hash) {
         await audit({
-          instanceId: instance.id,
+          instanceId: String(instance.id),
           userId: user.id,
           username: user.username,
           action: "auth.login",
@@ -273,24 +314,25 @@ Deno.serve(async (request: Request) => {
       const now = new Date().toISOString();
       await Promise.all([
         supabase.from("wfilemanager_users").update({ last_login_at: now }).eq("id", user.id),
-        touchInstance(instance.id),
+        touchInstance(String(instance.id)),
       ]);
-      await audit({ instanceId: instance.id, userId: user.id, username: user.username, action: "auth.login", request });
+      await audit({ instanceId: String(instance.id), userId: user.id, username: user.username, action: "auth.login", request });
       return json({ token: rawToken, expiresAt: sessionResult.data.expires_at, user: safeUser(user) });
     }
 
     const auth = await authenticate(request, instanceKey);
     if (!auth) return json({ error: "Unauthorized" }, 401);
+    if ("response" in auth) return auth.response;
 
     if (action === "verify-password") {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
       const password = String(body.password || "");
-      const hash = await passwordHash(password, auth.user.password_salt, auth.user.password_iterations || 210000);
+      const hash = await passwordHash(password, String(auth.user.password_salt), Number(auth.user.password_iterations || 210000));
       const valid = hash === auth.user.password_hash;
       await audit({
-        instanceId: auth.instance.id,
-        userId: auth.user.id,
-        username: auth.user.username,
+        instanceId: String(auth.instance.id),
+        userId: String(auth.user.id),
+        username: String(auth.user.username),
         action: "auth.password_verify",
         result: valid ? "success" : "failure",
         metadata: { purpose: "local_privilege_elevation" },
@@ -329,9 +371,9 @@ Deno.serve(async (request: Request) => {
           .eq("token_hash", await sha256(token));
       }
       await audit({
-        instanceId: auth.instance.id,
-        userId: auth.user.id,
-        username: auth.user.username,
+        instanceId: String(auth.instance.id),
+        userId: String(auth.user.id),
+        username: String(auth.user.username),
         action: "auth.logout",
         request,
       });
@@ -368,9 +410,9 @@ Deno.serve(async (request: Request) => {
         }).select().single();
         if (userResult.error) throw userResult.error;
         await audit({
-          instanceId: auth.instance.id,
-          userId: auth.user.id,
-          username: auth.user.username,
+          instanceId: String(auth.instance.id),
+          userId: String(auth.user.id),
+          username: String(auth.user.username),
           action: "user.create",
           target: username,
           request,
