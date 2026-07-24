@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CircleCheck, Server, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CircleCheck, CreditCard, Server, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import {
@@ -19,6 +20,8 @@ export const Route = createFileRoute("/setup")({
   head: () => ({ meta: [{ title: "First-run setup — wFileManager" }] }),
   component: Setup,
 });
+
+const IS_PRO = import.meta.env.VITE_WFILEMANAGER_DATABASE_MODE !== "sqlite";
 
 const STEPS = [
   { key: "welcome", label: "Welcome", icon: Server },
@@ -38,10 +41,14 @@ function Setup() {
     email: "",
     password: "",
     confirm: "",
+    activationToken: "",
   });
   const current = STEPS[step];
   const passwordError = form.password ? administratorPasswordError(form.password) : null;
   const confirmationError = form.confirm && form.password !== form.confirm ? "Passwords do not match." : null;
+  const activationError = IS_PRO && form.activationToken.trim().length < 12
+    ? "A paid Pro activation token is required. Contact support@kmerhosting.com after payment."
+    : null;
 
   useEffect(() => {
     if (!auth.loading && auth.user) nav({ to: "/" });
@@ -52,7 +59,8 @@ function Setup() {
     form.name.trim()
       && form.username.trim().length >= 3
       && !administratorPasswordError(form.password)
-      && form.password === form.confirm,
+      && form.password === form.confirm
+      && (!IS_PRO || form.activationToken.trim().length >= 12),
   );
 
   return (
@@ -68,14 +76,38 @@ function Setup() {
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
 
       {current.key === "welcome" && (
-        <Card><CardContent className="space-y-3 pt-6 text-sm">
+        <Card><CardContent className="space-y-4 pt-6 text-sm">
           <p>This creates the first administrator for this wFileManager installation. The account is stored in the selected application database and is separate from Linux system accounts.</p>
           <p className="text-muted-foreground">Administrator terminal access requires re-entering this application password and does not create a dedicated Linux user.</p>
+          {IS_PRO && (
+            <div className="rounded-md border border-border bg-muted/30 p-3">
+              <div className="mb-2 flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Pro activation required</Badge>
+              </div>
+              <p className="text-muted-foreground">Pro setup now requires a paid activation token. Unpaid Pro subscriptions are suspended after more than 7 days overdue and deleted after 30 days overdue.</p>
+            </div>
+          )}
         </CardContent></Card>
       )}
 
       {current.key === "account" && (
         <div className="grid gap-3">
+          {IS_PRO && (
+            <div className="grid gap-1.5 rounded-md border border-border bg-muted/20 p-3">
+              <Label>Paid Pro activation token</Label>
+              <Input
+                type="password"
+                autoComplete="off"
+                value={form.activationToken}
+                onChange={(e) => setForm({ ...form, activationToken: e.target.value })}
+                placeholder="Enter the token provided after payment"
+              />
+              <p className={activationError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                {activationError || "This token verifies the paid Pro subscription before managed application data is created."}
+              </p>
+            </div>
+          )}
           <div className="grid gap-1.5"><Label>Display name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="grid gap-1.5"><Label>Username</Label><Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></div>
           <div className="grid gap-1.5"><Label>Email (optional)</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
@@ -93,6 +125,8 @@ function Setup() {
         <Card><CardContent className="pt-6 text-sm"><dl className="grid grid-cols-3 gap-y-2">
           <dt className="text-muted-foreground">Administrator</dt><dd className="col-span-2">{form.name} ({form.username})</dd>
           <dt className="text-muted-foreground">Email</dt><dd className="col-span-2">{form.email || "Not set"}</dd>
+          <dt className="text-muted-foreground">Edition</dt><dd className="col-span-2">{IS_PRO ? "Pro — paid activation required" : "Community — SQLite"}</dd>
+          {IS_PRO && <><dt className="text-muted-foreground">Billing policy</dt><dd className="col-span-2">Suspend after +7 unpaid days · delete after +30 unpaid days</dd></>}
           <dt className="text-muted-foreground">Access</dt><dd className="col-span-2">Full administrator access to this instance</dd>
           <dt className="text-muted-foreground">Linux account</dt><dd className="col-span-2">No Linux user is created</dd>
         </dl></CardContent></Card>
@@ -112,7 +146,8 @@ function Setup() {
                 username: form.username,
                 email: form.email || undefined,
                 password: form.password,
-              });
+                ...(IS_PRO ? { activationToken: form.activationToken.trim() } : {}),
+              } as never);
               toast.success("wFileManager setup completed");
               nav({ to: "/" });
             } catch (e) {
