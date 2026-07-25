@@ -51,7 +51,7 @@ Community and Pro expose the same file-manager features. The difference is where
 
 ### Community — SQLite on your server
 
-Community is free forever. It does not require a paid licence, subscription or activation token.
+Community is free forever. It does not require a paid licence, subscription or licence key.
 
 Application records are stored locally in:
 
@@ -76,17 +76,23 @@ Each additional **100 MB** of managed application storage costs **$1 USD per yea
 
 Pro does not include server filesystem files, directories, databases, uploads or other server content. Those require a separate server backup.
 
-For Pro activation, renewal or storage expansion, contact:
+Licence keys are purchased from the wFileManager customer dashboard:
+
+```text
+https://wfilemanager.com/account
+```
+
+For renewal or storage expansion, contact:
 
 ```text
 support@kmerhosting.com
 ```
 
-## Pro activation, renewal and suspension
+## Pro licence key, renewal and suspension
 
-New Pro installations require a paid activation token during `/setup`. The support team creates the token after payment confirmation. The token is used once and then claimed by the instance.
+New Pro installations require a paid licence key during `/setup`. The customer dashboard creates the CamerPay link, lets the customer check payment status, displays the licence key after payment confirmation and sends the licence key email once. CamerPay webhooks are not required for issuing the key.
 
-Renewal does not require a new setup token. After payment, support extends the instance `paid_until` date in the managed backend.
+Renewal does not require a new setup licence key. After payment, support extends the instance `paid_until` date in the managed backend.
 
 Pro lifecycle:
 
@@ -238,47 +244,3 @@ If remote Pro deletion fails, the uninstaller stops before deleting local recove
 - Writes to `/proc`, `/sys`, `/dev` and `/run` are blocked by default.
 - Uploads never replace an existing destination.
 - Archive entry count, expanded size, compression ratio and destination free space are checked.
-- Release archives are verified by size and SHA-256 before activation.
-- Recovery keys, heartbeat secrets and exported Recovery Kits are stored with root-only permissions.
-- Pro routine heartbeats use a dedicated instance secret. Recovery keys are reserved for recovery operations and legacy fallback.
-
-Read [SECURITY.md](./SECURITY.md) before reporting a vulnerability.
-
-## Development
-
-Requirements: Node.js 24, Bun, Python 3 and Linux.
-
-```bash
-git clone https://github.com/toscani-tenekeu/wFileManager.git
-cd wFileManager
-cp .env.example .env
-bun install
-bun run dev
-```
-
-Verification:
-
-```bash
-bun run lint
-bun run typecheck
-bun run test
-bun run build
-```
-
-Example Community SQLite configuration:
-
-```env
-VITE_WFILEMANAGER_DATABASE_MODE=sqlite
-WFILEMANAGER_DATABASE_MODE=sqlite
-WFILEMANAGER_SQLITE_PATH=./data/wfilemanager.db
-```
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
-
-## Support
-
-```text
-support@kmerhosting.com
-```
-
-Developed by KmerHosting LLC.
