@@ -50,85 +50,69 @@ async function passwordHash(password: string, saltHex: string, iterations = 2100
 
 function passwordPolicyError(password: string) {
   if (password.length < 12) return "Password must contain at least 12 characters";
-  if (!/^[A-Za-z0-9]+$/.test(password)) return "Password may contain only uppercase letters, lowercase letters and numbers";
+  if (password.length > 256) return "Password is too long";
   if (!/[A-Z]/.test(password)) return "Password must contain an uppercase letter";
   if (!/[a-z]/.test(password)) return "Password must contain a lowercase letter";
   if (!/[0-9]/.test(password)) return "Password must contain a number";
-  if (/(.)\1/.test(password)) return "Password must not contain identical consecutive characters";
+  if (/[\u0000-\u001f\u007f]/.test(password)) return "Password contains unsupported control characters";
   return null;
 }
 
-function safeUser(user: Record<string, unknown>) {
-  return {
-    id: user.id,
-    instanceId: user.instance_id,
-    roleId: user.role_id,
-    username: user.username,
-    email: user.email,
-    displayName: user.display_name,
-    status: user.status,
-    isAdmin: user.is_admin,
-    mustChangePassword: user.must_change_password,
-    lastLoginAt: user.last_login_at,
-    createdAt: user.created_at,
-  };
+function clientIp(request: Request) {
+  return (request.headers.get("x-forwarded-for") || request.headers.get("cf-connecting-ip") || "")
+    .split(",")[0]
+    .trim();
 }
 
-function paidThrough(periodDays: number) {
-  return new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000).toISOString();
-}
-
-async function claimActivationToken(params: {
-  activationToken: string;
-  instanceKey: string;
-  instanceId: string;
-  now: string;
-}) {
-  const activationHash = await sha256(params.activationToken.trim());
-  const { data: token, error } = await supabase
-    .from("wfilemanager_pro_activation_tokens")
-    .select("id,period_days,storage_quota_bytes,instance_key,expires_at,status")
-    .eq("token_hash", activationHash)
-    .eq("status", "available")
-    .maybeSingle();
-
+async function rateCheck(scope: string, identifier: string, ipAddress: string) {
+  const { data, error } = await supabase.rpc("wfilemanager_auth_rate_check", {
+    p_scope: scope,
+    p_identifier_hash: await sha256(identifier),
+    p_ip_address: ipAddress,
+  });
   if (error) throw error;
-  if (!token) return { ok: false as const, error: "A valid paid Pro activation token is required." };
-  if (token.instance_key && token.instance_key !== params.instanceKey) {
-    return { ok: false as const, error: "This Pro activation token belongs to another instance." };
-  }
-  if (token.expires_at && new Date(token.expires_at).getTime() < Date.now()) {
-    await supabase.from("wfilemanager_pro_activation_tokens").update({ status: "expired", updated_at: params.now }).eq("id", token.id);
-    return { ok: false as const, error: "This Pro activation token has expired." };
-  }
+  return data as { allowed?: boolean; retryAfterSeconds?: number };
+}
 
-  const { error: claimError } = await supabase
-    .from("wfilemanager_pro_activation_tokens")
-    .update({
-      status: "claimed",
-      instance_key: params.instanceKey,
-      claimed_by_instance_id: params.instanceId,
-      claimed_at: params.now,
-      updated_at: params.now,
-    })
-    .eq("id", token.id)
-    .eq("status", "available");
-  if (claimError) throw claimError;
+async function rateRecord(scope: string, identifier: string, ipAddress: string, success: boolean) {
+  const { error } = await supabase.rpc("wfilemanager_auth_rate_record", {
+    p_scope: scope,
+    p_identifier_hash: await sha256(identifier),
+    p_ip_address: ipAddress,
+    p_success: success,
+    p_limit: 8,
+    p_window_minutes: 15,
+    p_block_minutes: 15,
+  });
+  if (error) console.warn("Unable to update setup rate limit", error.message);
+}
 
-  return {
-    ok: true as const,
-    periodDays: Number(token.period_days || 365),
-    storageQuotaBytes: Number(token.storage_quota_bytes || 104857600),
+function setupError(message: string) {
+  const mapping: Record<string, { status: number; error: string }> = {
+    installation_identity_missing: { status: 400, error: "Installation identity is missing" },
+    installation_frozen: { status: 423, error: "This installation is frozen. Recover it with the saved Recovery Kit before signing in." },
+    subscription_suspended: { status: 402, error: "This Pro subscription is suspended because payment is more than 7 days overdue." },
+    managed_account_deleted: { status: 410, error: "This Pro managed application-data account has expired or was deleted." },
+    installation_disabled: { status: 403, error: "This installation is disabled" },
+    already_configured: { status: 409, error: "This instance is already configured" },
+    licence_required: { status: 402, error: "A paid Pro licence key is required before setup." },
+    licence_invalid: { status: 402, error: "A valid paid Pro licence key is required." },
+    licence_wrong_instance: { status: 402, error: "This Pro licence key belongs to another instance." },
+    licence_expired: { status: 402, error: "This Pro licence key has expired." },
+    licence_already_claimed: { status: 409, error: "This Pro licence key has already been activated." },
   };
+  return mapping[message] || { status: 500, error: message || "Unexpected setup error" };
 }
 
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
+  const ipAddress = clientIp(request);
+  let instanceKey = "";
+
   try {
-    const now = new Date().toISOString();
-    const instanceKey = request.headers.get("x-wfilemanager-instance")?.trim() || "";
+    instanceKey = request.headers.get("x-wfilemanager-instance")?.trim() || "";
     const body = await request.json().catch(() => ({})) as Record<string, unknown>;
     const username = String(body.username || "admin").trim().toLowerCase();
     const password = String(body.password || "");
@@ -138,93 +122,39 @@ Deno.serve(async (request: Request) => {
     const activationToken = String(body.activationToken || "").trim();
 
     if (!instanceKey) return json({ error: "Installation identity is missing" }, 400);
-    if (username.length < 3) return json({ error: "Username must contain at least 3 characters" }, 400);
-    if (!displayName) return json({ error: "Display name is required" }, 400);
+
+    const rate = await rateCheck("pro_setup", instanceKey, ipAddress);
+    if (rate.allowed === false) {
+      return json({
+        error: "Too many setup attempts. Try again later.",
+        retryAfterSeconds: Number(rate.retryAfterSeconds || 900),
+      }, 429);
+    }
+
+    if (username.length < 3 || username.length > 64 || !/^[a-z0-9._-]+$/.test(username)) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
+      return json({ error: "Username must contain 3 to 64 lowercase letters, numbers, dots, underscores or hyphens" }, 400);
+    }
+    if (displayName.length < 2 || displayName.length > 120) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
+      return json({ error: "Display name must contain 2 to 120 characters" }, 400);
+    }
     const policyError = passwordPolicyError(password);
-    if (policyError) return json({ error: policyError }, 400);
+    if (policyError) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
+      return json({ error: policyError }, 400);
+    }
     if (!/^[0-9a-f]{64}$/.test(rootResetTokenHash)) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
       return json({ error: "The Pro recovery key is not enrolled" }, 400);
     }
     if (instanceSecretHash && !/^[0-9a-f]{64}$/.test(instanceSecretHash)) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
       return json({ error: "The Pro heartbeat credential is invalid" }, 400);
     }
 
-    let { data: instance, error: instanceError } = await supabase
-      .from("wfilemanager_instances")
-      .select("*")
-      .eq("instance_key", instanceKey)
-      .maybeSingle();
-    if (instanceError) throw instanceError;
-
-    if (instance?.status === "frozen") {
-      return json({ error: "This installation is frozen. Recover it with the saved Recovery Kit before signing in." }, 423);
-    }
-    if (instance?.subscription_status === "suspended" || instance?.data_status === "suspended") {
-      return json({ error: "This Pro subscription is suspended because payment is more than 7 days overdue." }, 402);
-    }
-    if (instance?.data_status === "deleted" || instance?.subscription_status === "expired") {
-      return json({ error: "This Pro managed application-data account has expired or was deleted." }, 410);
-    }
-    if (instance?.status === "disabled") {
-      return json({ error: "This installation is disabled" }, 403);
-    }
-
-    const newInstance = !instance;
-    if (newInstance) {
-      if (!activationToken) return json({ error: "A paid Pro activation token is required before setup." }, 402);
-      const created = await supabase.from("wfilemanager_instances").insert({
-        instance_key: instanceKey,
-        name: String(body.instanceName || "wFileManager"),
-        hostname: body.hostname ? String(body.hostname) : null,
-        base_url: body.baseUrl ? String(body.baseUrl) : null,
-        status: "active",
-        service_plan: "pro",
-        subscription_status: "active",
-        data_status: "active",
-        activated_at: now,
-        last_seen_at: now,
-      }).select().single();
-      if (created.error) throw created.error;
-      instance = created.data;
-    }
-
-    const { count, error: countError } = await supabase
-      .from("wfilemanager_users")
-      .select("id", { count: "exact", head: true })
-      .eq("instance_id", instance.id);
-    if (countError) throw countError;
-    if ((count || 0) > 0) return json({ error: "This instance is already configured" }, 409);
-
-    let activation: { ok: true; periodDays: number; storageQuotaBytes: number } | null = null;
-    if (newInstance || !instance.paid_until) {
-      if (!activationToken) return json({ error: "A paid Pro activation token is required before setup." }, 402);
-      const claimed = await claimActivationToken({ activationToken, instanceKey, instanceId: instance.id, now });
-      if (!claimed.ok) return json({ error: claimed.error }, 402);
-      activation = claimed;
-    }
-
-    const paidUntil = activation ? paidThrough(activation.periodDays) : instance.paid_until;
-    const quotaBytes = activation ? activation.storageQuotaBytes : instance.storage_quota_bytes;
-
-    const updated = await supabase.from("wfilemanager_instances").update({
-      hostname: body.hostname ? String(body.hostname) : instance.hostname,
-      base_url: body.baseUrl ? String(body.baseUrl) : instance.base_url,
-      status: "active",
-      subscription_status: "active",
-      data_status: "active",
-      paid_until: paidUntil,
-      storage_quota_bytes: quotaBytes,
-      activated_at: instance.activated_at || now,
-      past_due_at: null,
-      suspended_at: null,
-      frozen_at: null,
-      delete_after_at: null,
-      updated_at: now,
-      last_seen_at: now,
-    }).eq("id", instance.id).select().single();
-    if (updated.error) throw updated.error;
-    instance = updated.data;
-
+    const salt = randomHex(16);
+    const iterations = 210000;
     const permissions = [
       "browse", "view", "preview", "read", "create_files", "create_directories", "edit", "rename",
       "copy", "move", "upload", "download", "compress", "extract", "delete", "restore",
@@ -232,80 +162,35 @@ Deno.serve(async (request: Request) => {
       "calculate_checksums", "view_logs", "manage_users", "manage_roles", "change_settings",
     ];
 
-    const roleResult = await supabase.from("wfilemanager_roles").insert({
-      instance_id: instance.id,
-      name: "Administrator",
-      description: "Full access",
-      permissions,
-      is_system: true,
-    }).select().single();
-    if (roleResult.error) throw roleResult.error;
-
-    const salt = randomHex(16);
-    const iterations = 210000;
-    const userResult = await supabase.from("wfilemanager_users").insert({
-      instance_id: instance.id,
-      role_id: roleResult.data.id,
-      username,
-      email: body.email ? String(body.email).trim().toLowerCase() : null,
-      display_name: displayName,
-      password_hash: await passwordHash(password, salt, iterations),
-      password_salt: salt,
-      password_iterations: iterations,
-      is_admin: true,
-      status: "active",
-      must_change_password: false,
-    }).select().single();
-    if (userResult.error) throw userResult.error;
-
-    const pathRuleResult = await supabase.from("wfilemanager_path_rules").insert({
-      instance_id: instance.id,
-      user_id: userResult.data.id,
-      path: "/",
-      access_mode: "allow",
-      recursive: true,
+    const { data, error } = await supabase.rpc("wfilemanager_setup_pro_instance", {
+      p_activation_token_hash: activationToken ? await sha256(activationToken) : "",
+      p_instance_key: instanceKey,
+      p_instance_name: String(body.instanceName || "wFileManager"),
+      p_hostname: body.hostname ? String(body.hostname) : "",
+      p_base_url: body.baseUrl ? String(body.baseUrl) : "",
+      p_username: username,
+      p_email: body.email ? String(body.email).trim().toLowerCase() : "",
+      p_display_name: displayName,
+      p_password_hash: await passwordHash(password, salt, iterations),
+      p_password_salt: salt,
+      p_password_iterations: iterations,
+      p_root_reset_token_hash: rootResetTokenHash,
+      p_instance_secret_hash: instanceSecretHash,
+      p_ip_address: ipAddress,
+      p_user_agent: request.headers.get("user-agent") || "",
+      p_permissions: permissions,
     });
-    if (pathRuleResult.error) throw pathRuleResult.error;
 
-    const resetResult = await supabase.from("wfilemanager_root_reset_tokens").upsert({
-      instance_id: instance.id,
-      token_hash: rootResetTokenHash,
-      updated_at: now,
-    }, { onConflict: "instance_id" });
-    if (resetResult.error) throw resetResult.error;
-
-    if (instanceSecretHash) {
-      const credentialResult = await supabase.from("wfilemanager_instance_credentials").upsert({
-        instance_id: instance.id,
-        credential_type: "heartbeat",
-        secret_hash: instanceSecretHash,
-        last_used_at: null,
-        revoked_at: null,
-        updated_at: now,
-      }, { onConflict: "instance_id,credential_type" });
-      if (credentialResult.error) throw credentialResult.error;
+    if (error) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
+      const mapped = setupError(error.message);
+      return json({ error: mapped.error }, mapped.status);
     }
 
-    await supabase.from("wfilemanager_audit_logs").insert({
-      instance_id: instance.id,
-      user_id: userResult.data.id,
-      username,
-      action: "instance.setup",
-      target: instanceKey,
-      result: "success",
-      metadata: {
-        password_policy: "admin_v2",
-        recovery_key_enrolled: true,
-        heartbeat_secret_enrolled: Boolean(instanceSecretHash),
-        paid_activation_claimed: Boolean(activation),
-        paid_until: paidUntil,
-      },
-      ip_address: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
-      user_agent: request.headers.get("user-agent") || null,
-    });
-
-    return json({ success: true, user: safeUser(userResult.data), paidUntil }, 201);
+    await rateRecord("pro_setup", instanceKey, ipAddress, true);
+    return json(data, 201);
   } catch (error) {
+    if (instanceKey) await rateRecord("pro_setup", instanceKey, ipAddress, false);
     console.error(error);
     return json({ error: error instanceof Error ? error.message : "Unexpected error" }, 500);
   }
