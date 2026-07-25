@@ -47,7 +47,7 @@ function Setup() {
   const passwordError = form.password ? administratorPasswordError(form.password) : null;
   const confirmationError = form.confirm && form.password !== form.confirm ? "Passwords do not match." : null;
   const activationError = IS_PRO && form.activationToken.trim().length < 12
-    ? "Paid Pro token required. Contact support@kmerhosting.com."
+    ? "Paid Pro licence key required. Open your customer dashboard or contact support@kmerhosting.com."
     : null;
 
   useEffect(() => {
@@ -83,9 +83,9 @@ function Setup() {
             <div className="rounded-md border border-border bg-muted/30 p-3">
               <div className="mb-2 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-primary" />
-                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Pro token required</Badge>
+                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">Pro licence key required</Badge>
               </div>
-              <p className="text-muted-foreground">Pro needs a paid token. Unpaid plans are suspended after 7 days and deleted after 30 days.</p>
+              <p className="text-muted-foreground">Pro needs a paid licence key. Unpaid plans are suspended after 7 days and deleted after 30 days.</p>
             </div>
           )}
         </CardContent></Card>
@@ -95,13 +95,13 @@ function Setup() {
         <div className="grid gap-3">
           {IS_PRO && (
             <div className="grid gap-1.5 rounded-md border border-border bg-muted/20 p-3">
-              <Label>Pro activation token</Label>
+              <Label>Pro licence key</Label>
               <Input
                 type="password"
                 autoComplete="off"
                 value={form.activationToken}
                 onChange={(e) => setForm({ ...form, activationToken: e.target.value })}
-                placeholder="Paste your paid token"
+                placeholder="Paste your paid licence key"
               />
               <p className={activationError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
                 {activationError || "Used once to activate Pro managed data."}
