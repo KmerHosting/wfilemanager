@@ -3,6 +3,7 @@ const PROJECT_URL =
 const DATABASE_MODE =
   import.meta.env.VITE_WFILEMANAGER_DATABASE_MODE === "sqlite" ? "sqlite" : "supabase";
 const API_URL = `${PROJECT_URL}/functions/v1/wfilemanager-api`;
+const LOGIN_API_URL = `${PROJECT_URL}/functions/v1/wfilemanager-login-api`;
 const ROLES_API_URL = `${PROJECT_URL}/functions/v1/wfilemanager-roles-api`;
 const NOTIFICATIONS_API_URL = `${PROJECT_URL}/functions/v1/wfilemanager-notifications-api`;
 const ACCOUNT_API_URL = `${PROJECT_URL}/functions/v1/wfilemanager-account-api`;
@@ -145,6 +146,10 @@ function request<T>(action: string, init: RequestInit = {}) {
   return perform<T>(DATABASE_MODE === "sqlite" ? sqliteUrl("auth", action) : `${API_URL}/${action}`, init);
 }
 
+function loginRequest<T>(init: RequestInit = {}) {
+  return perform<T>(DATABASE_MODE === "sqlite" ? sqliteUrl("auth", "login") : LOGIN_API_URL, init);
+}
+
 function rolesRequest<T>(action: string, init: RequestInit = {}) {
   return perform<T>(DATABASE_MODE === "sqlite" ? sqliteUrl("roles", action) : `${ROLES_API_URL}/${action}`, init);
 }
@@ -178,7 +183,7 @@ export const wfilemanagerApi = {
   clearToken: () => localStorage.removeItem(TOKEN_KEY),
   status: () => request<InstanceStatusResponse>("status"),
   setup: (data: SetupPayload) => request<{ success: true; user: AuthUser }>("setup", { method: "POST", body: JSON.stringify(data) }),
-  login: (login: string, password: string, remember: boolean) => request<{ token: string; expiresAt: string; user: AuthUser }>("login", { method: "POST", body: JSON.stringify({ login, password, remember }) }),
+  login: (login: string, password: string, remember: boolean) => loginRequest<{ token: string; expiresAt: string; user: AuthUser }>({ method: "POST", body: JSON.stringify({ login, password, remember }) }),
   me: () => request<{ user: AuthUser; instance: WFileManagerInstance }>("me"),
   logout: () => request<{ success: true }>("logout", { method: "POST" }),
   users: () => request<{ users: AuthUser[] }>("users"),
@@ -219,10 +224,4 @@ export const wfilemanagerApi = {
     signalNotificationsChanged();
     return result;
   },
-  clearNotifications: async () => {
-    const result = await notificationsRequest<{ success: true }>({ method: "DELETE", body: JSON.stringify({ all: true }) });
-    signalNotificationsChanged();
-    return result;
-  },
-  onlineUsers: () => presenceRequest<{ onlineUsers: number; onlineWindowSeconds: number; checkedAt: string }>("presence"),
 };
