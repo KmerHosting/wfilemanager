@@ -1,6 +1,6 @@
 # wFileManager Terms of Use
 
-Last updated: 2026-07-24
+Last updated: 2026-07-25
 
 These terms govern use of wFileManager, including Community installations and Pro managed application-data services provided by KmerHosting LLC.
 
@@ -13,11 +13,13 @@ wFileManager has two editions:
 
 Both editions expose the same file-manager features. The difference is where wFileManager stores its own application records and who is responsible for backup and recovery of those records.
 
-## 2. Pro activation and payment
+## 2. Pro licence keys and payment
 
-A new Pro installation requires a valid paid activation token before the first administrator account can be created. A token may be limited to a specific instance, customer, order, period or storage quota.
+A new Pro installation requires a valid paid licence key before the first administrator account can be created. A licence key may be limited to a specific instance, customer, order, period or storage quota.
 
-A Pro token authorizes only the managed wFileManager application-data service. It does not grant server infrastructure, domain registration, filesystem backup, website hosting, database hosting or other services unless those are purchased separately.
+After checkout, the customer returns to the wFileManager customer dashboard and clicks **Check status**. If CamerPay confirms payment, the dashboard issues the licence key, displays it to the customer and sends the licence key email once.
+
+A Pro licence key authorizes only the managed wFileManager application-data service. It does not grant server infrastructure, domain registration, filesystem backup, website hosting, database hosting or other services unless those are purchased separately.
 
 ## 3. Unpaid Pro lifecycle
 
