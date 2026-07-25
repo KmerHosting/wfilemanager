@@ -20,13 +20,13 @@ describe("Pro managed application-data billing lifecycle", () => {
     expect(migration).toContain("pro-payment-7-day-suspend-30-day-delete");
   });
 
-  test("requires paid activation before Pro setup creates managed data", async () => {
+  test("requires paid licence key before Pro setup creates managed data", async () => {
     const setupApi = await source("supabase/functions/wfilemanager-setup-api/index.ts");
     const setupRoute = await source("src/routes/setup.tsx");
 
     expect(setupApi).toContain("wfilemanager_pro_activation_tokens");
     expect(setupApi).toContain("A paid Pro activation token is required before setup.");
-    expect(setupRoute).toContain("Pro activation token");
+    expect(setupRoute).toContain("Pro licence key");
     expect(setupRoute).toContain("+7 days suspend · +30 days delete");
   });
 
