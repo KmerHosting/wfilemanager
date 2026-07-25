@@ -76,23 +76,44 @@ Each additional **100 MB** of managed application storage costs **$1 USD per yea
 
 Pro does not include server filesystem files, directories, databases, uploads or other server content. Those require a separate server backup.
 
-Licence keys are purchased from the wFileManager customer dashboard:
+Licence keys, account balance, top-ups and renewals are managed from the customer account:
 
 ```text
 https://wfilemanager.com/account
 ```
 
-For renewal or storage expansion, contact:
+The customer account is self-service. Contact `support@kmerhosting.com` only for technical or security problems.
 
-```text
-support@kmerhosting.com
-```
+## USD account balance and payments
+
+Each customer account has a prepaid balance denominated in **USD**. It can be used to buy a new Pro licence key or renew an activated instance.
+
+The account supports:
+
+- account top-ups initiated in USD;
+- purchase using available balance;
+- direct CamerPay payment;
+- manual renewal using balance;
+- direct renewal payment;
+- per-instance automatic renewal;
+- transaction and top-up history.
+
+CamerPay may settle a top-up or direct payment internally in XAF. The customer-facing price, credited wallet amount, licence price, transaction history and account balance remain in USD.
+
+Wallet operations are atomic and idempotent. The balance cannot become negative, and a confirmed top-up, purchase or renewal cannot be applied twice.
 
 ## Pro licence key, renewal and suspension
 
-New Pro installations require a paid licence key during `/setup`. The customer dashboard creates the CamerPay link, lets the customer check payment status, displays the licence key after payment confirmation and sends the licence key email once. CamerPay webhooks are not required for issuing the key.
+New Pro installations require a paid licence key during `/setup`.
 
-Renewal does not require a new setup licence key. After payment, support extends the instance `paid_until` date in the managed backend.
+For a balance purchase, the licence key is generated immediately. For direct payment, the customer returns to the account and clicks **Check status**. The system queries CamerPay directly, displays the key and sends the English licence-key email once. CamerPay webhooks are not required for issuing the key.
+
+Renewal does not require a new licence key. The customer can renew from the USD balance or pay directly. A successful renewal keeps the same key and extends `paid_until` by 365 days. If renewal happens before expiry, the remaining paid time is preserved.
+
+Automatic renewal can be enabled or disabled for each activated instance. About 7 days before expiry, the daily billing job attempts to debit the annual price from the customer's USD balance:
+
+- sufficient balance: the debit and renewal are applied atomically, and an English confirmation email is sent;
+- insufficient balance: no partial debit and no negative balance are created; the customer receives an English notice and can add funds or pay directly.
 
 Pro lifecycle:
 
@@ -103,7 +124,7 @@ paid_until expired      grace period
 +30 unpaid days         managed app data and account deleted
 ```
 
-If managed storage reaches its quota, access is blocked with a clear message asking the customer to contact support to increase the Pro quota.
+If managed storage reaches its quota, access is blocked with a clear message asking the customer to increase the Pro quota.
 
 ## Pro Recovery Kit
 
