@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dir, "..");
@@ -8,9 +8,20 @@ async function source(relativePath: string) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
+async function migrationContaining(needle: string) {
+  const directory = path.join(root, "supabase/migrations");
+  for (const name of await readdir(directory)) {
+    const content = await readFile(path.join(directory, name), "utf8");
+    if (content.includes(needle)) return content;
+  }
+  throw new Error(`No migration contains ${needle}`);
+}
+
 describe("Pro managed application-data billing lifecycle", () => {
   test("suspends after 7 unpaid days and deletes after 30 unpaid days", async () => {
-    const migration = await source("supabase/migrations/20260724213000_wfilemanager_pro_billing_enforcement.sql");
+    const migration = await source(
+      "supabase/migrations/20260724213000_wfilemanager_pro_billing_enforcement.sql",
+    );
 
     expect(migration).toContain("interval '7 days'");
     expect(migration).toContain("interval '30 days'");
@@ -20,18 +31,23 @@ describe("Pro managed application-data billing lifecycle", () => {
     expect(migration).toContain("pro-payment-7-day-suspend-30-day-delete");
   });
 
-  test("requires paid licence key before Pro setup creates managed data", async () => {
+  test("requires a paid licence key before atomic Pro setup", async () => {
     const setupApi = await source("supabase/functions/wfilemanager-setup-api/index.ts");
+    const setupMigration = await migrationContaining("wfilemanager_setup_pro_instance");
     const setupRoute = await source("src/routes/setup.tsx");
 
-    expect(setupApi).toContain("wfilemanager_pro_activation_tokens");
-    expect(setupApi).toContain("A paid Pro activation token is required before setup.");
+    expect(setupApi).toContain("wfilemanager_setup_pro_instance");
+    expect(setupApi).toContain("A paid Pro licence key is required before setup.");
+    expect(setupMigration).toContain("wfilemanager_pro_activation_tokens");
+    expect(setupMigration).toContain("for update");
     expect(setupRoute).toContain("Pro licence key");
     expect(setupRoute).toContain("+7 days suspend · +30 days delete");
   });
 
   test("does not create inactivity warning notifications or email jobs", async () => {
-    const migration = (await source("supabase/migrations/20260724213000_wfilemanager_pro_billing_enforcement.sql")).toLowerCase();
+    const migration = (
+      await source("supabase/migrations/20260724213000_wfilemanager_pro_billing_enforcement.sql")
+    ).toLowerCase();
 
     expect(migration).not.toContain("insert into public.wfilemanager_notifications");
     expect(migration).not.toContain("send_email");

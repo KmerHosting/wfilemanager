@@ -3,46 +3,75 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
 function json(body: unknown, status = 200) {
-  return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
+  return Response.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
 async function runtime() {
   return import("@/lib/server/local-runtime");
 }
-
 async function authRuntime() {
   return import("@/lib/server/local-auth-runtime");
 }
-
 async function overviewRuntime() {
   return import("@/lib/server/file-manager-runtime");
 }
-
 async function archiveRuntime() {
   return import("@/lib/server/archive-runtime-v2");
 }
-
 async function safePathRuntime() {
   return import("@/lib/server/safe-path-runtime");
 }
-
 async function uploadRuntime() {
   return import("@/lib/server/upload-runtime");
 }
-
 async function archiveGuard() {
   return import("@/lib/server/archive-guard");
 }
-
 async function terminalRuntime() {
   return import("@/lib/server/terminal-runtime");
+}
+async function directoryRuntime() {
+  return import("@/lib/server/directory-runtime");
+}
+async function atomicFileRuntime() {
+  return import("@/lib/server/atomic-file-runtime");
+}
+async function operationRuntime() {
+  return import("@/lib/server/operation-jobs-runtime");
+}
+async function downloadRuntime() {
+  return import("@/lib/server/download-runtime");
+}
+async function hashRuntime() {
+  return import("@/lib/server/file-hash-runtime");
+}
+
+function sameOrigin(request: Request) {
+  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  try {
+    return new URL(origin).origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
 }
 
 async function handleError(error: unknown) {
   const { LocalApiError } = await runtime();
   if (error instanceof LocalApiError) return json({ error: error.message }, error.status);
   const value = error as NodeJS.ErrnoException;
-  const status = value?.code === "ENOENT" ? 404 : value?.code === "EACCES" || value?.code === "EPERM" ? 403 : value?.code === "EEXIST" ? 409 : 500;
+  const status =
+    value?.code === "ENOENT"
+      ? 404
+      : value?.code === "EACCES" || value?.code === "EPERM"
+        ? 403
+        : value?.code === "EEXIST"
+          ? 409
+          : 500;
   console.error(error);
   return json({ error: value?.message || "Local server operation failed" }, status);
 }
@@ -85,15 +114,31 @@ export const Route = createFileRoute("/api/local")({
           if (action === "pty-output") {
             const user = await auth.requireAdmin(request);
             const terminal = await terminalRuntime();
-            return json(terminal.readPtyOutput(user.id, url.searchParams.get("id"), url.searchParams.get("cursor")));
+            return json(
+              terminal.readPtyOutput(
+                user.id,
+                url.searchParams.get("id"),
+                url.searchParams.get("cursor"),
+              ),
+            );
           }
           if (action === "job") {
             const user = await auth.requireUser(request);
-            return json({ job: api.getOperationJob(user.id, url.searchParams.get("id")) });
+            const operations = await operationRuntime();
+            return json({
+              job: await operations.getOperationJob(user.id, url.searchParams.get("id")),
+            });
           }
           if (action === "list") {
             await auth.requirePermission(request, "browse");
-            return json(await api.listDirectory(target));
+            const directory = await directoryRuntime();
+            return json(
+              await directory.listDirectoryPage(target, {
+                cursor: url.searchParams.get("cursor"),
+                query: url.searchParams.get("q"),
+                limit: url.searchParams.get("limit"),
+              }),
+            );
           }
           if (action === "read") {
             await auth.requirePermission(request, "read");
@@ -101,10 +146,15 @@ export const Route = createFileRoute("/api/local")({
           }
           if (action === "download") {
             await auth.requirePermission(request, "download");
-            return api.downloadResponse(target);
+            const download = await downloadRuntime();
+            return download.streamedDownloadResponse(request, target);
           }
           if (action === "trash-list") {
-            const user = await auth.requireAnyPermission(request, ["delete", "restore", "permanently_delete"]);
+            const user = await auth.requireAnyPermission(request, [
+              "delete",
+              "restore",
+              "permanently_delete",
+            ]);
             return json(await api.listTrash(user));
           }
           return json({ error: "Unknown action" }, 404);
@@ -114,6 +164,7 @@ export const Route = createFileRoute("/api/local")({
       },
       POST: async ({ request }) => {
         try {
+          if (!sameOrigin(request)) return json({ error: "Cross-origin request rejected" }, 403);
           const api = await runtime();
           const auth = await authRuntime();
           const safe = await safePathRuntime();
@@ -123,20 +174,32 @@ export const Route = createFileRoute("/api/local")({
           if (["pty-create", "pty-input", "pty-resize", "pty-close"].includes(action)) {
             const user = await auth.requireAdmin(request);
             const terminal = await terminalRuntime();
-            const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+            const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
             if (action === "pty-create") {
               await auth.verifyCurrentPassword(request, body.password);
-              return json(await terminal.createRootPtySession(user, body.cwd, body.cols, body.rows), 201);
+              return json(
+                await terminal.createRootPtySession(user, body.cwd, body.cols, body.rows),
+                201,
+              );
             }
-            if (action === "pty-input") return json(terminal.writePty(user.id, body.sessionId, body.data));
-            if (action === "pty-resize") return json(terminal.resizePty(user.id, body.sessionId, body.cols, body.rows));
+            if (action === "pty-input")
+              return json(terminal.writePty(user.id, body.sessionId, body.data));
+            if (action === "pty-resize")
+              return json(terminal.resizePty(user.id, body.sessionId, body.cols, body.rows));
             return json(terminal.closePty(user.id, body.sessionId));
           }
 
           if (action === "upload-raw") {
             await auth.requirePermission(request, "upload");
             const upload = await uploadRuntime();
-            return json(await upload.saveRawUpload(url.searchParams.get("path") || "/", url.searchParams.get("name"), request.body), 201);
+            return json(
+              await upload.saveRawUpload(
+                url.searchParams.get("path") || "/",
+                url.searchParams.get("name"),
+                request.body,
+              ),
+              201,
+            );
           }
           if (action === "upload") {
             await auth.requirePermission(request, "upload");
@@ -145,7 +208,7 @@ export const Route = createFileRoute("/api/local")({
             return json(await upload.saveUploads(url.searchParams.get("path") || "/", form), 201);
           }
 
-          const body = await request.json().catch(() => ({})) as Record<string, unknown>;
+          const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
           if (action === "archive-create") {
             await auth.requirePermission(request, "create_files");
             await safe.assertSafeExistingMutation(body.path);
@@ -157,13 +220,26 @@ export const Route = createFileRoute("/api/local")({
             const archivePath = await safe.assertSafeExistingMutation(body.path);
             const parent = path.dirname(archivePath);
             let destination = parent;
-            if (body.mode === "custom") destination = await safe.assertSafeDirectory(body.destination);
-            else if (body.mode === "folder") destination = await safe.assertSafeDestination(path.join(parent, String(body.folderName || "extracted")));
+            if (body.mode === "custom")
+              destination = await safe.assertSafeDirectory(body.destination);
+            else if (body.mode === "folder")
+              destination = await safe.assertSafeDestination(
+                path.join(parent, String(body.folderName || "extracted")),
+              );
             else await safe.assertSafeDirectory(parent);
             const guard = await archiveGuard();
             await guard.inspectArchiveSafety(archivePath, destination);
             const archive = await archiveRuntime();
-            return json(await archive.extractArchive(archivePath, body.mode, body.folderName, destination, body.conflictPolicy), 201);
+            return json(
+              await archive.extractArchive(
+                archivePath,
+                body.mode,
+                body.folderName,
+                destination,
+                body.conflictPolicy,
+              ),
+              201,
+            );
           }
           if (action === "update-install") {
             await auth.requireAdmin(request);
@@ -175,29 +251,42 @@ export const Route = createFileRoute("/api/local")({
           }
           if (action === "create-file") {
             await auth.requirePermission(request, "create_files");
-            await safe.assertDestinationAbsent(path.join(String(body.path || "/"), String(body.name || "")));
+            await safe.assertDestinationAbsent(
+              path.join(String(body.path || "/"), String(body.name || "")),
+            );
             return json(await api.createFileAt(body.path, body.name, body.content), 201);
           }
           if (action === "create-directory") {
             await auth.requirePermission(request, "create_directories");
-            await safe.assertDestinationAbsent(path.join(String(body.path || "/"), String(body.name || "")));
+            await safe.assertDestinationAbsent(
+              path.join(String(body.path || "/"), String(body.name || "")),
+            );
             return json(await api.createDirectoryAt(body.path, body.name), 201);
           }
           if (action === "save") {
             await auth.requirePermission(request, "edit");
-            const target = await safe.assertSafeExistingMutation(body.path);
-            return json(await api.saveTextFile(target, body.content));
+            const atomic = await atomicFileRuntime();
+            return json(
+              await atomic.saveTextFileAtomic(body.path, body.content, body.expectedModifiedAt),
+            );
           }
           if (action === "rename") {
             await auth.requirePermission(request, "rename");
             const source = await safe.assertSafeExistingMutation(body.path);
-            await safe.assertDestinationAbsent(path.join(path.dirname(source), String(body.name || "")));
+            await safe.assertDestinationAbsent(
+              path.join(path.dirname(source), String(body.name || "")),
+            );
             return json(await api.renameEntry(source, body.name));
           }
           if (action === "chmod") {
             await auth.requirePermission(request, "change_permissions");
             const target = await safe.assertSafeExistingMutation(body.path);
             return json(await api.changeMode(target, body.mode));
+          }
+          if (action === "checksum") {
+            await auth.requirePermission(request, "calculate_checksums");
+            const hashes = await hashRuntime();
+            return json(await hashes.fileIntegrityHash(body.path, body.algorithm));
           }
           if (action === "trash-move") {
             const user = await auth.requirePermission(request, "delete");
@@ -222,11 +311,22 @@ export const Route = createFileRoute("/api/local")({
           }
           if (action === "job-start") {
             const operation = String(body.operation || "");
-            const permission = operation === "copy" ? "copy" : operation === "move" ? "move" : "permanently_delete";
+            const permission =
+              operation === "copy" ? "copy" : operation === "move" ? "move" : "permanently_delete";
             const user = await auth.requirePermission(request, permission);
             const source = await safe.assertSafeExistingMutation(body.source);
-            const destination = operation === "delete" ? undefined : await safe.assertSafeDirectory(body.destination);
-            return json({ job: api.startOperationJob(user.id, operation, source, destination) }, 202);
+            const destination =
+              operation === "delete" ? undefined : await safe.assertSafeDirectory(body.destination);
+            const operations = await operationRuntime();
+            return json(
+              { job: await operations.startOperationJob(user.id, operation, source, destination) },
+              202,
+            );
+          }
+          if (action === "job-cancel") {
+            const user = await auth.requireUser(request);
+            const operations = await operationRuntime();
+            return json({ job: await operations.cancelOperationJob(user.id, body.id) });
           }
           return json({ error: "Unknown action" }, 404);
         } catch (error) {
