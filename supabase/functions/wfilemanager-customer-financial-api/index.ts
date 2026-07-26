@@ -36,6 +36,9 @@ function json(body: unknown, status = 200) {
 function clean(value: unknown) {
   return String(value ?? "").trim();
 }
+function validCameroonPhone(value: unknown) {
+  return /^2376\d{8}$/.test(clean(value).replace(/\D/g, ""));
+}
 function money(value: unknown) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
@@ -240,6 +243,11 @@ async function initiatePayment(
   amountXaf: number,
 ) {
   if (!config.camerpayToken) throw new Error("CamerPay API token is not configured");
+  if (!validCameroonPhone(customer.phone))
+    throw Object.assign(
+      new Error("A valid Cameroon mobile number is required before starting a payment (example: +237 690 00 00 00)."),
+      { status: 400 },
+    );
   const requestBody: Row = {
     amount: amountXaf,
     currency: "XAF",
