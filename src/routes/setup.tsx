@@ -57,9 +57,10 @@ function Setup() {
     IS_PRO && form.activationToken.trim().length < 12
       ? "Paid Pro licence key required. Open your customer dashboard or contact support@kmerhosting.com."
       : null;
-  const emailError = IS_PRO && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
-    ? "A valid administrator email is required for verification."
-    : null;
+  const emailError =
+    IS_PRO && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+      ? "A valid administrator email is required for verification."
+      : null;
 
   useEffect(() => {
     if (!auth.loading && auth.user) nav({ to: "/" });
@@ -198,8 +199,9 @@ function Setup() {
               Verify your administrator email
             </div>
             <p className="text-muted-foreground">
-              We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>.
-              Enter it here to continue setup. The code expires in 10 minutes.
+              We sent a 6-digit code to{" "}
+              <span className="font-medium text-foreground">{form.email}</span>. Enter it here to
+              continue setup. The code expires in 10 minutes.
             </p>
             <Input
               inputMode="numeric"
@@ -312,11 +314,7 @@ function Setup() {
             {otpBusy ? "Sending code…" : "Continue to email verification"}
           </Button>
         ) : current.key === "otp" ? null : step < STEPS.length - 1 ? (
-          <Button
-            onClick={() => setStep((s) => s + 1)}
-          >
-            Continue
-          </Button>
+          <Button onClick={() => setStep((s) => s + 1)}>Continue</Button>
         ) : (
           <Button
             disabled={submitting || !accountValid || (IS_PRO && !otpVerified)}
