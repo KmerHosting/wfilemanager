@@ -242,7 +242,7 @@ async function loadConfig(): Promise<Config> {
     fromEmail: String(data.mailtrap_from_email || "support@kmerhosting.com"),
     fromName: String(data.mailtrap_from_name || "KmerHosting"),
     supportEmail: String(data.support_email || "support@kmerhosting.com"),
-    siteUrl: String(data.site_url || "https://wfilemanager.com").replace(/\/$/, ""),
+    siteUrl: String(data.site_url || "https://wfilemanager.kmerhosting.com").replace(/\/$/, ""),
   };
 }
 async function sendMail(
@@ -953,7 +953,7 @@ async function createPayment(
     customer_name: customer.full_name,
     customer_email: customer.email,
     merchant_invoice_id: paymentReference,
-    merchant_callback_url: "https://kmerhosting.com/api/webhooks/camerpay",
+    merchant_callback_url: `${config.siteUrl}/account`,
     merchant_return_url: `${config.siteUrl}/account?payment=returned&reference=${encodeURIComponent(paymentReference)}`,
     idempotency_key: paymentReference,
     source: "api",

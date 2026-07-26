@@ -79,7 +79,7 @@ Pro does not include server filesystem files, directories, databases, uploads or
 Licence keys, account balance, top-ups and renewals are managed from the customer account:
 
 ```text
-https://wfilemanager.com/account
+https://wfilemanager.kmerhosting.com/account
 ```
 
 The customer account is self-service. Contact `support@kmerhosting.com` only for technical or security problems.

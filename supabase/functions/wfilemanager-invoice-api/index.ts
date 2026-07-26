@@ -71,7 +71,7 @@ async function config(): Promise<Config> {
   return {
     automationSecretHash: clean(data?.automation_secret_hash),
     supportEmail: clean(data?.support_email || "support@kmerhosting.com"),
-    siteUrl: clean(data?.site_url || "https://wfilemanager.com"),
+    siteUrl: clean(data?.site_url || "https://wfilemanager.kmerhosting.com"),
     legalName: clean(data?.invoice_legal_name || "KmerHosting LLC"),
     legalAddress: clean(data?.invoice_legal_address),
     registrationNumber: clean(data?.invoice_registration_number),

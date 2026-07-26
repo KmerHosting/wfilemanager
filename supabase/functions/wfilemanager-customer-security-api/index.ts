@@ -37,6 +37,11 @@ function randomHex(length = 32) {
   crypto.getRandomValues(bytes);
   return hex(bytes);
 }
+function verificationCode() {
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return String(bytes[0] % 1_000_000).padStart(6, "0");
+}
 function hexBytes(value: string) {
   const bytes = new Uint8Array(value.length / 2);
   for (let index = 0; index < bytes.length; index += 1)
@@ -102,7 +107,7 @@ async function config() {
     fromEmail: String(data?.mailtrap_from_email || "support@kmerhosting.com"),
     fromName: String(data?.mailtrap_from_name || "KmerHosting"),
     supportEmail: String(data?.support_email || "support@kmerhosting.com"),
-    siteUrl: String(data?.site_url || "https://wfilemanager.com").replace(/\/$/, ""),
+    siteUrl: String(data?.site_url || "https://wfilemanager.kmerhosting.com").replace(/\/$/, ""),
   };
 }
 
@@ -184,8 +189,8 @@ async function issueToken(
   customer: Customer,
   purpose: "password_reset" | "email_verification",
   lifetimeMinutes: number,
+  value = `wfm_${randomHex(32)}`,
 ) {
-  const token = `wfm_${randomHex(32)}`;
   await db
     .from("wfilemanager_customer_auth_tokens")
     .update({ consumed_at: new Date().toISOString() })
@@ -195,7 +200,7 @@ async function issueToken(
   const { error } = await db.from("wfilemanager_customer_auth_tokens").insert({
     customer_id: customer.id,
     purpose,
-    token_hash: await sha256(token),
+    token_hash: await sha256(value),
     expires_at: new Date(Date.now() + lifetimeMinutes * 60_000).toISOString(),
   });
   if (error) throw error;
@@ -203,7 +208,7 @@ async function issueToken(
     .from("wfilemanager_customer_auth_tokens")
     .delete()
     .lt("expires_at", new Date(Date.now() - 7 * 86400000).toISOString());
-  return token;
+  return value;
 }
 
 async function requestPasswordReset(request: Request, body: Record<string, unknown>) {
@@ -305,15 +310,14 @@ async function resendVerification(request: Request) {
       429,
     );
   const settings = await config();
-  const token = await issueToken(customer, "email_verification", 24 * 60);
-  const url = `${settings.siteUrl}/account?verify=${encodeURIComponent(token)}`;
+  const code = await issueToken(customer, "email_verification", 15, verificationCode());
   const name = customer.full_name || "Customer";
   await sendMail(settings, {
     email: customer.email,
     name,
     subject: "Verify your wFileManager customer email",
-    text: `Hello ${name},\n\nVerify your email within 24 hours:\n${url}\n\nTechnical support: ${settings.supportEmail}.`,
-    html: `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#111827"><h2>Verify your email</h2><p>Hello ${escapeHtml(name)},</p><p><a href="${url}">Verify customer email</a></p><p>This link expires in 24 hours.</p></body></html>`,
+    text: `Hello ${name},\n\nYour verification code is: ${code}\n\nEnter this code in your customer dashboard within 15 minutes. Do not share it.\n\nTechnical support: ${settings.supportEmail}.`,
+    html: `<!doctype html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#111827"><h2>Verify your email</h2><p>Hello ${escapeHtml(name)},</p><p>Your verification code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:0.2em">${code}</p><p>Enter it in your customer dashboard within 15 minutes. Do not share it.</p></body></html>`,
     category: "wfilemanager-customer-email-verification",
   });
   await rateRecord("customer_email_verification", customer.email, ip, true, 4);
@@ -321,10 +325,13 @@ async function resendVerification(request: Request) {
 }
 
 async function verifyEmail(request: Request, body: Record<string, unknown>) {
-  const token = clean(body.token);
-  if (!token) return json({ error: "Verification token is required" }, 400);
+  const customer = await authenticate(request);
+  if (!customer) return json({ error: "Authentication required" }, 401);
+  if (customer.email_verified_at) return json({ success: true, alreadyVerified: true });
+  const code = clean(body.code);
+  if (!/^\d{6}$/.test(code)) return json({ error: "Enter the six-digit verification code" }, 400);
   const ip = clientIp(request);
-  const rate = await rateCheck("customer_email_verification_consume", token.slice(0, 20), ip);
+  const rate = await rateCheck("customer_email_verification_consume", customer.id, ip);
   if (rate.allowed === false)
     return json(
       {
@@ -333,20 +340,34 @@ async function verifyEmail(request: Request, body: Record<string, unknown>) {
       },
       429,
     );
+  const tokenHash = await sha256(code);
+  const { data: issued, error: issuedError } = await db
+    .from("wfilemanager_customer_auth_tokens")
+    .select("customer_id")
+    .eq("token_hash", tokenHash)
+    .eq("purpose", "email_verification")
+    .is("consumed_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (issuedError) throw issuedError;
+  if (!issued || issued.customer_id !== customer.id) {
+    await rateRecord("customer_email_verification_consume", customer.id, ip, false);
+    return json({ error: "This verification code is invalid or expired" }, 400);
+  }
   const { data, error } = await db.rpc("wfilemanager_consume_customer_auth_token", {
-    p_token_hash: await sha256(token),
+    p_token_hash: tokenHash,
     p_purpose: "email_verification",
     p_password_hash: null,
     p_password_salt: null,
     p_password_iterations: null,
   });
   if (error) {
-    await rateRecord("customer_email_verification_consume", token.slice(0, 20), ip, false);
+    await rateRecord("customer_email_verification_consume", customer.id, ip, false);
     if (String(error.message).includes("invalid_or_expired_token"))
-      return json({ error: "This verification link is invalid or expired" }, 400);
+      return json({ error: "This verification code is invalid or expired" }, 400);
     throw error;
   }
-  await rateRecord("customer_email_verification_consume", token.slice(0, 20), ip, true);
+  await rateRecord("customer_email_verification_consume", customer.id, ip, true);
   return json({ success: true, result: data });
 }
 

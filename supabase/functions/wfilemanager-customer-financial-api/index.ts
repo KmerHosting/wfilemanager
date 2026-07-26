@@ -200,7 +200,7 @@ async function loadConfig(): Promise<Config> {
     camerpayBaseUrl: clean(data.camerpay_api_base_url || "https://camerpay.biz").replace(/\/$/, ""),
     camerpayToken: clean(data.camerpay_api_token),
     camerpayMethod: clean(data.camerpay_payment_method || "auto"),
-    siteUrl: clean(data.site_url || "https://wfilemanager.com").replace(/\/$/, ""),
+    siteUrl: clean(data.site_url || "https://wfilemanager.kmerhosting.com").replace(/\/$/, ""),
   };
 }
 
@@ -252,7 +252,7 @@ async function initiatePayment(
     customer_name: customer.full_name,
     customer_email: customer.email,
     merchant_invoice_id: invoiceReference,
-    merchant_callback_url: "https://kmerhosting.com/api/webhooks/camerpay",
+    merchant_callback_url: `${config.siteUrl}/account`,
     merchant_return_url: `${config.siteUrl}/account?payment=returned&reference=${encodeURIComponent(invoiceReference)}`,
     idempotency_key: invoiceReference,
     source: "api",

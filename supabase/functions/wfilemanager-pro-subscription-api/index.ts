@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_K
   auth: { persistSession: false },
 });
 const encoder = new TextEncoder();
-const CAMERPAY_DASHBOARD_RETURN_URL = "https://kmerhosting.com/payment/top-up/return";
+const CAMERPAY_DASHBOARD_URL = "https://wfilemanager.kmerhosting.com/account";
 
 type Config = {
   camerpayApiBaseUrl: string;
@@ -82,7 +82,7 @@ async function loadConfig(): Promise<Config> {
     mailtrapApiUrl: String(data.mailtrap_api_url || "https://send.api.mailtrap.io/api/send"),
     mailtrapFromEmail: String(data.mailtrap_from_email || "support@kmerhosting.com"),
     mailtrapFromName: String(data.mailtrap_from_name || "KmerHosting"),
-    siteUrl: String(data.site_url || "https://wfilemanager.com").replace(/\/$/, ""),
+    siteUrl: String(data.site_url || "https://wfilemanager.kmerhosting.com").replace(/\/$/, ""),
     functionUrl: String(
       data.function_url || `${supabaseUrl}/functions/v1/wfilemanager-pro-subscription-api`,
     ).replace(/\/$/, ""),
@@ -219,8 +219,8 @@ async function createCamerPayLink(config: Config, order: Order) {
     customer_name: order.buyer_name,
     customer_email: order.buyer_email,
     merchant_invoice_id: order.order_reference,
-    merchant_callback_url: "https://kmerhosting.com/api/webhooks/camerpay",
-    merchant_return_url: CAMERPAY_DASHBOARD_RETURN_URL,
+    merchant_callback_url: CAMERPAY_DASHBOARD_URL,
+    merchant_return_url: CAMERPAY_DASHBOARD_URL,
     idempotency_key: order.order_reference,
     source: "api",
   };
