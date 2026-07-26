@@ -96,12 +96,6 @@ async function loadConfig(): Promise<Config> {
   };
 }
 
-function normalizeCameroonPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 9 && digits.startsWith("6")) return `237${digits}`;
-  if (digits.length === 12 && digits.startsWith("237")) return digits;
-  return digits;
-}
 function orderReference(orderType = "new_licence_key") {
   const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const prefix =
@@ -338,7 +332,7 @@ async function customerOwnsInstance(buyerEmail: string, instanceKey: string) {
 async function checkout(config: Config, body: Record<string, unknown>) {
   const buyerName = clean(body.buyerName || body.name);
   const buyerEmail = clean(body.buyerEmail || body.email).toLowerCase();
-  const buyerPhone = normalizeCameroonPhone(clean(body.buyerPhone || body.phone));
+  const buyerPhone = clean(body.buyerPhone || body.phone);
   const buyerCompany = clean(body.buyerCompany || body.company) || null;
   const buyerCountry = clean(body.buyerCountry || body.country);
   const billingAddress = clean(body.billingAddress || body.address);

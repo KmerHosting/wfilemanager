@@ -113,9 +113,7 @@ function bearer(request: Request) {
   return (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || "";
 }
 function normalizePhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 9 && digits.startsWith("6")) return `237${digits}`;
-  return digits;
+  return value.trim();
 }
 function reference(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${randomHex(8).toUpperCase()}`;
