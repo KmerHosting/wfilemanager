@@ -823,8 +823,23 @@ async function startUpdater(action: "install" | "rollback") {
       value.stderr?.trim() || value.message || `Unable to start ${action}`,
     );
   }
-  await new Promise((resolve) => setTimeout(resolve, 250));
-  return { success: true as const, state: await readUpdateState(await installedVersion()) };
+  // systemd --no-block returns before the oneshot process has written its first
+  // state file. Wait for that transition so the UI does not immediately read
+  // the previous idle state and report “No update is running”.
+  const deadline = Date.now() + 10_000;
+  let state = await readUpdateState(await installedVersion());
+  while (Date.now() < deadline) {
+    if (state.status !== "idle") break;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    state = await readUpdateState(await installedVersion());
+  }
+  if (state.status === "idle") {
+    throw new LocalApiError(
+      502,
+      "The updater service did not start. Check wfilemanager-updater@" + action + ".service.",
+    );
+  }
+  return { success: true as const, state };
 }
 
 export function installAvailableUpdate() {

@@ -38,6 +38,99 @@ async function sha256(value: string) {
   return bytesToHex(new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value))));
 }
 
+function normalizeEmail(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function validEmail(value: string) {
+  return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+async function mailConfig() {
+  const { data, error } = await supabase
+    .from("wfilemanager_pro_subscription_config")
+    .select("mailtrap_api_token,mailtrap_api_url,mailtrap_from_email,mailtrap_from_name,support_email")
+    .eq("id", true)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    token: String(data?.mailtrap_api_token || ""),
+    url: String(data?.mailtrap_api_url || "https://send.api.mailtrap.io/api/send"),
+    fromEmail: String(data?.mailtrap_from_email || "support@kmerhosting.com"),
+    fromName: String(data?.mailtrap_from_name || "KmerHosting"),
+    supportEmail: String(data?.support_email || "support@kmerhosting.com"),
+  };
+}
+
+async function sendSetupOtp(email: string, code: string) {
+  const config = await mailConfig();
+  if (!config.token) throw new Error("Setup email delivery is not configured");
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: { email: config.fromEmail, name: config.fromName },
+      to: [{ email, name: "wFileManager administrator" }],
+      subject: "Your wFileManager setup verification code",
+      text: `Your wFileManager setup code is ${code}. It expires in 10 minutes. If you did not start setup, ignore this message. Support: ${config.supportEmail}.`,
+      html: `<p>Your wFileManager setup verification code is:</p><p style="font-size:28px;font-weight:700;letter-spacing:8px">${code}</p><p>This code expires in 10 minutes.</p>`,
+      category: "wfilemanager-setup-otp",
+    }),
+  });
+  if (!response.ok) throw new Error(`Setup email delivery failed (${response.status})`);
+}
+
+async function setupOtpAction(action: string, instanceKey: string, body: Record<string, unknown>, ip: string) {
+  const email = normalizeEmail(body.email);
+  if (!validEmail(email)) return json({ error: "A valid administrator email is required." }, 400);
+
+  if (action === "send-otp") {
+    const rate = await rateCheck("pro_setup_otp", `${instanceKey}:${email}`, ip);
+    if (rate.allowed === false)
+      return json({ error: "Too many verification requests. Try again later.", retryAfterSeconds: Number(rate.retryAfterSeconds || 900) }, 429);
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const { error } = await supabase.from("wfilemanager_setup_otp_challenges").upsert({
+      instance_key: instanceKey,
+      email,
+      code_hash: await sha256(code),
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      attempts: 0,
+      verified_at: null,
+      consumed_at: null,
+      request_ip: ip || null,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+    try {
+      await sendSetupOtp(email, code);
+    } catch (error) {
+      await supabase.from("wfilemanager_setup_otp_challenges").delete().eq("instance_key", instanceKey);
+      throw error;
+    }
+    await rateRecord("pro_setup_otp", `${instanceKey}:${email}`, ip, true);
+    return json({ success: true, expiresInSeconds: 600 });
+  }
+
+  const code = String(body.code || "").replace(/\s/g, "");
+  if (!/^\d{6}$/.test(code)) return json({ error: "Enter the 6-digit verification code." }, 400);
+  const { data: challenge, error } = await supabase
+    .from("wfilemanager_setup_otp_challenges")
+    .select("instance_key,email,code_hash,expires_at,attempts,verified_at,consumed_at")
+    .eq("instance_key", instanceKey)
+    .eq("email", email)
+    .maybeSingle();
+  if (error) throw error;
+  if (!challenge || challenge.consumed_at || challenge.verified_at || new Date(challenge.expires_at).getTime() <= Date.now())
+    return json({ error: "The verification code is invalid or expired. Request a new code." }, 400);
+  if (Number(challenge.attempts) >= 5) return json({ error: "Too many incorrect codes. Request a new code." }, 429);
+  if ((await sha256(code)) !== challenge.code_hash) {
+    await supabase.from("wfilemanager_setup_otp_challenges").update({ attempts: Number(challenge.attempts) + 1, updated_at: new Date().toISOString() }).eq("instance_key", instanceKey);
+    return json({ error: "The verification code is incorrect." }, 400);
+  }
+  await supabase.from("wfilemanager_setup_otp_challenges").update({ verified_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("instance_key", instanceKey);
+  return json({ success: true, verified: true });
+}
+
 async function passwordHash(password: string, saltHex: string, iterations = 210000) {
   const pairs = saltHex.match(/.{1,2}/g);
   if (!pairs) throw new Error("Invalid password salt");
@@ -148,8 +241,11 @@ Deno.serve(async (request: Request) => {
       .trim()
       .toLowerCase();
     const activationToken = String(body.activationToken || "").trim();
+    const action = String(body.action || "setup");
 
     if (!instanceKey) return json({ error: "Installation identity is missing" }, 400);
+    if (action === "send-otp" || action === "verify-otp")
+      return await setupOtpAction(action, instanceKey, body, ipAddress);
 
     const rate = await rateCheck("pro_setup", instanceKey, ipAddress);
     if (rate.allowed === false) {
@@ -190,6 +286,23 @@ Deno.serve(async (request: Request) => {
       return json({ error: "The Pro heartbeat credential is invalid" }, 400);
     }
 
+    const email = normalizeEmail(body.email);
+    if (!validEmail(email)) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
+      return json({ error: "A verified administrator email is required for Pro setup." }, 400);
+    }
+    const { data: verifiedOtp, error: otpError } = await supabase
+      .from("wfilemanager_setup_otp_challenges")
+      .select("email,verified_at,consumed_at,expires_at")
+      .eq("instance_key", instanceKey)
+      .eq("email", email)
+      .maybeSingle();
+    if (otpError) throw otpError;
+    if (!verifiedOtp?.verified_at || verifiedOtp.consumed_at || new Date(verifiedOtp.expires_at).getTime() <= Date.now()) {
+      await rateRecord("pro_setup", instanceKey, ipAddress, false);
+      return json({ error: "Verify the administrator email code before completing setup." }, 400);
+    }
+
     const salt = randomHex(16);
     const iterations = 210000;
     const permissions = [
@@ -228,7 +341,7 @@ Deno.serve(async (request: Request) => {
       p_hostname: body.hostname ? String(body.hostname) : "",
       p_base_url: body.baseUrl ? String(body.baseUrl) : "",
       p_username: username,
-      p_email: body.email ? String(body.email).trim().toLowerCase() : "",
+      p_email: email,
       p_display_name: displayName,
       p_password_hash: await passwordHash(password, salt, iterations),
       p_password_salt: salt,
@@ -245,6 +358,12 @@ Deno.serve(async (request: Request) => {
       const mapped = setupError(error.message);
       return json({ error: mapped.error }, mapped.status);
     }
+
+    await supabase
+      .from("wfilemanager_setup_otp_challenges")
+      .update({ consumed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("instance_key", instanceKey)
+      .eq("email", email);
 
     await rateRecord("pro_setup", instanceKey, ipAddress, true);
     return json(data, 201);

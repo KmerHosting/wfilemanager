@@ -8,9 +8,10 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { CircleCheck, CreditCard, Server, User } from "lucide-react";
+import { CircleCheck, CreditCard, Mail, Server, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { sendSetupOtp, verifySetupOtp } from "@/lib/setup-api";
 import {
   ADMIN_PASSWORD_POLICY_TEXT,
   administratorPasswordError,
@@ -26,6 +27,7 @@ const IS_PRO = import.meta.env.VITE_WFILEMANAGER_DATABASE_MODE !== "sqlite";
 const STEPS = [
   { key: "welcome", label: "Welcome", icon: Server },
   { key: "account", label: "Administrator", icon: User },
+  { key: "otp", label: "Email verification", icon: Mail },
   { key: "review", label: "Review", icon: CircleCheck },
 ] as const;
 
@@ -34,6 +36,10 @@ function Setup() {
   const auth = useAuth();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "KmerHosting Administrator",
@@ -51,6 +57,9 @@ function Setup() {
     IS_PRO && form.activationToken.trim().length < 12
       ? "Paid Pro licence key required. Open your customer dashboard or contact support@kmerhosting.com."
       : null;
+  const emailError = IS_PRO && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+    ? "A valid administrator email is required for verification."
+    : null;
 
   useEffect(() => {
     if (!auth.loading && auth.user) nav({ to: "/" });
@@ -62,6 +71,7 @@ function Setup() {
     form.username.trim().length >= 3 &&
     !administratorPasswordError(form.password) &&
     form.password === form.confirm &&
+    (!IS_PRO || !emailError) &&
     (!IS_PRO || form.activationToken.trim().length >= 12),
   );
 
@@ -142,12 +152,13 @@ function Setup() {
             />
           </div>
           <div className="grid gap-1.5">
-            <Label>Email (optional)</Label>
+            <Label>{IS_PRO ? "Administrator email" : "Email (optional)"}</Label>
             <Input
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
+            {IS_PRO && emailError && <p className="text-xs text-destructive">{emailError}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
@@ -177,6 +188,74 @@ function Setup() {
             {passwordError || confirmationError || ADMIN_PASSWORD_POLICY_TEXT}
           </p>
         </div>
+      )}
+
+      {current.key === "otp" && (
+        <Card>
+          <CardContent className="space-y-4 pt-6 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <Mail className="h-4 w-4 text-primary" />
+              Verify your administrator email
+            </div>
+            <p className="text-muted-foreground">
+              We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>.
+              Enter it here to continue setup. The code expires in 10 minutes.
+            </p>
+            <Input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              className="text-center font-mono text-xl tracking-[0.5em]"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={otpBusy}
+                onClick={async () => {
+                  setOtpBusy(true);
+                  setError(null);
+                  try {
+                    await sendSetupOtp(form.email.trim());
+                    setOtpSent(true);
+                    setOtpVerified(false);
+                    setOtpCode("");
+                    toast.success("A new verification code was sent.");
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Unable to send verification code");
+                  } finally {
+                    setOtpBusy(false);
+                  }
+                }}
+              >
+                {otpSent ? "Resend code" : "Send code"}
+              </Button>
+              <Button
+                type="button"
+                disabled={otpBusy || otpCode.length !== 6 || otpVerified}
+                onClick={async () => {
+                  setOtpBusy(true);
+                  setError(null);
+                  try {
+                    await verifySetupOtp(form.email.trim(), otpCode);
+                    setOtpVerified(true);
+                    toast.success("Email verified.");
+                    setStep((s) => s + 1);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Invalid verification code");
+                  } finally {
+                    setOtpBusy(false);
+                  }
+                }}
+              >
+                {otpBusy ? "Verifying…" : "Verify and continue"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {current.key === "review" && (
@@ -212,7 +291,27 @@ function Setup() {
         >
           Back
         </Button>
-        {step < STEPS.length - 1 ? (
+        {current.key === "account" ? (
+          <Button
+            disabled={!accountValid || otpBusy}
+            onClick={async () => {
+              setOtpBusy(true);
+              setError(null);
+              try {
+                await sendSetupOtp(form.email.trim());
+                setOtpSent(true);
+                setOtpVerified(false);
+                setStep((s) => s + 1);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Unable to send verification code");
+              } finally {
+                setOtpBusy(false);
+              }
+            }}
+          >
+            {otpBusy ? "Sending code…" : "Continue to email verification"}
+          </Button>
+        ) : current.key === "otp" ? null : step < STEPS.length - 1 ? (
           <Button
             disabled={current.key === "account" && !accountValid}
             onClick={() => setStep((s) => s + 1)}
@@ -221,7 +320,7 @@ function Setup() {
           </Button>
         ) : (
           <Button
-            disabled={submitting || !accountValid}
+            disabled={submitting || !accountValid || (IS_PRO && !otpVerified)}
             onClick={async () => {
               setSubmitting(true);
               setError(null);
