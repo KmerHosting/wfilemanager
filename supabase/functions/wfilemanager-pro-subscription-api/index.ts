@@ -147,6 +147,10 @@ function providerRefFrom(payload: Record<string, unknown>) {
       "transactionId",
       "payment_id",
       "paymentId",
+      "transaction.uuid",
+      "transaction.transaction_uuid",
+      "transaction.reference",
+      "transaction.transaction_id",
       "data.transaction_uuid",
       "data.uuid",
       "data.reference",
@@ -165,6 +169,11 @@ function invoiceFromPayload(payload: Record<string, unknown>) {
       "invoiceId",
       "order_reference",
       "orderReference",
+      "transaction.merchant_invoice_id",
+      "transaction.merchantInvoiceId",
+      "transaction.idempotency_key",
+      "transaction.invoice_id",
+      "transaction.order_reference",
       "data.merchant_invoice_id",
       "data.merchantInvoiceId",
       "data.idempotency_key",
@@ -179,6 +188,8 @@ function statusFromPayload(payload: Record<string, unknown>) {
       "status",
       "payment_status",
       "paymentStatus",
+      "transaction.status",
+      "transaction.payment_status",
       "data.status",
       "data.payment_status",
     ]),
@@ -186,7 +197,14 @@ function statusFromPayload(payload: Record<string, unknown>) {
 }
 function amountFromPayload(payload: Record<string, unknown>) {
   const amount = Number(
-    pick(payload, ["amount", "paid_amount", "data.amount", "data.paid_amount"]),
+    pick(payload, [
+      "amount",
+      "paid_amount",
+      "transaction.amount",
+      "transaction.paid_amount",
+      "data.amount",
+      "data.paid_amount",
+    ]),
   );
   return Number.isFinite(amount) ? amount : null;
 }

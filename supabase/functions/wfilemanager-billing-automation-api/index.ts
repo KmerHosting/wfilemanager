@@ -77,6 +77,8 @@ function providerStatus(payload: Record<string, unknown>) {
       "status",
       "payment_status",
       "paymentStatus",
+      "transaction.status",
+      "transaction.payment_status",
       "data.status",
       "data.payment_status",
     ]),
@@ -84,9 +86,54 @@ function providerStatus(payload: Record<string, unknown>) {
 }
 function providerAmount(payload: Record<string, unknown>) {
   const amount = Number(
-    pick(payload, ["amount", "paid_amount", "data.amount", "data.paid_amount"]),
+    pick(payload, [
+      "amount",
+      "paid_amount",
+      "transaction.amount",
+      "transaction.paid_amount",
+      "data.amount",
+      "data.paid_amount",
+    ]),
   );
   return Number.isFinite(amount) ? amount : null;
+}
+function providerCurrency(payload: Record<string, unknown>) {
+  return clean(
+    pick(payload, ["currency", "transaction.currency", "data.currency"]),
+  ).toUpperCase();
+}
+function providerInvoice(payload: Record<string, unknown>) {
+  return clean(
+    pick(payload, [
+      "merchant_invoice_id",
+      "invoice_id",
+      "idempotency_key",
+      "transaction.merchant_invoice_id",
+      "transaction.invoice_id",
+      "transaction.idempotency_key",
+      "data.merchant_invoice_id",
+      "data.invoice_id",
+      "data.idempotency_key",
+    ]),
+  );
+}
+function providerReference(payload: Record<string, unknown>) {
+  return clean(
+    pick(payload, [
+      "transaction_uuid",
+      "uuid",
+      "reference",
+      "transaction_id",
+      "transaction.uuid",
+      "transaction.transaction_uuid",
+      "transaction.reference",
+      "transaction.transaction_id",
+      "data.transaction_uuid",
+      "data.uuid",
+      "data.reference",
+      "data.transaction_id",
+    ]),
+  );
 }
 function paidStatus(status: string) {
   return [
@@ -342,16 +389,22 @@ async function reconcileTopups(config: Config) {
       ) {
         const payload = await checkPayment(config, topup.provider_reference);
         const amount = providerAmount(payload);
-        if (
+        const verified =
           paidStatus(providerStatus(payload)) &&
-          (amount === null || amount >= Number(topup.amount_xaf || 0))
-        ) {
+          amount !== null &&
+          Math.abs(amount - Number(topup.amount_xaf || 0)) <= 0.01 &&
+          providerCurrency(payload) === "XAF" &&
+          providerInvoice(payload) === clean(topup.topup_reference) &&
+          providerReference(payload) === clean(topup.provider_reference);
+        if (verified) {
           const paidAt = topup.paid_at || new Date().toISOString();
           await db
             .from("wfilemanager_wallet_topups")
             .update({ status: "paid", paid_at: paidAt, status_payload: payload })
             .eq("id", topup.id);
           topup = { ...topup, status: "paid", paid_at: paidAt };
+        } else if (paidStatus(providerStatus(payload))) {
+          throw new Error("CamerPay payment confirmation does not match this top-up");
         }
       }
       if (topup.status === "paid" && !topup.credited_at) {

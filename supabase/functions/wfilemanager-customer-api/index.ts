@@ -160,6 +160,10 @@ function providerReference(payload: Record<string, unknown>) {
       "transaction_id",
       "transactionId",
       "payment_id",
+      "transaction.uuid",
+      "transaction.transaction_uuid",
+      "transaction.reference",
+      "transaction.transaction_id",
       "data.transaction_uuid",
       "data.uuid",
       "data.reference",
@@ -173,6 +177,8 @@ function providerStatus(payload: Record<string, unknown>) {
       "status",
       "payment_status",
       "paymentStatus",
+      "transaction.status",
+      "transaction.payment_status",
       "data.status",
       "data.payment_status",
     ]),
@@ -180,7 +186,14 @@ function providerStatus(payload: Record<string, unknown>) {
 }
 function providerAmount(payload: Record<string, unknown>) {
   const number = Number(
-    pick(payload, ["amount", "paid_amount", "data.amount", "data.paid_amount"]),
+    pick(payload, [
+      "amount",
+      "paid_amount",
+      "transaction.amount",
+      "transaction.paid_amount",
+      "data.amount",
+      "data.paid_amount",
+    ]),
   );
   return Number.isFinite(number) ? number : null;
 }

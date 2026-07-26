@@ -72,16 +72,40 @@ function pick(payload: Row, paths: string[]) {
 }
 function paymentStatus(payload: Row) {
   return clean(
-    pick(payload, ["status", "payment_status", "paymentStatus", "data.status", "data.payment_status"]),
+    pick(payload, [
+      "status",
+      "payment_status",
+      "paymentStatus",
+      "transaction.status",
+      "transaction.payment_status",
+      "data.status",
+      "data.payment_status",
+    ]),
   ).toLowerCase();
 }
 function paymentAmount(payload: Row) {
-  const value = Number(pick(payload, ["amount", "paid_amount", "data.amount", "data.paid_amount"]));
+  const value = Number(
+    pick(payload, [
+      "amount",
+      "paid_amount",
+      "transaction.amount",
+      "transaction.paid_amount",
+      "data.amount",
+      "data.paid_amount",
+    ]),
+  );
   return Number.isFinite(value) ? value : null;
 }
 function paymentCurrency(payload: Row) {
   return clean(
-    pick(payload, ["currency", "paid_currency", "data.currency", "data.paid_currency"]),
+    pick(payload, [
+      "currency",
+      "paid_currency",
+      "transaction.currency",
+      "transaction.paid_currency",
+      "data.currency",
+      "data.paid_currency",
+    ]),
   ).toUpperCase();
 }
 function paymentInvoice(payload: Row) {
@@ -92,6 +116,10 @@ function paymentInvoice(payload: Row) {
       "invoice_id",
       "invoiceId",
       "idempotency_key",
+      "transaction.merchant_invoice_id",
+      "transaction.merchantInvoiceId",
+      "transaction.invoice_id",
+      "transaction.idempotency_key",
       "data.merchant_invoice_id",
       "data.merchantInvoiceId",
       "data.invoice_id",
@@ -108,6 +136,10 @@ function paymentReference(payload: Row) {
       "transaction_id",
       "transactionId",
       "payment_id",
+      "transaction.uuid",
+      "transaction.transaction_uuid",
+      "transaction.reference",
+      "transaction.transaction_id",
       "data.transaction_uuid",
       "data.uuid",
       "data.reference",
