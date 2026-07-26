@@ -32,6 +32,7 @@ upload() {
 upload "$(jq -r '.releaseUrl | split("/") | last' "$ASSET_DIR/stable.json")" "application/gzip"
 upload install.sh text/x-shellscript
 upload update.sh text/x-shellscript
+upload uninstall.sh text/x-shellscript
 upload wfilemanager.service text/plain
 upload 'wfilemanager-updater@.service' text/plain
 upload migrate-existing-vps.sh text/x-shellscript
