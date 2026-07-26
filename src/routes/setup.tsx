@@ -313,7 +313,6 @@ function Setup() {
           </Button>
         ) : current.key === "otp" ? null : step < STEPS.length - 1 ? (
           <Button
-            disabled={current.key === "account" && !accountValid}
             onClick={() => setStep((s) => s + 1)}
           >
             Continue
