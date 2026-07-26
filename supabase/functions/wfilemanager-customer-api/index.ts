@@ -385,16 +385,12 @@ async function authenticate(request: Request) {
   return { customer, sessionId: String(data.id) };
 }
 function profile(body: Record<string, unknown>) {
-  const phoneCountryCode = clean(body.phoneCountryCode);
-  const phoneNumber = clean(body.phoneNumber);
-  const phone = phoneCountryCode || phoneNumber ? `${phoneCountryCode} ${phoneNumber}`.trim() : clean(body.phone);
+  const phone = clean(body.phone);
   return {
     email: normalizeEmail(body.email),
     password: clean(body.password),
     fullName: clean(body.fullName || body.name),
     phone: normalizePhone(phone),
-    phoneCountryCode,
-    phoneNumber,
     company: clean(body.company) || null,
     country: clean(body.country),
     billingAddress: clean(body.billingAddress || body.address),
@@ -409,8 +405,8 @@ function validateProfile(input: ReturnType<typeof profile>, requirePassword = fa
     if (error) return error;
   }
   if (input.fullName.length < 2) return "Full name is required";
-  if (requirePassword && (!input.phoneCountryCode.startsWith("+") || !input.phoneNumber))
-    return "Country code must start with + and a phone number is required";
+  if (requirePassword && (!input.phone || !input.phone.startsWith("+")))
+    return "Enter the complete phone number with the + country prefix";
   if (input.country.length < 2) return "Country is required";
   if (input.billingAddress.length < 4) return "Billing address is required";
   return "";
