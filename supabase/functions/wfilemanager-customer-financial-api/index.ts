@@ -665,7 +665,31 @@ async function topupStatus(config: Config, customer: Row, url: URL) {
   if (!found) return json({ error: "Top-up not found" }, 404);
   let row = found;
   if (!["credited", "failed", "cancelled"].includes(row.status)) {
-    const verification = await verifyPayment(config, row, "topup_reference");
+    let verification;
+    try {
+      verification = await verifyPayment(config, row, "topup_reference");
+    } catch (value) {
+      const message = value instanceof Error ? value.message : "Payment confirmation is pending";
+      const { error: updateError } = await db
+        .from("wfilemanager_wallet_topups")
+        .update({ reconciliation_error: message })
+        .eq("id", row.id);
+      if (updateError) throw updateError;
+      const { data: account, error: accountError } = await db
+        .from("wfilemanager_customer_accounts")
+        .select("balance_usd")
+        .eq("id", customer.id)
+        .single();
+      if (accountError) throw accountError;
+      return json({
+        reference: row.topup_reference,
+        status: row.status,
+        amountUsd: money(row.amount_usd),
+        paymentUrl: row.provider_payment_url,
+        balanceUsd: money(account?.balance_usd),
+        confirmationPending: true,
+      });
+    }
     if (verification.paid) {
       const paidAt = row.paid_at || new Date().toISOString();
       await db
