@@ -385,11 +385,14 @@ async function authenticate(request: Request) {
   return { customer, sessionId: String(data.id) };
 }
 function profile(body: Record<string, unknown>) {
+  const phoneCountryCode = clean(body.phoneCountryCode);
+  const phoneNumber = clean(body.phoneNumber);
+  const phone = phoneCountryCode || phoneNumber ? `${phoneCountryCode} ${phoneNumber}`.trim() : clean(body.phone);
   return {
     email: normalizeEmail(body.email),
     password: clean(body.password),
     fullName: clean(body.fullName || body.name),
-    phone: normalizePhone(clean(body.phone)),
+    phone: normalizePhone(phone),
     company: clean(body.company) || null,
     country: clean(body.country),
     billingAddress: clean(body.billingAddress || body.address),
