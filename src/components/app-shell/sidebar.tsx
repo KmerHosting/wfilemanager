@@ -75,7 +75,12 @@ const NAV: { label: string; items: Item[] }[] = [
       { to: "/docs", label: "Documentation", icon: BookOpen },
       { to: "/about", label: "About & updates", icon: Info },
       { href: "mailto:support@kmerhosting.com", label: "Support", icon: LifeBuoy },
-      { href: "https://wfilemanager.kmerhosting.com", label: "Website", icon: Globe2, newTab: true },
+      {
+        href: "https://wfilemanager.kmerhosting.com",
+        label: "Website",
+        icon: Globe2,
+        newTab: true,
+      },
     ],
   },
 ];
