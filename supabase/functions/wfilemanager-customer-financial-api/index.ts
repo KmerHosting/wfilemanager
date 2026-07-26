@@ -170,6 +170,11 @@ async function fetchJson(url: string, init: RequestInit = {}) {
     clearTimeout(timer);
   }
 }
+function providerError(payload: Row, status: number) {
+  const detail = payload.error ?? payload.message ?? payload.detail ?? payload.errors;
+  const message = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : "";
+  return message || `CamerPay rejected the request (${status})`;
+}
 
 async function loadConfig(): Promise<Config> {
   const { data, error } = await db
@@ -267,9 +272,9 @@ async function initiatePayment(
     body: JSON.stringify(requestBody),
   });
   if (!response.ok)
-    throw new Error(
-      clean(payload.error || payload.message) || `CamerPay failed (${response.status})`,
-    );
+    throw Object.assign(new Error(providerError(payload, response.status)), {
+      status: response.status >= 400 && response.status < 500 ? response.status : 502,
+    });
   const url = paymentLink(payload);
   const providerReference = paymentReference(payload);
   if (!/^https:\/\//i.test(url)) throw new Error("CamerPay did not return a secure payment link");
