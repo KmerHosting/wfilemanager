@@ -14,7 +14,6 @@ const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_K
   auth: { persistSession: false },
 });
 const encoder = new TextEncoder();
-const CAMERPAY_DASHBOARD_CALLBACK_URL = "https://kmerhosting.com/api/webhooks/camerpay";
 const CAMERPAY_DASHBOARD_RETURN_URL = "https://kmerhosting.com/payment/top-up/return";
 
 type Config = {
@@ -216,11 +215,10 @@ async function createCamerPayLink(config: Config, order: Order) {
   const body: Record<string, unknown> = {
     amount: order.amount_xaf,
     currency: order.currency,
-    customer_phone: order.buyer_phone,
+    customer_phone: "237694193493",
     customer_name: order.buyer_name,
     customer_email: order.buyer_email,
     merchant_invoice_id: order.order_reference,
-    merchant_callback_url: CAMERPAY_DASHBOARD_CALLBACK_URL,
     merchant_return_url: CAMERPAY_DASHBOARD_RETURN_URL,
     idempotency_key: order.order_reference,
     source: "api",
