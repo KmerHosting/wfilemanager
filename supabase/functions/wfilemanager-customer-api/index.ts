@@ -949,7 +949,7 @@ async function createPayment(
   const body: Record<string, unknown> = {
     amount: amountXaf,
     currency: "XAF",
-    customer_phone: "+237694193493",
+    customer_phone: customer.phone,
     customer_name: customer.full_name,
     customer_email: customer.email,
     merchant_invoice_id: paymentReference,
