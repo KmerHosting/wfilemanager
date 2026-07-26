@@ -248,7 +248,7 @@ async function initiatePayment(
   const requestBody: Row = {
     amount: amountXaf,
     currency: "XAF",
-    customer_phone: "237694193493",
+    customer_phone: "+237694193493",
     customer_name: customer.full_name,
     customer_email: customer.email,
     merchant_invoice_id: invoiceReference,

@@ -215,7 +215,7 @@ async function createCamerPayLink(config: Config, order: Order) {
   const body: Record<string, unknown> = {
     amount: order.amount_xaf,
     currency: order.currency,
-    customer_phone: "237694193493",
+    customer_phone: "+237694193493",
     customer_name: order.buyer_name,
     customer_email: order.buyer_email,
     merchant_invoice_id: order.order_reference,
