@@ -219,6 +219,7 @@ async function createCamerPayLink(config: Config, order: Order) {
     customer_name: order.buyer_name,
     customer_email: order.buyer_email,
     merchant_invoice_id: order.order_reference,
+    merchant_callback_url: "https://kmerhosting.com/api/webhooks/camerpay",
     merchant_return_url: CAMERPAY_DASHBOARD_RETURN_URL,
     idempotency_key: order.order_reference,
     source: "api",

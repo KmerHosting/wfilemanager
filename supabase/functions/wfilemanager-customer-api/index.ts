@@ -957,6 +957,7 @@ async function createPayment(
     customer_name: customer.full_name,
     customer_email: customer.email,
     merchant_invoice_id: paymentReference,
+    merchant_callback_url: "https://kmerhosting.com/api/webhooks/camerpay",
     merchant_return_url: `${config.siteUrl}/account?payment=returned&reference=${encodeURIComponent(paymentReference)}`,
     idempotency_key: paymentReference,
     source: "api",
