@@ -117,9 +117,6 @@ function normalizePhone(value: string) {
   if (digits.length === 9 && digits.startsWith("6")) return `237${digits}`;
   return digits;
 }
-function validCameroonPhone(value: string) {
-  return /^2376\d{8}$/.test(value);
-}
 function reference(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${randomHex(8).toUpperCase()}`;
 }
@@ -409,8 +406,6 @@ function validateProfile(input: ReturnType<typeof profile>, requirePassword = fa
     if (error) return error;
   }
   if (input.fullName.length < 2) return "Full name is required";
-  if (input.phone && !validCameroonPhone(input.phone))
-    return "Enter a valid Cameroon mobile number, for example +237 690 00 00 00";
   if (input.country.length < 2) return "Country is required";
   if (input.billingAddress.length < 4) return "Billing address is required";
   return "";
