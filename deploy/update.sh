@@ -43,7 +43,7 @@ state() {
     --arg updatedAt "$(now)" \
     --arg error "$error" \
     --arg startedAt "${STARTED_AT:-$(now)}" \
-    '{status:$status,progress:$progress,message:$message,currentVersion:($currentVersion|select(length>0)),targetVersion:($targetVersion|select(length>0)),previousVersion:($previousVersion|select(length>0)),startedAt:$startedAt,updatedAt:$updatedAt,error:($error|select(length>0))}' \
+    '{status:$status,progress:$progress,message:$message,currentVersion:($currentVersion | if length > 0 then . else null end),targetVersion:($targetVersion | if length > 0 then . else null end),previousVersion:($previousVersion | if length > 0 then . else null end),startedAt:$startedAt,updatedAt:$updatedAt,error:($error | if length > 0 then . else null end)}' \
     > "$STATE_FILE.tmp"
   mv "$STATE_FILE.tmp" "$STATE_FILE"
   chmod 644 "$STATE_FILE"
