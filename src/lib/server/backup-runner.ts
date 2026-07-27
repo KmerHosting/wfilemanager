@@ -54,14 +54,21 @@ async function reportJob(jobId: string, status: "completed" | "failed", error?: 
 }
 
 export async function startRemoteBackup(source: unknown, jobId: unknown, signedUrl: unknown) {
-  const sourcePath = String(source || "").trim();
+  const sourcePaths = (Array.isArray(source) ? source : [source])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
   const id = String(jobId || "").trim();
   const url = String(signedUrl || "").trim();
-  if (!sourcePath.startsWith("/") || !/^[0-9a-f-]{36}$/i.test(id) || !url.startsWith("https://"))
+  if (
+    !sourcePaths.length ||
+    sourcePaths.some((item) => !item.startsWith("/")) ||
+    !/^[0-9a-f-]{36}$/i.test(id) ||
+    !url.startsWith("https://")
+  )
     throw new LocalApiError(400, "Invalid backup worker request");
   const worker = await resolveWorker();
   await ensureTransferKey();
-  const child = spawn(worker, ["upload", sourcePath, id, url], {
+  const child = spawn(worker, ["upload", id, url, ...sourcePaths], {
     detached: true,
     stdio: ["ignore", "ignore", "pipe"],
   });

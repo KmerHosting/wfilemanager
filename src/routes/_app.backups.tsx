@@ -83,7 +83,7 @@ function Backups() {
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          source: data?.sources[0]?.source_path,
+          source: data?.sources.map((source) => source.source_path),
           jobId: queued.job.id,
           signedUrl: transfer.signedUrl,
         }),

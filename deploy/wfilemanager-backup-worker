@@ -23,15 +23,25 @@ safe_source() {
   done < <(find -P "$source" -xdev -type f -print0)
 }
 archive() {
-  local source="$1" job="$2" output="$STAGING_ROOT/$job.tar.gz"
-  safe_source "$source"; umask 077
-  tar --create --gzip --file "$output" --directory "$(dirname "$source")" -- "$(basename "$source")"
-  printf '%s\n' "$output"
+  local job="$1" output="$STAGING_ROOT/$job.tar.gz"
+  shift
+  local source
+  local -a entries=()
+  (( $# > 0 )) || fail "At least one backup source is required"
+  for source in "$@"; do
+    safe_source "$source"
+    entries+=("$(printf '%s' "$source" | sed 's#^/##')")
+  done
+  umask 077
+  tar --create --gzip --file "$output" --directory / -- "${entries[@]}"
+  printf '%s
+' "$output"
 }
 upload() {
-  local source="$1" job="$2" signed_url="$3" archive_file encrypted
+  local job="$1" signed_url="$2" archive_file encrypted
+  shift 2
   [[ "$signed_url" == https://* ]] || fail "A HTTPS signed upload URL is required"
-  require_key; archive_file="$(archive "$source" "$job")"; encrypted="$STAGING_ROOT/$job.tar.gz.enc"
+  require_key; archive_file="$(archive "$job" "$@")"; encrypted="$STAGING_ROOT/$job.tar.gz.enc"
   openssl enc -aes-256-cbc -pbkdf2 -iter 210000 -salt -in "$archive_file" -out "$encrypted" -pass file:"$KEY_FILE"
   curl --fail --silent --show-error --retry 3 --retry-all-errors --upload-file "$encrypted" "$signed_url"
   sha256sum "$encrypted" | awk '{print $1}'
@@ -49,9 +59,9 @@ restore() {
   printf '%s\n' "$target"
 }
 case "$1" in
- validate) safe_source "$2" ;;
- archive) archive "$2" "$3" ;;
- upload) upload "$2" "$3" "$4" ;;
+ validate) shift; for source in "$@"; do safe_source "$source"; done ;;
+ archive) shift; archive "$@" ;;
+ upload) shift; upload "$@" ;;
  restore) restore "$2" "$3" ;;
  restore-root) printf '%s\n' "$RESTORE_ROOT" ;;
  *) fail "Usage: worker validate|archive|upload|restore|restore-root" ;;
