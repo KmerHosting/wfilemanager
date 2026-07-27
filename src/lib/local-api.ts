@@ -251,7 +251,9 @@ export function backgroundUploadTasks() {
 
 export function subscribeBackgroundUploads(listener: () => void) {
   backgroundUploadListeners.add(listener);
-  return () => backgroundUploadListeners.delete(listener);
+  return () => {
+    backgroundUploadListeners.delete(listener);
+  };
 }
 
 export function cancelBackgroundUpload(id: string) {
