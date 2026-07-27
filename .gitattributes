@@ -1,4 +1,6 @@
 *.sh text eol=lf
 *.service text eol=lf
+deploy/wfilemanager-heartbeat text eol=lf
+*.timer text eol=lf
 release/stable.json text eol=lf
 release/SHA256SUMS text eol=lf
