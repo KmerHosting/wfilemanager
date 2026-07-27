@@ -65,7 +65,7 @@ const edition = IS_PRO
       badge: "Managed",
       backend: "KmerHosting Cloud",
       price: "$100/year",
-      storage: "5 GB included · 20 GB backup traffic/month",
+      storage: "5 GB included · 20 GB monthly transfer traffic",
       backup: "App data backup + recovery",
       excludes: "Server files and databases",
     }

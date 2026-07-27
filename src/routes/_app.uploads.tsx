@@ -153,7 +153,7 @@ function Uploads() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold tracking-tight">Upload files</h1>
         <p className="text-sm text-muted-foreground">
-          Choose a server folder visually, then upload files up to 20 GB with progress and
+          Choose a server folder visually, then upload files up to 5 GB per file with progress and
           cancellation.
         </p>
       </div>
