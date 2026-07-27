@@ -138,6 +138,11 @@ export const Route = createFileRoute("/api/local")({
               job: await operations.getOperationJob(user.id, url.searchParams.get("id")),
             });
           }
+          if (action === "jobs") {
+            const user = await auth.requireUser(request);
+            const operations = await operationRuntime();
+            return json({ jobs: await operations.listOperationJobs(user.id) });
+          }
           if (action === "list") {
             const user = await auth.requirePermission(request, "browse");
             const allowedTarget = await policy.assertDirectoryPathAllowed(user, target);

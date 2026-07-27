@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  ListTodo,
   FolderTree,
   UploadCloud,
   Trash2,
@@ -45,6 +46,7 @@ const NAV: { label: string; items: Item[] }[] = [
       { to: "/", label: "Overview", icon: LayoutDashboard },
       { to: "/explorer", label: "File Explorer", icon: FolderTree, permission: "browse" },
       { to: "/uploads", label: "Uploads", icon: UploadCloud, permission: "upload" },
+      { to: "/tasks", label: "Background tasks", icon: ListTodo },
       {
         to: "/trash",
         label: "Trash",

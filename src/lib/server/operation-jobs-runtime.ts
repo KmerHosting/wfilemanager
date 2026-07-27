@@ -81,14 +81,7 @@ let initialized: Promise<void> | null = null;
 let persistQueue = Promise.resolve();
 
 function publicJob(job: PersistentOperationJob) {
-  const {
-    ownerUserId: _ownerUserId,
-    source: _source,
-    destinationDirectory: _destinationDirectory,
-    createdAt: _createdAt,
-    updatedAt: _updatedAt,
-    ...value
-  } = job;
+  const { ownerUserId: _ownerUserId, ...value } = job;
   return { ...value, cancellable: !["source_cleanup", "done"].includes(job.phase) };
 }
 
@@ -411,6 +404,15 @@ export async function getOperationJob(ownerUserId: string, idInput: unknown) {
   const job = jobs.get(String(idInput || ""));
   if (!job || job.ownerUserId !== ownerUserId) throw new LocalApiError(404, "Operation not found");
   return publicJob(job);
+}
+
+export async function listOperationJobs(ownerUserId: string) {
+  await initialize();
+  return [...jobs.values()]
+    .filter((job) => job.ownerUserId === ownerUserId)
+    .sort((left, right) => right.updatedAt - left.updatedAt)
+    .slice(0, 100)
+    .map(publicJob);
 }
 
 export async function cancelOperationJob(ownerUserId: string, idInput: unknown) {

@@ -62,6 +62,26 @@ export interface OperationJob {
   currentItem?: string;
   error?: string;
   result?: Record<string, unknown>;
+  source: string;
+  destinationDirectory?: string;
+  createdAt: number;
+  updatedAt: number;
+  cancellable: boolean;
+}
+
+export interface BackgroundUploadTask {
+  id: string;
+  type: "upload";
+  status: "running" | "cancelling" | "cancelled" | "completed" | "failed";
+  progress: number;
+  loaded: number;
+  total: number;
+  destination: string;
+  files: string[];
+  currentFile?: string;
+  error?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface PtyOutput {
@@ -199,6 +219,48 @@ function notifySilently(data: {
   void wfilemanagerApi.createNotification(data).catch(() => undefined);
 }
 
+type ManagedUploadTask = BackgroundUploadTask & { controller: AbortController };
+
+const backgroundUploads = new Map<string, ManagedUploadTask>();
+const backgroundUploadListeners = new Set<() => void>();
+
+function backgroundUploadId() {
+  return globalThis.crypto?.randomUUID?.() || `upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function publishBackgroundUploads() {
+  for (const listener of backgroundUploadListeners) listener();
+}
+
+function updateBackgroundUpload(id: string, patch: Partial<BackgroundUploadTask>) {
+  const task = backgroundUploads.get(id);
+  if (!task) return;
+  Object.assign(task, patch, { updatedAt: Date.now() });
+  publishBackgroundUploads();
+}
+
+export function backgroundUploadTasks() {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [id, task] of backgroundUploads)
+    if (task.updatedAt < cutoff && task.status !== "running" && task.status !== "cancelling")
+      backgroundUploads.delete(id);
+  return [...backgroundUploads.values()]
+    .map(({ controller: _controller, ...task }) => task)
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+}
+
+export function subscribeBackgroundUploads(listener: () => void) {
+  backgroundUploadListeners.add(listener);
+  return () => backgroundUploadListeners.delete(listener);
+}
+
+export function cancelBackgroundUpload(id: string) {
+  const task = backgroundUploads.get(id);
+  if (!task || task.status !== "running") return;
+  updateBackgroundUpload(id, { status: "cancelling" });
+  task.controller.abort();
+}
+
 function uploadSingleFile(
   path: string,
   file: File,
@@ -259,39 +321,74 @@ async function uploadWithProgress(
 ) {
   const values = Array.from(files);
   const total = values.reduce((sum, file) => sum + file.size, 0);
+  const controller = new AbortController();
+  const taskId = backgroundUploadId();
+  const relayAbort = () => controller.abort();
+  signal?.addEventListener("abort", relayAbort, { once: true });
+  backgroundUploads.set(taskId, {
+    id: taskId,
+    type: "upload",
+    status: "running",
+    progress: 0,
+    loaded: 0,
+    total,
+    destination: path,
+    files: values.map((file) => file.name),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    controller,
+  });
+  publishBackgroundUploads();
   let completed = 0;
   const uploaded: LocalFileEntry[] = [];
   onProgress?.({ loaded: 0, total, percent: 0 });
 
-  for (const file of values) {
-    if (signal?.aborted) throw abortError("Upload cancelled");
-    const entry = await uploadSingleFile(
-      path,
-      file,
-      (currentFileLoaded) => {
-        const loaded = Math.min(total, completed + currentFileLoaded);
-        onProgress?.({
-          loaded,
-          total,
-          percent: total ? Math.min(100, Math.round((loaded / total) * 100)) : 100,
-          detail: file.name,
-        });
-      },
-      signal,
-    );
-    completed += file.size;
-    uploaded.push(entry);
-  }
+  try {
+    for (const file of values) {
+      if (controller.signal.aborted) throw abortError("Upload cancelled");
+      const entry = await uploadSingleFile(
+        path,
+        file,
+        (currentFileLoaded) => {
+          const loaded = Math.min(total, completed + currentFileLoaded);
+          const progress = {
+            loaded,
+            total,
+            percent: total ? Math.min(100, Math.round((loaded / total) * 100)) : 100,
+            detail: file.name,
+          };
+          onProgress?.(progress);
+          updateBackgroundUpload(taskId, {
+            loaded,
+            progress: progress.percent,
+            currentFile: file.name,
+          });
+        },
+        controller.signal,
+      );
+      completed += file.size;
+      uploaded.push(entry);
+    }
 
-  onProgress?.({ loaded: total, total, percent: 100 });
-  notifySilently({
-    title: "Upload completed",
-    message: `${values.length} file(s) uploaded to ${path}.`,
-    tone: "success",
-    link: `/explorer?path=${encodeURIComponent(path)}`,
-    source: "upload",
-  });
-  return { uploaded };
+    onProgress?.({ loaded: total, total, percent: 100 });
+    updateBackgroundUpload(taskId, { status: "completed", loaded: total, progress: 100 });
+    notifySilently({
+      title: "Upload completed",
+      message: `${values.length} file(s) uploaded to ${path}.`,
+      tone: "success",
+      link: `/explorer?path=${encodeURIComponent(path)}`,
+      source: "upload",
+    });
+    return { uploaded };
+  } catch (cause) {
+    updateBackgroundUpload(taskId, {
+      status: controller.signal.aborted ? "cancelled" : "failed",
+      error: cause instanceof Error ? cause.message : "Upload failed",
+    });
+    throw cause;
+  } finally {
+    signal?.removeEventListener("abort", relayAbort);
+  }
 }
 
 async function runJob(
@@ -404,7 +501,11 @@ export const localApi = {
     runJob("copy", source, destination, onProgress),
   move: (source: string, destination: string, onProgress?: (job: OperationJob) => void) =>
     runJob("move", source, destination, onProgress),
+  jobs: () => get<{ jobs: OperationJob[] }>("jobs"),
   cancelJob: (id: string) => post<{ job: OperationJob }>("job-cancel", { id }),
+  backgroundUploads: backgroundUploadTasks,
+  subscribeBackgroundUploads,
+  cancelBackgroundUpload,
   chmod: (path: string, mode: string) => post("chmod", { path, mode }),
   checksum: (path: string, algorithm: "sha256" | "sha512" = "sha256") =>
     post<{ path: string; algorithm: string; checksum: string }>("checksum", { path, algorithm }),
