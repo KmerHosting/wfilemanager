@@ -28,6 +28,7 @@ const endpoints = {
   users: `${PROJECT_URL}/functions/v1/wfilemanager-users-admin-api`,
   presence: `${PROJECT_URL}/functions/v1/wfilemanager-presence-api`,
   notifications: `${PROJECT_URL}/functions/v1/wfilemanager-notifications-api`,
+  backup: `${PROJECT_URL}/functions/v1/wfilemanager-backup-client-api`,
 } as const;
 
 type Scope = keyof typeof allowedActions;
@@ -41,6 +42,7 @@ const allowedActions = {
   users: new Set(["users"]),
   presence: new Set(["presence"]),
   notifications: new Set(["notifications"]),
+  backup: new Set(["status", "sources", "jobs", "cancel", "transfer-url"]),
 } as const;
 
 function json(body: unknown, status = 200, headers?: HeadersInit) {

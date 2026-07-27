@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  ArchiveRestore,
   ListTodo,
   FolderTree,
   UploadCloud,
@@ -47,6 +48,7 @@ const NAV: { label: string; items: Item[] }[] = [
       { to: "/explorer", label: "File Explorer", icon: FolderTree, permission: "browse" },
       { to: "/uploads", label: "Uploads", icon: UploadCloud, permission: "upload" },
       { to: "/tasks", label: "Background tasks", icon: ListTodo },
+      { to: "/backups", label: "Remote backups", icon: ArchiveRestore, adminOnly: true },
       {
         to: "/trash",
         label: "Trash",

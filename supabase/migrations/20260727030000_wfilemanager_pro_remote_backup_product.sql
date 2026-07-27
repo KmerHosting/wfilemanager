@@ -49,6 +49,8 @@ create table if not exists public.wfilemanager_backup_jobs (
   progress integer not null default 0 check (progress between 0 and 100),
   bytes_processed bigint not null default 0 check (bytes_processed >= 0),
   traffic_bytes bigint not null default 0 check (traffic_bytes >= 0),
+  retention_days integer not null default 30 check (retention_days between 1 and 365),
+  storage_bytes bigint not null default 0 check (storage_bytes >= 0),
   snapshot_id uuid references public.wfilemanager_backup_snapshots(id) on delete set null,
   error text,
   started_at timestamptz,
@@ -66,6 +68,8 @@ create table if not exists public.wfilemanager_backup_capacity_events (
   cycle_started_at timestamptz not null,
   cycle_ends_at timestamptz not null,
   status text not null default 'pending' check (status in ('pending','paid','failed','cancelled')),
+  grace_ends_at timestamptz,
+  delete_after_at timestamptz,
   idempotency_key text not null unique,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -94,6 +98,7 @@ revoke all on public.wfilemanager_backup_sources, public.wfilemanager_backup_job
 create or replace function public.wfilemanager_backup_consume_traffic(
   p_instance_id uuid,
   p_bytes bigint,
+  p_direction text,
   p_idempotency_key text
 )
 returns table(used_bytes bigint, quota_bytes bigint, blocked boolean)
@@ -101,6 +106,7 @@ language plpgsql security definer set search_path = public as $$
 declare v_instance public.wfilemanager_instances%rowtype;
 begin
   if p_bytes is null or p_bytes <= 0 or p_bytes > 21474836480 then raise exception 'invalid_backup_traffic'; end if;
+  if p_direction not in ('upload', 'restore') then raise exception 'invalid_backup_traffic_direction'; end if;
   select * into v_instance from public.wfilemanager_instances where id = p_instance_id for update;
   if not found then raise exception 'instance_not_found'; end if;
   if v_instance.backup_traffic_cycle_started_at + interval '1 month' <= now() then
@@ -120,9 +126,61 @@ begin
   update public.wfilemanager_instances set backup_traffic_used_bytes = backup_traffic_used_bytes + p_bytes,
     updated_at = now() where id = p_instance_id returning * into v_instance;
   insert into public.wfilemanager_backup_traffic_events(instance_id, bytes, direction, idempotency_key)
-    values (p_instance_id, p_bytes, 'upload', p_idempotency_key);
+    values (p_instance_id, p_bytes, p_direction, p_idempotency_key);
   return query select v_instance.backup_traffic_used_bytes, v_instance.backup_traffic_quota_bytes, false;
 end;
 $$;
 revoke all on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text) from public, anon, authenticated;
-grant execute on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text) to service_role;
+revoke all on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text,text) from public, anon, authenticated;
+grant execute on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text,text) to service_role;
+
+create or replace function public.wfilemanager_backup_charge_capacity(
+  p_instance_id uuid,
+  p_idempotency_key text
+)
+returns table(status text, balance_usd numeric, amount_usd numeric, grace_ends_at timestamptz, delete_after_at timestamptz)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_instance public.wfilemanager_instances%rowtype;
+  v_amount numeric(14,2);
+  v_debit record;
+  v_now timestamptz := now();
+begin
+  select * into v_instance from public.wfilemanager_instances where id = p_instance_id for update;
+  if not found then raise exception 'instance_not_found'; end if;
+  if v_instance.billing_customer_id is null then raise exception 'backup_billing_customer_missing'; end if;
+  v_amount := greatest(v_instance.backup_capacity_gb - 5, 0)::numeric * 1.00;
+  if v_amount = 0 then
+    update public.wfilemanager_instances set backup_billing_status = 'active', updated_at = v_now where id = v_instance.id;
+    return query select 'active'::text, null::numeric, v_amount, null::timestamptz, null::timestamptz;
+    return;
+  end if;
+  begin
+    select * into v_debit from public.wfilemanager_wallet_debit(
+      v_instance.billing_customer_id, v_amount, 'backup_capacity_debit', 'backup capacity', p_idempotency_key,
+      jsonb_build_object('instance_id', v_instance.id, 'capacity_gib', v_instance.backup_capacity_gb)
+    );
+    insert into public.wfilemanager_backup_capacity_events(
+      instance_id, customer_id, capacity_gb, amount_usd, cycle_started_at, cycle_ends_at, status, idempotency_key
+    ) values (
+      v_instance.id, v_instance.billing_customer_id, v_instance.backup_capacity_gb, v_amount,
+      coalesce(v_instance.backup_traffic_cycle_started_at, v_now),
+      coalesce(v_instance.backup_traffic_cycle_started_at, v_now) + interval '1 month', 'paid', p_idempotency_key
+    ) on conflict (idempotency_key) do nothing;
+    update public.wfilemanager_instances set backup_billing_status = 'active', updated_at = v_now where id = v_instance.id;
+    return query select 'active'::text, v_debit.balance_usd, v_amount, null::timestamptz, null::timestamptz;
+  exception when others then
+    insert into public.wfilemanager_backup_capacity_events(
+      instance_id, customer_id, capacity_gb, amount_usd, cycle_started_at, cycle_ends_at, status, grace_ends_at, delete_after_at, idempotency_key
+    ) values (
+      v_instance.id, v_instance.billing_customer_id, v_instance.backup_capacity_gb, v_amount,
+      coalesce(v_instance.backup_traffic_cycle_started_at, v_now), coalesce(v_instance.backup_traffic_cycle_started_at, v_now) + interval '1 month',
+      'failed', v_now + interval '7 days', v_now + interval '30 days', p_idempotency_key
+    ) on conflict (idempotency_key) do nothing;
+    update public.wfilemanager_instances set backup_billing_status = 'past_due', updated_at = v_now where id = v_instance.id;
+    return query select 'past_due'::text, null::numeric, v_amount, v_now + interval '7 days', v_now + interval '30 days';
+  end;
+end;
+$$;
+revoke all on function public.wfilemanager_backup_charge_capacity(uuid,text) from public, anon, authenticated;
+grant execute on function public.wfilemanager_backup_charge_capacity(uuid,text) to service_role;

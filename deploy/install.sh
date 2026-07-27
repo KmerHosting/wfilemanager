@@ -441,6 +441,7 @@ run_systemctl "while enabling wFileManager" enable wfilemanager.service
 
 CURRENT_RELEASE="$(readlink -f "$APP_ROOT/current")"
 install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-reset-admin-password" /usr/local/sbin/wfilemanager-reset-admin-password
+install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-backup-worker" /usr/local/sbin/wfilemanager-backup-worker
 install -m 700 "$CURRENT_RELEASE/deploy/uninstall.sh" /usr/local/sbin/wfilemanager-uninstall
 [[ -f "$CURRENT_RELEASE/deploy/wfilemanager-recovery-kit" ]] && install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-recovery-kit" /usr/local/sbin/wfilemanager-recovery-kit
 
