@@ -4,7 +4,7 @@ import { constants } from "node:fs";
 import { LocalApiError } from "@/lib/server/local-runtime";
 
 const worker =
-  process.env.WFILEMANAGER_BACKUP_WORKER || "/usr/local/bin/wfilemanager-backup-worker";
+  process.env.WFILEMANAGER_BACKUP_WORKER || "/usr/local/sbin/wfilemanager-backup-worker";
 export async function startRemoteBackup(source: unknown, jobId: unknown, signedUrl: unknown) {
   const sourcePath = String(source || "").trim();
   const id = String(jobId || "").trim();

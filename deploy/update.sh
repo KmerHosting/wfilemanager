@@ -16,7 +16,6 @@ SERVICE="${WFILEMANAGER_SERVICE:-wfilemanager.service}"
 HEALTH_URL="${WFILEMANAGER_HEALTH_URL:-http://127.0.0.1:${PORT:-1973}/api/health}"
 KEEP_RELEASES="${WFILEMANAGER_KEEP_RELEASES:-3}"
 ROOT_RESET_COMMAND="${WFILEMANAGER_ROOT_RESET_COMMAND:-/usr/local/sbin/wfilemanager-reset-admin-password}"
-install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-backup-worker" /usr/local/sbin/wfilemanager-backup-worker
 UNINSTALL_COMMAND="${WFILEMANAGER_UNINSTALL_COMMAND:-/usr/local/sbin/wfilemanager-uninstall}"
 RECOVERY_KIT_COMMAND="${WFILEMANAGER_RECOVERY_KIT_COMMAND:-/usr/local/sbin/wfilemanager-recovery-kit}"
 HEARTBEAT_COMMAND="${WFILEMANAGER_HEARTBEAT_COMMAND:-/usr/local/lib/wfilemanager/heartbeat.sh}"
@@ -24,6 +23,11 @@ HEARTBEAT_SERVICE="wfilemanager-heartbeat.service"
 HEARTBEAT_TIMER="wfilemanager-heartbeat.timer"
 
 mkdir -p "$RELEASES_DIR" "$STATE_DIR" "$CONFIG_DIR" /usr/local/lib/wfilemanager
+if [[ ! -s "$CONFIG_DIR/backup-transfer.key" ]]; then
+  umask 077
+  openssl rand -base64 48 >"$CONFIG_DIR/backup-transfer.key"
+fi
+chmod 600 "$CONFIG_DIR/backup-transfer.key"
 chmod 700 "$STATE_DIR"
 exec 9>"$LOCK_FILE"
 flock -n 9 || { echo "Another wFileManager update is already running" >&2; exit 75; }
@@ -93,7 +97,7 @@ activate_release() {
 install_release_commands() {
   local release_dir="$1"
   local reset_source="$release_dir/deploy/wfilemanager-reset-admin-password"
-install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-backup-worker" /usr/local/sbin/wfilemanager-backup-worker
+  local backup_worker_source="$release_dir/deploy/wfilemanager-backup-worker"
   local uninstall_source="$release_dir/deploy/uninstall.sh"
   local recovery_source="$release_dir/deploy/wfilemanager-recovery-kit"
   local heartbeat_source="$release_dir/deploy/wfilemanager-heartbeat"
@@ -102,6 +106,7 @@ install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-backup-worker" /usr/local/s
   local database_mode=""
 
   [[ -f "$reset_source" ]] && install -m 700 "$reset_source" "$ROOT_RESET_COMMAND"
+  [[ -f "$backup_worker_source" ]] && install -m 700 "$backup_worker_source" /usr/local/sbin/wfilemanager-backup-worker
   [[ -f "$uninstall_source" ]] && install -m 700 "$uninstall_source" "$UNINSTALL_COMMAND"
   [[ -f "$recovery_source" ]] && install -m 700 "$recovery_source" "$RECOVERY_KIT_COMMAND"
 

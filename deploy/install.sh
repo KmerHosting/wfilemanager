@@ -330,6 +330,11 @@ export PATH="/root/.bun/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
 install -d -m 755 "$APP_ROOT/releases" "$CONFIG_DIR" /usr/local/lib/wfilemanager
 install -d -m 700 "$STATE_ROOT" "$STATE_ROOT/trash" "$STATE_ROOT/update"
+if [[ ! -s "$CONFIG_DIR/backup-transfer.key" ]]; then
+  umask 077
+  openssl rand -base64 48 >"$CONFIG_DIR/backup-transfer.key"
+fi
+chmod 600 "$CONFIG_DIR/backup-transfer.key"
 
 INSTANCE_KEY="${WFILEMANAGER_INSTANCE_KEY:-$EXISTING_INSTANCE_KEY}"
 if [[ "$SUPABASE_ACTION" == "recover" ]]; then

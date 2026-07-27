@@ -130,7 +130,6 @@ begin
   return query select v_instance.backup_traffic_used_bytes, v_instance.backup_traffic_quota_bytes, false;
 end;
 $$;
-revoke all on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text) from public, anon, authenticated;
 revoke all on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text,text) from public, anon, authenticated;
 grant execute on function public.wfilemanager_backup_consume_traffic(uuid,bigint,text,text) to service_role;
 
