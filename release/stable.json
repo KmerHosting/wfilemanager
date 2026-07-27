@@ -2,14 +2,14 @@
   "schema": 1,
   "product": "wfilemanager",
   "channel": "stable",
-  "version": "0.8.19",
-  "publishedAt": "2026-07-27T00:27:03Z",
-  "sourceCommit": "f389d52dda98264f343d84b4b6bb99382df06a15",
+  "version": "0.8.20",
+  "publishedAt": "2026-07-27T00:32:09Z",
+  "sourceCommit": "ac8c456e9ca19c26a9ed621c6d771a7a723ae3c4",
   "minimumVersion": "0.6.0",
-  "releaseUrl": "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/wfilemanager-0.8.19.tar.gz",
-  "url": "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/wfilemanager-0.8.19.tar.gz",
-  "sha256": "5b69ebc003ef4a32191b76477d5b36284222b6d12b8be95c30b39b4d9d16f46f",
-  "size": 359524,
+  "releaseUrl": "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/wfilemanager-0.8.20.tar.gz",
+  "url": "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/wfilemanager-0.8.20.tar.gz",
+  "sha256": "0a5ba12ac44dc7240f927241c560f14d8d50871acc5d22e9763b2dcc3fbd9524",
+  "size": 359346,
   "installUrl": "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/install.sh",
   "canonicalBaseUrl": "https://releases.kmerhosting.com/wfilemanager",
   "githubUrl": "https://github.com/toscani-tenekeu/wFileManager",
@@ -28,7 +28,7 @@
   "notes": [
     "Fixes Pro first-run setup behind Nginx by validating the configured public origin.",
     "Prevents heartbeat setup checks from showing a systemd failure before an instance is activated.",
-    "Keeps managed heartbeat retries automatic and non-blocking."
+    "Normalizes every release script and systemd unit to Linux LF line endings."
   ],
   "assets": {
     "installer": "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/install.sh",
