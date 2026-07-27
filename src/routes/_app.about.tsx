@@ -469,7 +469,11 @@ function About() {
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-4">
           {[
-            { icon: BookOpen, label: "Documentation", href: "/docs" },
+            {
+              icon: BookOpen,
+              label: "Documentation",
+              href: "https://wfilemanager.kmerhosting.com/docs",
+            },
             {
               icon: Github,
               label: "Source code",

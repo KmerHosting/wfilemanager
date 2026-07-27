@@ -17,7 +17,6 @@ const PATHS = [
   "/roles",
   "/storage",
   "/account",
-  "/docs",
   "/about",
 ];
 
