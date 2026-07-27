@@ -47,7 +47,7 @@ The first administrator password must contain at least 12 alphanumeric character
 
 The edition controls where wFileManager stores its own application records: users, roles, sessions, authentication records, notifications, settings and internal metadata. It does not back up the files displayed by the file manager.
 
-Community and Pro expose the same file-manager features. The difference is where application data is stored and who is responsible for recovery.
+Community provides complete local administration. Pro adds managed recovery, encrypted remote backups, retention and operational alerts.
 
 ### Community — SQLite on your server
 
@@ -63,18 +63,20 @@ The server administrator is responsible for SQLite backups, restore, migration, 
 
 ### Pro — managed application data
 
-Pro costs **$50 USD per instance per year** and includes **100 MB** of managed application storage.
+Pro costs **$100 USD per instance per year** and includes **5 GB** of managed remote storage.
 
 Pro manages wFileManager application records separately from the server:
 
 - users, roles and permissions;
 - sessions and authentication records;
 - notifications and settings;
-- managed backup and recovery metadata.
+- encrypted backup and recovery metadata;
+- encrypted snapshots of administrator-selected server folders;
+- 20 GB of remote backup traffic per monthly billing cycle.
 
-Each additional **100 MB** of managed application storage costs **$1 USD per year**.
+Each additional **GB** of managed storage costs **$1 USD per month** and is charged automatically from the customer USD balance.
 
-Pro does not include server filesystem files, directories, databases, uploads or other server content. Those require a separate server backup.
+Pro backs up only folders explicitly selected in the application. It does not include databases or the whole server. Protected system paths and unsafe links are rejected. A single uploaded or backed-up file cannot exceed **20 GB**.
 
 Licence keys, account balance, top-ups and renewals are managed from the customer account:
 
@@ -124,7 +126,7 @@ paid_until expired      grace period
 +30 unpaid days         managed app data and account deleted
 ```
 
-If managed storage reaches its quota, access is blocked with a clear message asking the customer to increase the Pro quota.
+If managed storage reaches its quota, the customer can increase capacity in whole GB increments. When the monthly 20 GB remote traffic allowance is exhausted, new remote backups and restores wait for the next billing cycle; local file management remains available.
 
 ## Pro Recovery Kit
 

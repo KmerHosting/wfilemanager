@@ -174,7 +174,7 @@ async function loadConfig(): Promise<Config> {
     fromName: String(data.mailtrap_from_name || "KmerHosting"),
     supportEmail: String(data.support_email || "support@kmerhosting.com"),
     siteUrl: String(data.site_url || "https://wfilemanager.kmerhosting.com").replace(/\/$/, ""),
-    priceUsd: Number(data.price_usd || 50),
+    priceUsd: Number(data.price_usd || 100),
     periodDays: Number(data.period_days || 365),
     automationSecretHash: String(data.automation_secret_hash || ""),
   };

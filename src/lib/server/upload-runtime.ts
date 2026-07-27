@@ -8,7 +8,7 @@ import { LocalApiError, listDirectory, type LocalFileEntry } from "@/lib/server/
 import { assertDestinationAbsent, assertSafeDirectory } from "@/lib/server/safe-path-runtime";
 
 const MAX_UPLOAD_BYTES = Number(
-  process.env.WFILEMANAGER_MAX_UPLOAD_BYTES || 10 * 1024 * 1024 * 1024,
+  process.env.WFILEMANAGER_MAX_UPLOAD_BYTES || 20 * 1024 * 1024 * 1024,
 );
 const MIN_FREE_BYTES = Math.max(
   256 * 1024 * 1024,

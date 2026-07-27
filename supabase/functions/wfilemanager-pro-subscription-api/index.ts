@@ -87,10 +87,10 @@ async function loadConfig(): Promise<Config> {
       data.function_url || `${supabaseUrl}/functions/v1/wfilemanager-pro-subscription-api`,
     ).replace(/\/$/, ""),
     supportEmail: String(data.support_email || "support@kmerhosting.com"),
-    priceUsd: Number(data.price_usd || 50),
+    priceUsd: Number(data.price_usd || 100),
     priceXaf: Number(data.price_xaf || 30000),
     currency: String(data.currency || "XAF"),
-    storageQuotaBytes: Number(data.storage_quota_bytes || 104857600),
+    storageQuotaBytes: Number(data.storage_quota_bytes || 5368709120),
     periodDays: Number(data.period_days || 365),
   };
 }

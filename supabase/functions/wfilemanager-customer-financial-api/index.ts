@@ -217,13 +217,13 @@ async function loadConfig(): Promise<Config> {
     subscriptionApi: clean(
       data.function_url || `${supabaseUrl}/functions/v1/wfilemanager-pro-subscription-api`,
     ).replace(/\/$/, ""),
-    priceUsd: Number(data.price_usd || 50),
+    priceUsd: Number(data.price_usd || 100),
     priceXaf: Number(
       data.price_xaf ||
-        Math.round(Number(data.price_usd || 50) * Number(data.usd_to_xaf_rate || 600)),
+        Math.round(Number(data.price_usd || 100) * Number(data.usd_to_xaf_rate || 600)),
     ),
     periodDays: Number(data.period_days || 365),
-    storageQuotaBytes: Number(data.storage_quota_bytes || 104857600),
+    storageQuotaBytes: Number(data.storage_quota_bytes || 5368709120),
     usdToXafRate: Number(data.usd_to_xaf_rate || 600),
     camerpayBaseUrl: clean(data.camerpay_api_base_url || "https://camerpay.biz").replace(/\/$/, ""),
     camerpayToken: clean(data.camerpay_api_token),
