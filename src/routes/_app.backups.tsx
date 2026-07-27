@@ -10,7 +10,14 @@ import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/_app/backups")({ component: Backups });
 type Source = { id: string; source_path: string; label: string };
-type Job = { id: string; status: string; progress: number; retention_days: number; error?: string };
+type Job = {
+  id: string;
+  status: string;
+  progress: number;
+  retention_days: number;
+  traffic_bytes: number;
+  error?: string;
+};
 type Data = {
   sources: Source[];
   jobs: Job[];
@@ -206,6 +213,12 @@ function Backups() {
                 )}
               </div>
               <Progress className="mt-2" value={job.progress} />
+              {job.traffic_bytes > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {Math.ceil(job.traffic_bytes / 1024 / 1024)} MB debited from monthly backup
+                  traffic.
+                </p>
+              )}
               {job.error && <p className="mt-2 text-xs text-destructive">{job.error}</p>}
             </div>
           ))}

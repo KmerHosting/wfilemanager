@@ -1,11 +1,13 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { constants } from "node:fs";
-import { access, chmod, mkdir, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { LocalApiError } from "@/lib/server/local-runtime";
 
 const keyFile = "/etc/wfilemanager/backup-transfer.key";
+const instanceSecretFile =
+  process.env.WFILEMANAGER_INSTANCE_SECRET_FILE || "/etc/wfilemanager/instance-secret.key";
 const workers = [
   process.env.WFILEMANAGER_BACKUP_WORKER,
   "/usr/local/sbin/wfilemanager-backup-worker",
@@ -34,6 +36,23 @@ async function ensureTransferKey() {
   await chmod(keyFile, 0o600);
 }
 
+async function reportJob(jobId: string, status: "completed" | "failed", error?: string) {
+  const baseUrl = String(process.env.WFILEMANAGER_SUPABASE_URL || "").replace(/\/$/, "");
+  const instanceKey = String(process.env.WFILEMANAGER_INSTANCE_KEY || "").trim();
+  if (!baseUrl || !instanceKey) return;
+  const instanceSecret = (await readFile(instanceSecretFile, "utf8").catch(() => "")).trim();
+  if (!instanceSecret) return;
+  await fetch(baseUrl + "/functions/v1/wfilemanager-backup-worker-api/" + status, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-wfilemanager-instance": instanceKey,
+      "x-wfilemanager-instance-secret": instanceSecret,
+    },
+    body: JSON.stringify({ jobId, error: error?.slice(0, 1200) }),
+  }).catch(() => undefined);
+}
+
 export async function startRemoteBackup(source: unknown, jobId: unknown, signedUrl: unknown) {
   const sourcePath = String(source || "").trim();
   const id = String(jobId || "").trim();
@@ -42,7 +61,20 @@ export async function startRemoteBackup(source: unknown, jobId: unknown, signedU
     throw new LocalApiError(400, "Invalid backup worker request");
   const worker = await resolveWorker();
   await ensureTransferKey();
-  const child = spawn(worker, ["upload", sourcePath, id, url], { detached: true, stdio: "ignore" });
+  const child = spawn(worker, ["upload", sourcePath, id, url], {
+    detached: true,
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+  let stderr = "";
+  child.stderr?.on("data", (chunk) => {
+    stderr = (stderr + String(chunk)).slice(-1200);
+  });
+  child.once("error", (error) => void reportJob(id, "failed", error.message));
+  child.once(
+    "close",
+    (code) =>
+      void reportJob(id, code === 0 ? "completed" : "failed", stderr || "Backup worker failed"),
+  );
   child.unref();
   return { accepted: true, jobId: id };
 }
