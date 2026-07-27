@@ -260,7 +260,9 @@ Deno.serve(async (request: Request) => {
     const url = new URL(request.url);
     const action = url.pathname.split("/").filter(Boolean).pop() || "status";
     const instanceKey =
-      request.headers.get("x-wfilemanager-instance") || url.searchParams.get("instance") || "default";
+      request.headers.get("x-wfilemanager-instance") ||
+      url.searchParams.get("instance") ||
+      "default";
 
     if (action === "status") {
       if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);

@@ -22,8 +22,8 @@ function Page() {
       <div className="space-y-4">
         <Alert>
           <AlertDescription>
-            Reset the administrator password from an authenticated server shell. This prevents account
-            takeover through forged browser reset links.
+            Reset the administrator password from an authenticated server shell. This prevents
+            account takeover through forged browser reset links.
           </AlertDescription>
         </Alert>
         <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 text-xs">

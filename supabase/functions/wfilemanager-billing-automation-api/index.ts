@@ -98,9 +98,7 @@ function providerAmount(payload: Record<string, unknown>) {
   return Number.isFinite(amount) ? amount : null;
 }
 function providerCurrency(payload: Record<string, unknown>) {
-  return clean(
-    pick(payload, ["currency", "transaction.currency", "data.currency"]),
-  ).toUpperCase();
+  return clean(pick(payload, ["currency", "transaction.currency", "data.currency"])).toUpperCase();
 }
 function providerInvoice(payload: Record<string, unknown>) {
   return clean(

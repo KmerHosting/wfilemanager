@@ -128,7 +128,9 @@ async function authenticate(req: Request, instanceKey: string): Promise<Authenti
 
 async function effectivePathRules(auth: Authenticated) {
   if (auth.user.is_admin === true) {
-    return [{ id: "administrator-root", path: "/", accessMode: "allow", recursive: true, source: "user" }];
+    return [
+      { id: "administrator-root", path: "/", accessMode: "allow", recursive: true, source: "user" },
+    ];
   }
   const queries = [
     db
@@ -250,8 +252,7 @@ Deno.serve(async (req) => {
     if (!current) return respond({ error: "Role not found" }, 404);
 
     if (req.method === "PATCH") {
-      if (current.is_system)
-        return respond({ error: "System roles cannot be modified" }, 403);
+      if (current.is_system) return respond({ error: "System roles cannot be modified" }, 403);
       const updates: Record<string, unknown> = {};
       if (typeof body.name === "string") {
         const name = body.name.trim();
@@ -301,7 +302,9 @@ Deno.serve(async (req) => {
     console.error(error);
     const message = error instanceof Error ? error.message : "Unexpected error";
     return respond(
-      { error: message.includes("duplicate key") ? "A role with this name already exists" : message },
+      {
+        error: message.includes("duplicate key") ? "A role with this name already exists" : message,
+      },
       500,
     );
   }

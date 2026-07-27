@@ -8,592 +8,592 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as AppRouteImport } from './routes/_app'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
-import { Route as LockedRouteImport } from './routes/locked'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as SessionExpiredRouteImport } from './routes/session-expired'
-import { Route as SetupRouteImport } from './routes/setup'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as AppIndexRouteImport } from './routes/_app.index'
-import { Route as AppAboutRouteImport } from './routes/_app.about'
-import { Route as AppAccountRouteImport } from './routes/_app.account'
-import { Route as AppBackupsRouteImport } from './routes/_app.backups'
-import { Route as AppExplorerRouteImport } from './routes/_app.explorer'
-import { Route as AppLogsRouteImport } from './routes/_app.logs'
-import { Route as AppNotificationsRouteImport } from './routes/_app.notifications'
-import { Route as AppRolesRouteImport } from './routes/_app.roles'
-import { Route as AppTasksRouteImport } from './routes/_app.tasks'
-import { Route as AppTerminalRouteImport } from './routes/_app.terminal'
-import { Route as AppTrashRouteImport } from './routes/_app.trash'
-import { Route as AppUploadsRouteImport } from './routes/_app.uploads'
-import { Route as AppUsersRouteImport } from './routes/_app.users'
-import { Route as ApiGatewayRouteImport } from './routes/api.gateway'
-import { Route as ApiHealthRouteImport } from './routes/api.health'
-import { Route as ApiLocalRouteImport } from './routes/api.local'
-import { Route as ApiSqliteRouteImport } from './routes/api.sqlite'
-import { Route as ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport } from './routes/api.sqlite-proxy.functions.v1.wfilemanager-api.me'
-import { Route as ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRouteImport } from './routes/api.sqlite-proxy.functions.v1.wfilemanager-api.verify-password'
-import { Route as ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRouteImport } from './routes/api.sqlite-proxy.functions.v1.wfilemanager-roles-api.permissions'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as AppRouteImport } from "./routes/_app";
+import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password";
+import { Route as LockedRouteImport } from "./routes/locked";
+import { Route as LoginRouteImport } from "./routes/login";
+import { Route as ResetPasswordRouteImport } from "./routes/reset-password";
+import { Route as SessionExpiredRouteImport } from "./routes/session-expired";
+import { Route as SetupRouteImport } from "./routes/setup";
+import { Route as SitemapDotxmlRouteImport } from "./routes/sitemap[.]xml";
+import { Route as AppIndexRouteImport } from "./routes/_app.index";
+import { Route as AppAboutRouteImport } from "./routes/_app.about";
+import { Route as AppAccountRouteImport } from "./routes/_app.account";
+import { Route as AppBackupsRouteImport } from "./routes/_app.backups";
+import { Route as AppExplorerRouteImport } from "./routes/_app.explorer";
+import { Route as AppLogsRouteImport } from "./routes/_app.logs";
+import { Route as AppNotificationsRouteImport } from "./routes/_app.notifications";
+import { Route as AppRolesRouteImport } from "./routes/_app.roles";
+import { Route as AppTasksRouteImport } from "./routes/_app.tasks";
+import { Route as AppTerminalRouteImport } from "./routes/_app.terminal";
+import { Route as AppTrashRouteImport } from "./routes/_app.trash";
+import { Route as AppUploadsRouteImport } from "./routes/_app.uploads";
+import { Route as AppUsersRouteImport } from "./routes/_app.users";
+import { Route as ApiGatewayRouteImport } from "./routes/api.gateway";
+import { Route as ApiHealthRouteImport } from "./routes/api.health";
+import { Route as ApiLocalRouteImport } from "./routes/api.local";
+import { Route as ApiSqliteRouteImport } from "./routes/api.sqlite";
+import { Route as ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport } from "./routes/api.sqlite-proxy.functions.v1.wfilemanager-api.me";
+import { Route as ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRouteImport } from "./routes/api.sqlite-proxy.functions.v1.wfilemanager-api.verify-password";
+import { Route as ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRouteImport } from "./routes/api.sqlite-proxy.functions.v1.wfilemanager-roles-api.permissions";
 
 const AppRoute = AppRouteImport.update({
-  id: '/_app',
+  id: "/_app",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
+  id: "/forgot-password",
+  path: "/forgot-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LockedRoute = LockedRouteImport.update({
-  id: '/locked',
-  path: '/locked',
+  id: "/locked",
+  path: "/locked",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+  id: "/reset-password",
+  path: "/reset-password",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SessionExpiredRoute = SessionExpiredRouteImport.update({
-  id: '/session-expired',
-  path: '/session-expired',
+  id: "/session-expired",
+  path: "/session-expired",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
+  id: "/setup",
+  path: "/setup",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+  id: "/sitemap.xml",
+  path: "/sitemap.xml",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppAboutRoute = AppAboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+  id: "/about",
+  path: "/about",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppAccountRoute = AppAccountRouteImport.update({
-  id: '/account',
-  path: '/account',
+  id: "/account",
+  path: "/account",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppBackupsRoute = AppBackupsRouteImport.update({
-  id: '/backups',
-  path: '/backups',
+  id: "/backups",
+  path: "/backups",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppExplorerRoute = AppExplorerRouteImport.update({
-  id: '/explorer',
-  path: '/explorer',
+  id: "/explorer",
+  path: "/explorer",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppLogsRoute = AppLogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
+  id: "/logs",
+  path: "/logs",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
+  id: "/notifications",
+  path: "/notifications",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppRolesRoute = AppRolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
+  id: "/roles",
+  path: "/roles",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppTasksRoute = AppTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
+  id: "/tasks",
+  path: "/tasks",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppTerminalRoute = AppTerminalRouteImport.update({
-  id: '/terminal',
-  path: '/terminal',
+  id: "/terminal",
+  path: "/terminal",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppTrashRoute = AppTrashRouteImport.update({
-  id: '/trash',
-  path: '/trash',
+  id: "/trash",
+  path: "/trash",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppUploadsRoute = AppUploadsRouteImport.update({
-  id: '/uploads',
-  path: '/uploads',
+  id: "/uploads",
+  path: "/uploads",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const AppUsersRoute = AppUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
+  id: "/users",
+  path: "/users",
   getParentRoute: () => AppRoute,
-} as any)
+} as any);
 const ApiGatewayRoute = ApiGatewayRouteImport.update({
-  id: '/api/gateway',
-  path: '/api/gateway',
+  id: "/api/gateway",
+  path: "/api/gateway",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
+  id: "/api/health",
+  path: "/api/health",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiLocalRoute = ApiLocalRouteImport.update({
-  id: '/api/local',
-  path: '/api/local',
+  id: "/api/local",
+  path: "/api/local",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiSqliteRoute = ApiSqliteRouteImport.update({
-  id: '/api/sqlite',
-  path: '/api/sqlite',
+  id: "/api/sqlite",
+  path: "/api/sqlite",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute =
   ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport.update({
-    id: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me',
-    path: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me',
+    id: "/api/sqlite-proxy/functions/v1/wfilemanager-api/me",
+    path: "/api/sqlite-proxy/functions/v1/wfilemanager-api/me",
     getParentRoute: () => rootRouteImport,
-  } as any)
+  } as any);
 const ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute =
   ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRouteImport.update({
-    id: '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password',
-    path: '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password',
+    id: "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password",
+    path: "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password",
     getParentRoute: () => rootRouteImport,
-  } as any)
+  } as any);
 const ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute =
   ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRouteImport.update({
-    id: '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions',
-    path: '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions',
+    id: "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions",
+    path: "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions",
     getParentRoute: () => rootRouteImport,
-  } as any)
+  } as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppIndexRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/locked': typeof LockedRoute
-  '/login': typeof LoginRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/session-expired': typeof SessionExpiredRoute
-  '/setup': typeof SetupRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/about': typeof AppAboutRoute
-  '/account': typeof AppAccountRoute
-  '/backups': typeof AppBackupsRoute
-  '/explorer': typeof AppExplorerRoute
-  '/logs': typeof AppLogsRoute
-  '/notifications': typeof AppNotificationsRoute
-  '/roles': typeof AppRolesRoute
-  '/tasks': typeof AppTasksRoute
-  '/terminal': typeof AppTerminalRoute
-  '/trash': typeof AppTrashRoute
-  '/uploads': typeof AppUploadsRoute
-  '/users': typeof AppUsersRoute
-  '/api/gateway': typeof ApiGatewayRoute
-  '/api/health': typeof ApiHealthRoute
-  '/api/local': typeof ApiLocalRoute
-  '/api/sqlite': typeof ApiSqliteRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
+  "/": typeof AppIndexRoute;
+  "/forgot-password": typeof ForgotPasswordRoute;
+  "/locked": typeof LockedRoute;
+  "/login": typeof LoginRoute;
+  "/reset-password": typeof ResetPasswordRoute;
+  "/session-expired": typeof SessionExpiredRoute;
+  "/setup": typeof SetupRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
+  "/about": typeof AppAboutRoute;
+  "/account": typeof AppAccountRoute;
+  "/backups": typeof AppBackupsRoute;
+  "/explorer": typeof AppExplorerRoute;
+  "/logs": typeof AppLogsRoute;
+  "/notifications": typeof AppNotificationsRoute;
+  "/roles": typeof AppRolesRoute;
+  "/tasks": typeof AppTasksRoute;
+  "/terminal": typeof AppTerminalRoute;
+  "/trash": typeof AppTrashRoute;
+  "/uploads": typeof AppUploadsRoute;
+  "/users": typeof AppUsersRoute;
+  "/api/gateway": typeof ApiGatewayRoute;
+  "/api/health": typeof ApiHealthRoute;
+  "/api/local": typeof ApiLocalRoute;
+  "/api/sqlite": typeof ApiSqliteRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-api/me": typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password": typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions": typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute;
 }
 export interface FileRoutesByTo {
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/locked': typeof LockedRoute
-  '/login': typeof LoginRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/session-expired': typeof SessionExpiredRoute
-  '/setup': typeof SetupRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/about': typeof AppAboutRoute
-  '/account': typeof AppAccountRoute
-  '/backups': typeof AppBackupsRoute
-  '/explorer': typeof AppExplorerRoute
-  '/logs': typeof AppLogsRoute
-  '/notifications': typeof AppNotificationsRoute
-  '/roles': typeof AppRolesRoute
-  '/tasks': typeof AppTasksRoute
-  '/terminal': typeof AppTerminalRoute
-  '/trash': typeof AppTrashRoute
-  '/uploads': typeof AppUploadsRoute
-  '/users': typeof AppUsersRoute
-  '/api/gateway': typeof ApiGatewayRoute
-  '/api/health': typeof ApiHealthRoute
-  '/api/local': typeof ApiLocalRoute
-  '/api/sqlite': typeof ApiSqliteRoute
-  '/': typeof AppIndexRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
+  "/forgot-password": typeof ForgotPasswordRoute;
+  "/locked": typeof LockedRoute;
+  "/login": typeof LoginRoute;
+  "/reset-password": typeof ResetPasswordRoute;
+  "/session-expired": typeof SessionExpiredRoute;
+  "/setup": typeof SetupRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
+  "/about": typeof AppAboutRoute;
+  "/account": typeof AppAccountRoute;
+  "/backups": typeof AppBackupsRoute;
+  "/explorer": typeof AppExplorerRoute;
+  "/logs": typeof AppLogsRoute;
+  "/notifications": typeof AppNotificationsRoute;
+  "/roles": typeof AppRolesRoute;
+  "/tasks": typeof AppTasksRoute;
+  "/terminal": typeof AppTerminalRoute;
+  "/trash": typeof AppTrashRoute;
+  "/uploads": typeof AppUploadsRoute;
+  "/users": typeof AppUsersRoute;
+  "/api/gateway": typeof ApiGatewayRoute;
+  "/api/health": typeof ApiHealthRoute;
+  "/api/local": typeof ApiLocalRoute;
+  "/api/sqlite": typeof ApiSqliteRoute;
+  "/": typeof AppIndexRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-api/me": typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password": typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions": typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/_app': typeof AppRouteWithChildren
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/locked': typeof LockedRoute
-  '/login': typeof LoginRoute
-  '/reset-password': typeof ResetPasswordRoute
-  '/session-expired': typeof SessionExpiredRoute
-  '/setup': typeof SetupRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/_app/about': typeof AppAboutRoute
-  '/_app/account': typeof AppAccountRoute
-  '/_app/backups': typeof AppBackupsRoute
-  '/_app/explorer': typeof AppExplorerRoute
-  '/_app/logs': typeof AppLogsRoute
-  '/_app/notifications': typeof AppNotificationsRoute
-  '/_app/roles': typeof AppRolesRoute
-  '/_app/tasks': typeof AppTasksRoute
-  '/_app/terminal': typeof AppTerminalRoute
-  '/_app/trash': typeof AppTrashRoute
-  '/_app/uploads': typeof AppUploadsRoute
-  '/_app/users': typeof AppUsersRoute
-  '/api/gateway': typeof ApiGatewayRoute
-  '/api/health': typeof ApiHealthRoute
-  '/api/local': typeof ApiLocalRoute
-  '/api/sqlite': typeof ApiSqliteRoute
-  '/_app/': typeof AppIndexRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
-  '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
+  __root__: typeof rootRouteImport;
+  "/_app": typeof AppRouteWithChildren;
+  "/forgot-password": typeof ForgotPasswordRoute;
+  "/locked": typeof LockedRoute;
+  "/login": typeof LoginRoute;
+  "/reset-password": typeof ResetPasswordRoute;
+  "/session-expired": typeof SessionExpiredRoute;
+  "/setup": typeof SetupRoute;
+  "/sitemap.xml": typeof SitemapDotxmlRoute;
+  "/_app/about": typeof AppAboutRoute;
+  "/_app/account": typeof AppAccountRoute;
+  "/_app/backups": typeof AppBackupsRoute;
+  "/_app/explorer": typeof AppExplorerRoute;
+  "/_app/logs": typeof AppLogsRoute;
+  "/_app/notifications": typeof AppNotificationsRoute;
+  "/_app/roles": typeof AppRolesRoute;
+  "/_app/tasks": typeof AppTasksRoute;
+  "/_app/terminal": typeof AppTerminalRoute;
+  "/_app/trash": typeof AppTrashRoute;
+  "/_app/uploads": typeof AppUploadsRoute;
+  "/_app/users": typeof AppUsersRoute;
+  "/api/gateway": typeof ApiGatewayRoute;
+  "/api/health": typeof ApiHealthRoute;
+  "/api/local": typeof ApiLocalRoute;
+  "/api/sqlite": typeof ApiSqliteRoute;
+  "/_app/": typeof AppIndexRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-api/me": typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password": typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute;
+  "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions": typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/forgot-password'
-    | '/locked'
-    | '/login'
-    | '/reset-password'
-    | '/session-expired'
-    | '/setup'
-    | '/sitemap.xml'
-    | '/about'
-    | '/account'
-    | '/backups'
-    | '/explorer'
-    | '/logs'
-    | '/notifications'
-    | '/roles'
-    | '/tasks'
-    | '/terminal'
-    | '/trash'
-    | '/uploads'
-    | '/users'
-    | '/api/gateway'
-    | '/api/health'
-    | '/api/local'
-    | '/api/sqlite'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/forgot-password"
+    | "/locked"
+    | "/login"
+    | "/reset-password"
+    | "/session-expired"
+    | "/setup"
+    | "/sitemap.xml"
+    | "/about"
+    | "/account"
+    | "/backups"
+    | "/explorer"
+    | "/logs"
+    | "/notifications"
+    | "/roles"
+    | "/tasks"
+    | "/terminal"
+    | "/trash"
+    | "/uploads"
+    | "/users"
+    | "/api/gateway"
+    | "/api/health"
+    | "/api/local"
+    | "/api/sqlite"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-api/me"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/forgot-password'
-    | '/locked'
-    | '/login'
-    | '/reset-password'
-    | '/session-expired'
-    | '/setup'
-    | '/sitemap.xml'
-    | '/about'
-    | '/account'
-    | '/backups'
-    | '/explorer'
-    | '/logs'
-    | '/notifications'
-    | '/roles'
-    | '/tasks'
-    | '/terminal'
-    | '/trash'
-    | '/uploads'
-    | '/users'
-    | '/api/gateway'
-    | '/api/health'
-    | '/api/local'
-    | '/api/sqlite'
-    | '/'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
+    | "/forgot-password"
+    | "/locked"
+    | "/login"
+    | "/reset-password"
+    | "/session-expired"
+    | "/setup"
+    | "/sitemap.xml"
+    | "/about"
+    | "/account"
+    | "/backups"
+    | "/explorer"
+    | "/logs"
+    | "/notifications"
+    | "/roles"
+    | "/tasks"
+    | "/terminal"
+    | "/trash"
+    | "/uploads"
+    | "/users"
+    | "/api/gateway"
+    | "/api/health"
+    | "/api/local"
+    | "/api/sqlite"
+    | "/"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-api/me"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions";
   id:
-    | '__root__'
-    | '/_app'
-    | '/forgot-password'
-    | '/locked'
-    | '/login'
-    | '/reset-password'
-    | '/session-expired'
-    | '/setup'
-    | '/sitemap.xml'
-    | '/_app/about'
-    | '/_app/account'
-    | '/_app/backups'
-    | '/_app/explorer'
-    | '/_app/logs'
-    | '/_app/notifications'
-    | '/_app/roles'
-    | '/_app/tasks'
-    | '/_app/terminal'
-    | '/_app/trash'
-    | '/_app/uploads'
-    | '/_app/users'
-    | '/api/gateway'
-    | '/api/health'
-    | '/api/local'
-    | '/api/sqlite'
-    | '/_app/'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
-    | '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/_app"
+    | "/forgot-password"
+    | "/locked"
+    | "/login"
+    | "/reset-password"
+    | "/session-expired"
+    | "/setup"
+    | "/sitemap.xml"
+    | "/_app/about"
+    | "/_app/account"
+    | "/_app/backups"
+    | "/_app/explorer"
+    | "/_app/logs"
+    | "/_app/notifications"
+    | "/_app/roles"
+    | "/_app/tasks"
+    | "/_app/terminal"
+    | "/_app/trash"
+    | "/_app/uploads"
+    | "/_app/users"
+    | "/api/gateway"
+    | "/api/health"
+    | "/api/local"
+    | "/api/sqlite"
+    | "/_app/"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-api/me"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password"
+    | "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  AppRoute: typeof AppRouteWithChildren
-  ForgotPasswordRoute: typeof ForgotPasswordRoute
-  LockedRoute: typeof LockedRoute
-  LoginRoute: typeof LoginRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
-  SessionExpiredRoute: typeof SessionExpiredRoute
-  SetupRoute: typeof SetupRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  ApiGatewayRoute: typeof ApiGatewayRoute
-  ApiHealthRoute: typeof ApiHealthRoute
-  ApiLocalRoute: typeof ApiLocalRoute
-  ApiSqliteRoute: typeof ApiSqliteRoute
-  ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
-  ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
-  ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
+  AppRoute: typeof AppRouteWithChildren;
+  ForgotPasswordRoute: typeof ForgotPasswordRoute;
+  LockedRoute: typeof LockedRoute;
+  LoginRoute: typeof LoginRoute;
+  ResetPasswordRoute: typeof ResetPasswordRoute;
+  SessionExpiredRoute: typeof SessionExpiredRoute;
+  SetupRoute: typeof SetupRoute;
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute;
+  ApiGatewayRoute: typeof ApiGatewayRoute;
+  ApiHealthRoute: typeof ApiHealthRoute;
+  ApiLocalRoute: typeof ApiLocalRoute;
+  ApiSqliteRoute: typeof ApiSqliteRoute;
+  ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute;
+  ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute;
+  ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/_app': {
-      id: '/_app'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/locked': {
-      id: '/locked'
-      path: '/locked'
-      fullPath: '/locked'
-      preLoaderRoute: typeof LockedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/session-expired': {
-      id: '/session-expired'
-      path: '/session-expired'
-      fullPath: '/session-expired'
-      preLoaderRoute: typeof SessionExpiredRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/': {
-      id: '/_app/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/about': {
-      id: '/_app/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AppAboutRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/account': {
-      id: '/_app/account'
-      path: '/account'
-      fullPath: '/account'
-      preLoaderRoute: typeof AppAccountRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/backups': {
-      id: '/_app/backups'
-      path: '/backups'
-      fullPath: '/backups'
-      preLoaderRoute: typeof AppBackupsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/explorer': {
-      id: '/_app/explorer'
-      path: '/explorer'
-      fullPath: '/explorer'
-      preLoaderRoute: typeof AppExplorerRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/logs': {
-      id: '/_app/logs'
-      path: '/logs'
-      fullPath: '/logs'
-      preLoaderRoute: typeof AppLogsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/notifications': {
-      id: '/_app/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AppNotificationsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/roles': {
-      id: '/_app/roles'
-      path: '/roles'
-      fullPath: '/roles'
-      preLoaderRoute: typeof AppRolesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/tasks': {
-      id: '/_app/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof AppTasksRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/terminal': {
-      id: '/_app/terminal'
-      path: '/terminal'
-      fullPath: '/terminal'
-      preLoaderRoute: typeof AppTerminalRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/trash': {
-      id: '/_app/trash'
-      path: '/trash'
-      fullPath: '/trash'
-      preLoaderRoute: typeof AppTrashRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/uploads': {
-      id: '/_app/uploads'
-      path: '/uploads'
-      fullPath: '/uploads'
-      preLoaderRoute: typeof AppUploadsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/users': {
-      id: '/_app/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof AppUsersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/api/gateway': {
-      id: '/api/gateway'
-      path: '/api/gateway'
-      fullPath: '/api/gateway'
-      preLoaderRoute: typeof ApiGatewayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/local': {
-      id: '/api/local'
-      path: '/api/local'
-      fullPath: '/api/local'
-      preLoaderRoute: typeof ApiLocalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sqlite': {
-      id: '/api/sqlite'
-      path: '/api/sqlite'
-      fullPath: '/api/sqlite'
-      preLoaderRoute: typeof ApiSqliteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': {
-      id: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
-      path: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
-      fullPath: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
-      preLoaderRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': {
-      id: '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
-      path: '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
-      fullPath: '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
-      preLoaderRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': {
-      id: '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
-      path: '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
-      fullPath: '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
-      preLoaderRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
+    "/_app": {
+      id: "/_app";
+      path: "";
+      fullPath: "/";
+      preLoaderRoute: typeof AppRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/forgot-password": {
+      id: "/forgot-password";
+      path: "/forgot-password";
+      fullPath: "/forgot-password";
+      preLoaderRoute: typeof ForgotPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/locked": {
+      id: "/locked";
+      path: "/locked";
+      fullPath: "/locked";
+      preLoaderRoute: typeof LockedRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/login": {
+      id: "/login";
+      path: "/login";
+      fullPath: "/login";
+      preLoaderRoute: typeof LoginRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/reset-password": {
+      id: "/reset-password";
+      path: "/reset-password";
+      fullPath: "/reset-password";
+      preLoaderRoute: typeof ResetPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/session-expired": {
+      id: "/session-expired";
+      path: "/session-expired";
+      fullPath: "/session-expired";
+      preLoaderRoute: typeof SessionExpiredRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/setup": {
+      id: "/setup";
+      path: "/setup";
+      fullPath: "/setup";
+      preLoaderRoute: typeof SetupRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/sitemap.xml": {
+      id: "/sitemap.xml";
+      path: "/sitemap.xml";
+      fullPath: "/sitemap.xml";
+      preLoaderRoute: typeof SitemapDotxmlRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_app/": {
+      id: "/_app/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof AppIndexRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/about": {
+      id: "/_app/about";
+      path: "/about";
+      fullPath: "/about";
+      preLoaderRoute: typeof AppAboutRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/account": {
+      id: "/_app/account";
+      path: "/account";
+      fullPath: "/account";
+      preLoaderRoute: typeof AppAccountRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/backups": {
+      id: "/_app/backups";
+      path: "/backups";
+      fullPath: "/backups";
+      preLoaderRoute: typeof AppBackupsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/explorer": {
+      id: "/_app/explorer";
+      path: "/explorer";
+      fullPath: "/explorer";
+      preLoaderRoute: typeof AppExplorerRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/logs": {
+      id: "/_app/logs";
+      path: "/logs";
+      fullPath: "/logs";
+      preLoaderRoute: typeof AppLogsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/notifications": {
+      id: "/_app/notifications";
+      path: "/notifications";
+      fullPath: "/notifications";
+      preLoaderRoute: typeof AppNotificationsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/roles": {
+      id: "/_app/roles";
+      path: "/roles";
+      fullPath: "/roles";
+      preLoaderRoute: typeof AppRolesRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/tasks": {
+      id: "/_app/tasks";
+      path: "/tasks";
+      fullPath: "/tasks";
+      preLoaderRoute: typeof AppTasksRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/terminal": {
+      id: "/_app/terminal";
+      path: "/terminal";
+      fullPath: "/terminal";
+      preLoaderRoute: typeof AppTerminalRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/trash": {
+      id: "/_app/trash";
+      path: "/trash";
+      fullPath: "/trash";
+      preLoaderRoute: typeof AppTrashRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/uploads": {
+      id: "/_app/uploads";
+      path: "/uploads";
+      fullPath: "/uploads";
+      preLoaderRoute: typeof AppUploadsRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/_app/users": {
+      id: "/_app/users";
+      path: "/users";
+      fullPath: "/users";
+      preLoaderRoute: typeof AppUsersRouteImport;
+      parentRoute: typeof AppRoute;
+    };
+    "/api/gateway": {
+      id: "/api/gateway";
+      path: "/api/gateway";
+      fullPath: "/api/gateway";
+      preLoaderRoute: typeof ApiGatewayRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/health": {
+      id: "/api/health";
+      path: "/api/health";
+      fullPath: "/api/health";
+      preLoaderRoute: typeof ApiHealthRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/local": {
+      id: "/api/local";
+      path: "/api/local";
+      fullPath: "/api/local";
+      preLoaderRoute: typeof ApiLocalRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/sqlite": {
+      id: "/api/sqlite";
+      path: "/api/sqlite";
+      fullPath: "/api/sqlite";
+      preLoaderRoute: typeof ApiSqliteRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/sqlite-proxy/functions/v1/wfilemanager-api/me": {
+      id: "/api/sqlite-proxy/functions/v1/wfilemanager-api/me";
+      path: "/api/sqlite-proxy/functions/v1/wfilemanager-api/me";
+      fullPath: "/api/sqlite-proxy/functions/v1/wfilemanager-api/me";
+      preLoaderRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password": {
+      id: "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password";
+      path: "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password";
+      fullPath: "/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password";
+      preLoaderRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions": {
+      id: "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions";
+      path: "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions";
+      fullPath: "/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions";
+      preLoaderRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
 interface AppRouteChildren {
-  AppAboutRoute: typeof AppAboutRoute
-  AppAccountRoute: typeof AppAccountRoute
-  AppBackupsRoute: typeof AppBackupsRoute
-  AppExplorerRoute: typeof AppExplorerRoute
-  AppLogsRoute: typeof AppLogsRoute
-  AppNotificationsRoute: typeof AppNotificationsRoute
-  AppRolesRoute: typeof AppRolesRoute
-  AppTasksRoute: typeof AppTasksRoute
-  AppTerminalRoute: typeof AppTerminalRoute
-  AppTrashRoute: typeof AppTrashRoute
-  AppUploadsRoute: typeof AppUploadsRoute
-  AppUsersRoute: typeof AppUsersRoute
-  AppIndexRoute: typeof AppIndexRoute
+  AppAboutRoute: typeof AppAboutRoute;
+  AppAccountRoute: typeof AppAccountRoute;
+  AppBackupsRoute: typeof AppBackupsRoute;
+  AppExplorerRoute: typeof AppExplorerRoute;
+  AppLogsRoute: typeof AppLogsRoute;
+  AppNotificationsRoute: typeof AppNotificationsRoute;
+  AppRolesRoute: typeof AppRolesRoute;
+  AppTasksRoute: typeof AppTasksRoute;
+  AppTerminalRoute: typeof AppTerminalRoute;
+  AppTrashRoute: typeof AppTrashRoute;
+  AppUploadsRoute: typeof AppUploadsRoute;
+  AppUsersRoute: typeof AppUsersRoute;
+  AppIndexRoute: typeof AppIndexRoute;
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -610,9 +610,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppUploadsRoute: AppUploadsRoute,
   AppUsersRoute: AppUsersRoute,
   AppIndexRoute: AppIndexRoute,
-}
+};
 
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
@@ -627,23 +627,22 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLocalRoute: ApiLocalRoute,
   ApiSqliteRoute: ApiSqliteRoute,
-  ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute:
-    ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute,
+  ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute: ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute,
   ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute:
     ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute,
   ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute:
     ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
 
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
+import type { getRouter } from "./router.tsx";
+import type { startInstance } from "./start.ts";
+declare module "@tanstack/react-start" {
   interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+    ssr: true;
+    router: Awaited<ReturnType<typeof getRouter>>;
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>;
   }
 }

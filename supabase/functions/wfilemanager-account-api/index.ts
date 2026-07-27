@@ -92,12 +92,7 @@ async function rateCheck(scope: string, identifier: string, request: Request) {
   if (error) throw error;
   return data as { allowed?: boolean; retryAfterSeconds?: number };
 }
-async function rateRecord(
-  scope: string,
-  identifier: string,
-  request: Request,
-  success: boolean,
-) {
+async function rateRecord(scope: string, identifier: string, request: Request, success: boolean) {
   const { error } = await db.rpc("wfilemanager_auth_rate_record", {
     p_scope: scope,
     p_identifier_hash: await sha256(identifier),
@@ -110,7 +105,8 @@ async function rateRecord(
   if (error) console.warn("Rate-limit update failed", error.message);
 }
 async function authenticate(req: Request, instanceKey: string) {
-  const token = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || "";
+  const token =
+    (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || "";
   if (!token) return null;
   const { data: instance } = await db
     .from("wfilemanager_instances")
@@ -177,7 +173,12 @@ Deno.serve(async (req) => {
         return json({ error: "Email address is invalid" }, 400);
       const { data, error } = await db
         .from("wfilemanager_users")
-        .update({ display_name: displayName, email, timezone, updated_at: new Date().toISOString() })
+        .update({
+          display_name: displayName,
+          email,
+          timezone,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", auth.user.id)
         .eq("instance_id", auth.instance.id)
         .select()

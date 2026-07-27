@@ -100,7 +100,10 @@ async function customerAuth(request: Request) {
 }
 function invoiceNumber(type: string, reference: string) {
   const month = new Date().toISOString().slice(0, 7).replace("-", "");
-  const suffix = reference.replace(/[^A-Za-z0-9]/g, "").slice(-14).toUpperCase();
+  const suffix = reference
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(-14)
+    .toUpperCase();
   const prefix =
     type === "topup" ? "RCT" : type === "renewal" ? "REN" : type === "storage" ? "STO" : "INV";
   return `WFM-${prefix}-${month}-${suffix}`;
@@ -285,7 +288,11 @@ async function createInvoice(params: {
       .update({
         status: "paid",
         pdf_storage_path: storagePath,
-        metadata: { ...(invoice.metadata || {}), reference: params.reference, generatedAt: new Date().toISOString() },
+        metadata: {
+          ...(invoice.metadata || {}),
+          reference: params.reference,
+          generatedAt: new Date().toISOString(),
+        },
       })
       .eq("id", invoice.id)
       .select("*")
@@ -318,7 +325,13 @@ async function generateForCustomer(customer: Row, settings: Config) {
       .from("wfilemanager_pro_orders")
       .select("id,order_reference,order_type,status,amount_usd,paid_at")
       .eq("customer_id", customer.id)
-      .in("status", ["paid", "activation_sent", "renewal_applied", "upgrade_applied", "email_failed"])
+      .in("status", [
+        "paid",
+        "activation_sent",
+        "renewal_applied",
+        "upgrade_applied",
+        "email_failed",
+      ])
       .order("created_at", { ascending: true })
       .range(from, from + 199);
     if (error) throw error;

@@ -57,7 +57,8 @@ export async function assertDestinationPathAllowed(user: LocalUser, inputPath: u
   const requested = normalizeServerPath(inputPath);
   const parent = path.dirname(requested);
   const canonicalParent = await realpath(parent).catch(() => null);
-  if (!canonicalParent) throw new LocalApiError(404, "The destination parent directory does not exist");
+  if (!canonicalParent)
+    throw new LocalApiError(404, "The destination parent directory does not exist");
   const canonical = path.join(canonicalParent, path.basename(requested));
   assertDecision(user, requested, canonical);
   return canonical;

@@ -14,11 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  localApi,
-  type BackgroundUploadTask,
-  type OperationJob,
-} from "@/lib/local-api";
+import { localApi, type BackgroundUploadTask, type OperationJob } from "@/lib/local-api";
 import { formatBytes } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -72,7 +68,9 @@ function Tasks() {
     }
   };
 
-  const activeCount = jobs.filter((job) => ACTIVE.has(job.status)).length + uploads.filter((upload) => ACTIVE.has(upload.status)).length;
+  const activeCount =
+    jobs.filter((job) => ACTIVE.has(job.status)).length +
+    uploads.filter((upload) => ACTIVE.has(upload.status)).length;
 
   return (
     <div className="mx-auto w-full max-w-5xl p-6">
@@ -108,19 +106,28 @@ function Tasks() {
                   <div className="min-w-0">
                     <CardTitle className="text-base">Upload</CardTitle>
                     <CardDescription className="truncate font-mono text-xs">
-                      {upload.currentFile || `${upload.files.length} file(s)`} → {upload.destination}
+                      {upload.currentFile || `${upload.files.length} file(s)`} →{" "}
+                      {upload.destination}
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant="outline" className="capitalize">{upload.status}</Badge>
+                <Badge variant="outline" className="capitalize">
+                  {upload.status}
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <Progress value={upload.progress} />
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>{formatBytes(upload.loaded)} of {formatBytes(upload.total)} · {upload.progress}%</span>
+                <span>
+                  {formatBytes(upload.loaded)} of {formatBytes(upload.total)} · {upload.progress}%
+                </span>
                 {upload.status === "running" && (
-                  <Button size="sm" variant="destructive" onClick={() => localApi.cancelBackgroundUpload(upload.id)}>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => localApi.cancelBackgroundUpload(upload.id)}
+                  >
                     Cancel upload
                   </Button>
                 )}
@@ -140,18 +147,29 @@ function Tasks() {
                     <Icon className="h-5 w-5 shrink-0 text-primary" />
                     <div className="min-w-0">
                       <CardTitle className="capitalize text-base">{job.operation}</CardTitle>
-                      <CardDescription className="truncate font-mono text-xs">{job.currentItem || job.source}</CardDescription>
+                      <CardDescription className="truncate font-mono text-xs">
+                        {job.currentItem || job.source}
+                      </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="capitalize">{job.status}</Badge>
+                  <Badge variant="outline" className="capitalize">
+                    {job.status}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Progress value={job.progress} />
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>{job.processedItems} of {job.totalItems || "…"} items · {job.progress}%</span>
+                  <span>
+                    {job.processedItems} of {job.totalItems || "…"} items · {job.progress}%
+                  </span>
                   {job.cancellable && ACTIVE.has(job.status) && (
-                    <Button size="sm" variant="destructive" disabled={cancelling === job.id} onClick={() => void cancelJob(job)}>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={cancelling === job.id}
+                      onClick={() => void cancelJob(job)}
+                    >
                       {cancelling === job.id ? "Cancelling…" : "Cancel task"}
                     </Button>
                   )}

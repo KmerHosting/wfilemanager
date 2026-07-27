@@ -16,6 +16,7 @@ SERVICE="${WFILEMANAGER_SERVICE:-wfilemanager.service}"
 HEALTH_URL="${WFILEMANAGER_HEALTH_URL:-http://127.0.0.1:${PORT:-1973}/api/health}"
 KEEP_RELEASES="${WFILEMANAGER_KEEP_RELEASES:-3}"
 ROOT_RESET_COMMAND="${WFILEMANAGER_ROOT_RESET_COMMAND:-/usr/local/sbin/wfilemanager-reset-admin-password}"
+install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-backup-worker" /usr/local/sbin/wfilemanager-backup-worker
 UNINSTALL_COMMAND="${WFILEMANAGER_UNINSTALL_COMMAND:-/usr/local/sbin/wfilemanager-uninstall}"
 RECOVERY_KIT_COMMAND="${WFILEMANAGER_RECOVERY_KIT_COMMAND:-/usr/local/sbin/wfilemanager-recovery-kit}"
 HEARTBEAT_COMMAND="${WFILEMANAGER_HEARTBEAT_COMMAND:-/usr/local/lib/wfilemanager/heartbeat.sh}"
@@ -92,6 +93,7 @@ activate_release() {
 install_release_commands() {
   local release_dir="$1"
   local reset_source="$release_dir/deploy/wfilemanager-reset-admin-password"
+install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-backup-worker" /usr/local/sbin/wfilemanager-backup-worker
   local uninstall_source="$release_dir/deploy/uninstall.sh"
   local recovery_source="$release_dir/deploy/wfilemanager-recovery-kit"
   local heartbeat_source="$release_dir/deploy/wfilemanager-heartbeat"

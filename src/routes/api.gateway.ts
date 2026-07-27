@@ -209,7 +209,10 @@ async function proxy(request: Request) {
     });
 
     if (scopeValue === "login" && upstream.ok && typeof payload.token === "string") {
-      responseHeaders.append("Set-Cookie", sessionCookie(request, payload.token, payload.expiresAt));
+      responseHeaders.append(
+        "Set-Cookie",
+        sessionCookie(request, payload.token, payload.expiresAt),
+      );
       delete payload.token;
     }
     if (action === "logout" || upstream.status === 401 || payload.currentRevoked === true)

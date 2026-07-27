@@ -108,7 +108,9 @@ async function entriesWithLimit(parent: string, names: string[]) {
       if (entry) results.push(entry);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(STAT_CONCURRENCY, names.length) }, () => worker()));
+  await Promise.all(
+    Array.from({ length: Math.min(STAT_CONCURRENCY, names.length) }, () => worker()),
+  );
   return results;
 }
 

@@ -225,7 +225,10 @@ const backgroundUploads = new Map<string, ManagedUploadTask>();
 const backgroundUploadListeners = new Set<() => void>();
 
 function backgroundUploadId() {
-  return globalThis.crypto?.randomUUID?.() || `upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `upload-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
 }
 
 function publishBackgroundUploads() {

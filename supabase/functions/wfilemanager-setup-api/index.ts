@@ -39,7 +39,9 @@ async function sha256(value: string) {
 }
 
 function normalizeEmail(value: unknown) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function validEmail(value: string) {
@@ -49,7 +51,9 @@ function validEmail(value: string) {
 async function mailConfig() {
   const { data, error } = await supabase
     .from("wfilemanager_pro_subscription_config")
-    .select("mailtrap_api_token,mailtrap_api_url,mailtrap_from_email,mailtrap_from_name,support_email")
+    .select(
+      "mailtrap_api_token,mailtrap_api_url,mailtrap_from_email,mailtrap_from_name,support_email",
+    )
     .eq("id", true)
     .maybeSingle();
   if (error) throw error;
@@ -80,14 +84,25 @@ async function sendSetupOtp(email: string, code: string) {
   if (!response.ok) throw new Error(`Setup email delivery failed (${response.status})`);
 }
 
-async function setupOtpAction(action: string, instanceKey: string, body: Record<string, unknown>, ip: string) {
+async function setupOtpAction(
+  action: string,
+  instanceKey: string,
+  body: Record<string, unknown>,
+  ip: string,
+) {
   const email = normalizeEmail(body.email);
   if (!validEmail(email)) return json({ error: "A valid administrator email is required." }, 400);
 
   if (action === "send-otp") {
     const rate = await rateCheck("pro_setup_otp", `${instanceKey}:${email}`, ip);
     if (rate.allowed === false)
-      return json({ error: "Too many verification requests. Try again later.", retryAfterSeconds: Number(rate.retryAfterSeconds || 900) }, 429);
+      return json(
+        {
+          error: "Too many verification requests. Try again later.",
+          retryAfterSeconds: Number(rate.retryAfterSeconds || 900),
+        },
+        429,
+      );
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const { error } = await supabase.from("wfilemanager_setup_otp_challenges").upsert({
       instance_key: instanceKey,
@@ -104,7 +119,10 @@ async function setupOtpAction(action: string, instanceKey: string, body: Record<
     try {
       await sendSetupOtp(email, code);
     } catch (error) {
-      await supabase.from("wfilemanager_setup_otp_challenges").delete().eq("instance_key", instanceKey);
+      await supabase
+        .from("wfilemanager_setup_otp_challenges")
+        .delete()
+        .eq("instance_key", instanceKey);
       throw error;
     }
     await rateRecord("pro_setup_otp", `${instanceKey}:${email}`, ip, true);
@@ -120,14 +138,26 @@ async function setupOtpAction(action: string, instanceKey: string, body: Record<
     .eq("email", email)
     .maybeSingle();
   if (error) throw error;
-  if (!challenge || challenge.consumed_at || challenge.verified_at || new Date(challenge.expires_at).getTime() <= Date.now())
+  if (
+    !challenge ||
+    challenge.consumed_at ||
+    challenge.verified_at ||
+    new Date(challenge.expires_at).getTime() <= Date.now()
+  )
     return json({ error: "The verification code is invalid or expired. Request a new code." }, 400);
-  if (Number(challenge.attempts) >= 5) return json({ error: "Too many incorrect codes. Request a new code." }, 429);
+  if (Number(challenge.attempts) >= 5)
+    return json({ error: "Too many incorrect codes. Request a new code." }, 429);
   if ((await sha256(code)) !== challenge.code_hash) {
-    await supabase.from("wfilemanager_setup_otp_challenges").update({ attempts: Number(challenge.attempts) + 1, updated_at: new Date().toISOString() }).eq("instance_key", instanceKey);
+    await supabase
+      .from("wfilemanager_setup_otp_challenges")
+      .update({ attempts: Number(challenge.attempts) + 1, updated_at: new Date().toISOString() })
+      .eq("instance_key", instanceKey);
     return json({ error: "The verification code is incorrect." }, 400);
   }
-  await supabase.from("wfilemanager_setup_otp_challenges").update({ verified_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("instance_key", instanceKey);
+  await supabase
+    .from("wfilemanager_setup_otp_challenges")
+    .update({ verified_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq("instance_key", instanceKey);
   return json({ success: true, verified: true });
 }
 
@@ -298,7 +328,11 @@ Deno.serve(async (request: Request) => {
       .eq("email", email)
       .maybeSingle();
     if (otpError) throw otpError;
-    if (!verifiedOtp?.verified_at || verifiedOtp.consumed_at || new Date(verifiedOtp.expires_at).getTime() <= Date.now()) {
+    if (
+      !verifiedOtp?.verified_at ||
+      verifiedOtp.consumed_at ||
+      new Date(verifiedOtp.expires_at).getTime() <= Date.now()
+    ) {
       await rateRecord("pro_setup", instanceKey, ipAddress, false);
       return json({ error: "Verify the administrator email code before completing setup." }, 400);
     }

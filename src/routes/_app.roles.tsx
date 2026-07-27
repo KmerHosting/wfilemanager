@@ -239,11 +239,17 @@ function Roles() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => void load()} aria-label="Refresh roles">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => void load()}
+            aria-label="Refresh roles"
+          >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           <Button onClick={() => setNewOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />New role
+            <Plus className="mr-1.5 h-4 w-4" />
+            New role
           </Button>
         </div>
       </div>
@@ -264,7 +270,8 @@ function Roles() {
             <ScrollArea className="max-h-[650px]">
               {loading ? (
                 <div className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />Loading roles…
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading roles…
                 </div>
               ) : (
                 <ul className="divide-y divide-border">
@@ -283,7 +290,8 @@ function Roles() {
                             {role.isSystem && <Badge variant="outline">system</Badge>}
                           </div>
                           <div className="mt-0.5 text-xs text-muted-foreground">
-                            {role.members} member{role.members === 1 ? "" : "s"} · {role.permissions.length} permissions
+                            {role.members} member{role.members === 1 ? "" : "s"} ·{" "}
+                            {role.permissions.length} permissions
                           </div>
                         </div>
                       </button>
@@ -317,7 +325,8 @@ function Roles() {
                         disabled={active.members > 0 || saving}
                         onClick={() => setDeleteOpen(true)}
                       >
-                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                        Delete
                       </Button>
                     )}
                     <Button
@@ -325,7 +334,11 @@ function Roles() {
                       disabled={saving || systemLocked || !draft.name.trim()}
                       onClick={() => void save()}
                     >
-                      {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />}
+                      {saving ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                      )}
                       Save
                     </Button>
                   </div>
@@ -366,24 +379,37 @@ function Roles() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Create role</DialogTitle>
-            <DialogDescription>Choose only operations implemented by the application.</DialogDescription>
+            <DialogDescription>
+              Choose only operations implemented by the application.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">
                 <Label>Name</Label>
-                <Input value={newRole.name} onChange={(event) => setNewRole({ ...newRole, name: event.target.value })} />
+                <Input
+                  value={newRole.name}
+                  onChange={(event) => setNewRole({ ...newRole, name: event.target.value })}
+                />
               </div>
               <div className="grid gap-1.5">
                 <Label>Description</Label>
-                <Textarea value={newRole.description} onChange={(event) => setNewRole({ ...newRole, description: event.target.value })} />
+                <Textarea
+                  value={newRole.description}
+                  onChange={(event) => setNewRole({ ...newRole, description: event.target.value })}
+                />
               </div>
             </div>
             {permissionGrid(newRole.permissions, "new")}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-            <Button disabled={saving || newRole.name.trim().length < 2} onClick={() => void create()}>
+            <Button variant="outline" onClick={() => setNewOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={saving || newRole.name.trim().length < 2}
+              onClick={() => void create()}
+            >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create role
             </Button>
           </DialogFooter>

@@ -22,15 +22,16 @@ function Page() {
       <div className="space-y-4">
         <Alert>
           <AlertDescription>
-            Open an SSH session as root or with sudo access, then run the installed recovery command.
+            Open an SSH session as root or with sudo access, then run the installed recovery
+            command.
           </AlertDescription>
         </Alert>
         <pre className="overflow-x-auto rounded-md border border-border bg-muted p-3 text-xs">
           sudo wfilemanager-reset-admin-password
         </pre>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Pro installations can also be recovered after a server reinstall with the saved Recovery Kit.
-          wFileManager does not pretend to send reset emails for local administrator accounts.
+          Pro installations can also be recovered after a server reinstall with the saved Recovery
+          Kit. wFileManager does not pretend to send reset emails for local administrator accounts.
         </p>
         <Button asChild className="w-full">
           <Link to="/login">Return to sign in</Link>

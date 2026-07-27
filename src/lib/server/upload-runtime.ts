@@ -14,10 +14,7 @@ const MIN_FREE_BYTES = Math.max(
   256 * 1024 * 1024,
   Number(process.env.WFILEMANAGER_MIN_FREE_BYTES || 1024 * 1024 * 1024),
 );
-const MAX_ACTIVE_UPLOADS = Math.max(
-  1,
-  Number(process.env.WFILEMANAGER_MAX_ACTIVE_UPLOADS || 4),
-);
+const MAX_ACTIVE_UPLOADS = Math.max(1, Number(process.env.WFILEMANAGER_MAX_ACTIVE_UPLOADS || 4));
 let activeUploads = 0;
 
 function safeName(input: unknown) {
@@ -85,7 +82,10 @@ async function streamUpload(
       throw new LocalApiError(413, "The uploaded file exceeds the configured size limit");
     const initialAvailable = await availableBytes(parent);
     if (initialAvailable <= MIN_FREE_BYTES)
-      throw new LocalApiError(507, "The destination filesystem does not have enough reserved free space");
+      throw new LocalApiError(
+        507,
+        "The destination filesystem does not have enough reserved free space",
+      );
     if (expectedSize != null && expectedSize > initialAvailable - MIN_FREE_BYTES)
       throw new LocalApiError(507, "The uploaded file would exhaust the destination filesystem");
 

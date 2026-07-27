@@ -147,7 +147,9 @@ async function authenticate(request: Request): Promise<Authenticated | null> {
       .eq("instance_id", instance.id)
       .maybeSingle();
     permissions = Array.isArray(role?.permissions)
-      ? role.permissions.filter((permission): permission is string => typeof permission === "string")
+      ? role.permissions.filter(
+          (permission): permission is string => typeof permission === "string",
+        )
       : [];
   }
   if (!permissions.includes("manage_users")) return null;
@@ -304,7 +306,11 @@ async function createUser(request: Request, auth: Authenticated, body: Row) {
   try {
     await replacePaths(auth, data.id, paths);
   } catch (error) {
-    await db.from("wfilemanager_users").delete().eq("id", data.id).eq("instance_id", auth.instance.id);
+    await db
+      .from("wfilemanager_users")
+      .delete()
+      .eq("id", data.id)
+      .eq("instance_id", auth.instance.id);
     throw error;
   }
   await audit(request, auth, "user.create", username, "success", { allowedPaths: paths });
@@ -314,7 +320,8 @@ async function createUser(request: Request, auth: Authenticated, body: Row) {
 async function updateUser(request: Request, auth: Authenticated, body: Row) {
   const id = clean(body.id);
   if (!id) return json({ error: "User id is required" }, 400);
-  if (id === auth.actor.id) return json({ error: "Use Account settings to edit your own account" }, 400);
+  if (id === auth.actor.id)
+    return json({ error: "Use Account settings to edit your own account" }, 400);
   const { data: target, error: targetError } = await db
     .from("wfilemanager_users")
     .select("*")
@@ -323,7 +330,8 @@ async function updateUser(request: Request, auth: Authenticated, body: Row) {
     .maybeSingle();
   if (targetError) throw targetError;
   if (!target) return json({ error: "User was not found" }, 404);
-  if (target.is_admin === true) return json({ error: "The installation administrator cannot be modified" }, 409);
+  if (target.is_admin === true)
+    return json({ error: "The installation administrator cannot be modified" }, 409);
 
   const updates: Row = { updated_at: new Date().toISOString() };
   if (body.displayName !== undefined) {
@@ -426,11 +434,7 @@ async function deleteUser(request: Request, auth: Authenticated, body: Row) {
   if (target.is_admin === true)
     return json({ error: "The installation administrator cannot be deleted" }, 409);
   await Promise.all([
-    db
-      .from("wfilemanager_sessions")
-      .delete()
-      .eq("instance_id", auth.instance.id)
-      .eq("user_id", id),
+    db.from("wfilemanager_sessions").delete().eq("instance_id", auth.instance.id).eq("user_id", id),
     db
       .from("wfilemanager_path_rules")
       .delete()

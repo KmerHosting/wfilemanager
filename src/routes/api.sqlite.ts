@@ -36,10 +36,7 @@ import {
   recordLoginSuccess,
 } from "@/lib/server/login-rate-limit";
 import { pathRulesForUser } from "@/lib/server/sqlite-path-policy";
-import {
-  createSqliteUserWithPaths,
-  updateSqliteUser,
-} from "@/lib/server/sqlite-user-admin";
+import { createSqliteUserWithPaths, updateSqliteUser } from "@/lib/server/sqlite-user-admin";
 
 const MAX_BODY_BYTES = Math.max(
   16 * 1024,

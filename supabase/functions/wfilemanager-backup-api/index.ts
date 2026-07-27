@@ -252,7 +252,10 @@ async function runSnapshots(key: BackupKey) {
         continue;
       }
       try {
-        results.push({ instance: instance.instance_key, snapshot: await createSnapshot(key, instance) });
+        results.push({
+          instance: instance.instance_key,
+          snapshot: await createSnapshot(key, instance),
+        });
       } catch (error) {
         results.push({
           instance: instance.instance_key,

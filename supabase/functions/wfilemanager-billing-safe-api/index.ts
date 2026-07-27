@@ -82,8 +82,8 @@ async function authorized(request: Request, settings: Config) {
   const secret = clean(request.headers.get("x-wfilemanager-automation-secret"));
   return Boolean(
     secret &&
-      settings.automationSecretHash &&
-      safeEqual(await sha256(secret), settings.automationSecretHash),
+    settings.automationSecretHash &&
+    safeEqual(await sha256(secret), settings.automationSecretHash),
   );
 }
 async function sendDeletionEmail(settings: Config, info: Row) {
@@ -174,7 +174,8 @@ async function cleanupLifecycle(settings: Config) {
       results.push({ instance: info.instanceKey, databaseDeleted: true, backupsDeleted: true });
     } catch (value) {
       const message = value instanceof Error ? value.message : "Lifecycle cleanup failed";
-      const databaseDeleted = ["database_deleted", "cleanup_failed"].includes(event.status) ||
+      const databaseDeleted =
+        ["database_deleted", "cleanup_failed"].includes(event.status) ||
         !(await db
           .from("wfilemanager_instances")
           .select("id", { count: "exact", head: true })
@@ -189,7 +190,12 @@ async function cleanupLifecycle(settings: Config) {
           last_error: message,
         })
         .eq("id", event.id);
-      results.push({ instance: event.instance_key, completed: false, databaseDeleted, error: message });
+      results.push({
+        instance: event.instance_key,
+        completed: false,
+        databaseDeleted,
+        error: message,
+      });
     }
   }
   return { checked: events?.length || 0, results };
@@ -228,6 +234,9 @@ Deno.serve(async (request: Request) => {
     return json({ ok: true, safeLifecycle: lifecycle, billing: upstream });
   } catch (error) {
     console.error(error);
-    return json({ error: error instanceof Error ? error.message : "Safe billing automation failed" }, 500);
+    return json(
+      { error: error instanceof Error ? error.message : "Safe billing automation failed" },
+      500,
+    );
   }
 });

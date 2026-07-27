@@ -36,10 +36,9 @@ function normalizedPath(value: unknown) {
 
 export function normalizeAllowedPaths(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value.map(normalizedPath).filter((item): item is string => Boolean(item)))].slice(
-    0,
-    32,
-  );
+  return [
+    ...new Set(value.map(normalizedPath).filter((item): item is string => Boolean(item))),
+  ].slice(0, 32);
 }
 
 export function pathRulesForUser(
@@ -47,8 +46,7 @@ export function pathRulesForUser(
   roleId: string | null | undefined,
   isAdmin: boolean,
 ): LocalPathRule[] {
-  if (isAdmin)
-    return [{ path: "/", accessMode: "allow", recursive: true, source: "user" }];
+  if (isAdmin) return [{ path: "/", accessMode: "allow", recursive: true, source: "user" }];
   const connection = db();
   const userRules = connection
     .prepare(

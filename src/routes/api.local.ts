@@ -160,7 +160,9 @@ export const Route = createFileRoute("/api/local")({
           }
           if (action === "read") {
             const user = await auth.requirePermission(request, "read");
-            return json(await api.readTextFile(await policy.assertExistingPathAllowed(user, target)));
+            return json(
+              await api.readTextFile(await policy.assertExistingPathAllowed(user, target)),
+            );
           }
           if (action === "download") {
             const user = await auth.requirePermission(request, "download");
@@ -315,7 +317,11 @@ export const Route = createFileRoute("/api/local")({
             );
             await safe.assertDestinationAbsent(destination);
             return json(
-              await api.createFileAt(path.dirname(destination), path.basename(destination), body.content),
+              await api.createFileAt(
+                path.dirname(destination),
+                path.basename(destination),
+                body.content,
+              ),
               201,
             );
           }
@@ -397,7 +403,10 @@ export const Route = createFileRoute("/api/local")({
           if (action === "backup-run") {
             const user = await auth.requireAdmin(request);
             const runner = await backupRunner();
-            return json(await runner.startRemoteBackup(body.source, body.jobId, body.signedUrl), 202);
+            return json(
+              await runner.startRemoteBackup(body.source, body.jobId, body.signedUrl),
+              202,
+            );
           }
           if (action === "job-start") {
             const operation = String(body.operation || "");

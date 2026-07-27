@@ -20,8 +20,7 @@ function clean(value: unknown) {
 function roleName(roleId: string | null) {
   if (!roleId) return null;
   const row = db().prepare("SELECT name FROM wfm_roles WHERE id = ?").get(roleId) as
-    | { name?: string }
-    | undefined;
+    { name?: string } | undefined;
   return row?.name || null;
 }
 function publicUser(row: Record<string, unknown>) {
@@ -52,8 +51,7 @@ function publicUser(row: Record<string, unknown>) {
 function assertRole(roleId: string | null) {
   if (!roleId) return;
   const row = db().prepare("SELECT name FROM wfm_roles WHERE id = ?").get(roleId) as
-    | { name?: string }
-    | undefined;
+    { name?: string } | undefined;
   if (!row) throw new SqliteAuthError(400, "The selected role does not exist.");
   if (String(row.name).toLowerCase() === "administrator")
     throw new SqliteAuthError(400, "The Administrator role cannot be assigned to another account.");
@@ -90,10 +88,9 @@ export function createSqliteUserWithPaths(
     connection.prepare("DELETE FROM wfm_users WHERE id = ?").run(result.user.id);
     throw error;
   }
-  const row = connection.prepare("SELECT * FROM wfm_users WHERE id = ?").get(result.user.id) as Record<
-    string,
-    unknown
-  >;
+  const row = connection
+    .prepare("SELECT * FROM wfm_users WHERE id = ?")
+    .get(result.user.id) as Record<string, unknown>;
   return { user: publicUser(row) };
 }
 
@@ -104,8 +101,7 @@ export function updateSqliteUser(actor: Actor, payload: Record<string, unknown>)
   if (id === String(actor.id))
     throw new SqliteAuthError(400, "Use Account settings to edit your own account.");
   const current = db().prepare("SELECT * FROM wfm_users WHERE id = ?").get(id) as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   if (!current) throw new SqliteAuthError(404, "User was not found.");
   if (current.is_admin)
     throw new SqliteAuthError(409, "The installation administrator cannot be modified.");
@@ -147,11 +143,7 @@ export function updateSqliteUser(actor: Actor, payload: Record<string, unknown>)
   if (typeof payload.password === "string" && payload.password) {
     const credential = passwordCredential(payload.password);
     updates.push("password_hash = ?", "password_salt = ?", "must_change_password = ?");
-    values.push(
-      credential.hash,
-      credential.salt,
-      payload.mustChangePassword === false ? 0 : 1,
-    );
+    values.push(credential.hash, credential.salt, payload.mustChangePassword === false ? 0 : 1);
     passwordChanged = true;
   }
   updates.push("updated_at = ?");

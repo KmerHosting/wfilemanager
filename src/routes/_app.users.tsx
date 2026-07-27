@@ -68,7 +68,14 @@ function strongPassword(value: string) {
 }
 
 function parsePaths(value: string) {
-  return [...new Set(value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      value
+        .split(/\r?\n/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
 function pathsText(user: AuthUser | null) {
@@ -231,7 +238,12 @@ function Users() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => void load()} aria-label="Refresh users">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => void load()}
+            aria-label="Refresh users"
+          >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -276,7 +288,10 @@ function Users() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label>Role</Label>
-                    <Select value={form.roleId} onValueChange={(roleId) => setForm({ ...form, roleId })}>
+                    <Select
+                      value={form.roleId}
+                      onValueChange={(roleId) => setForm({ ...form, roleId })}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choose a role" />
                       </SelectTrigger>
@@ -310,7 +325,8 @@ function Users() {
                     placeholder={"/var/www/example.com\n/home/customer"}
                   />
                   <p className="text-xs text-muted-foreground">
-                    One absolute path per line. Access is recursive. Empty means no filesystem access.
+                    One absolute path per line. Access is recursive. Empty means no filesystem
+                    access.
                   </p>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
@@ -360,7 +376,12 @@ function Users() {
             </div>
             <div className="relative w-72">
               <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search users…" className="pl-8" />
+              <Input
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                placeholder="Search users…"
+                className="pl-8"
+              />
             </div>
           </div>
         </CardHeader>
@@ -398,17 +419,25 @@ function Users() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="font-medium">{user.displayName}</div>
-                        <div className="text-xs text-muted-foreground">{user.email || "No email"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.email || "No email"}
+                        </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{user.username}</TableCell>
                       <TableCell>
                         <Badge variant={user.isAdmin ? "default" : "secondary"}>
-                          {assignedRole?.name || user.roleName || (user.isAdmin ? "Administrator" : "No role")}
+                          {assignedRole?.name ||
+                            user.roleName ||
+                            (user.isAdmin ? "Administrator" : "No role")}
                         </Badge>
                       </TableCell>
                       <TableCell className="max-w-52">
                         <div className="truncate font-mono text-xs text-muted-foreground">
-                          {user.isAdmin ? "/" : user.allowedPaths?.length ? user.allowedPaths.join(", ") : "Denied"}
+                          {user.isAdmin
+                            ? "/"
+                            : user.allowedPaths?.length
+                              ? user.allowedPaths.join(", ")
+                              : "Denied"}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -459,27 +488,50 @@ function Users() {
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Display name</Label>
-                <Input value={edit.displayName} onChange={(event) => setEdit({ ...edit, displayName: event.target.value })} />
+                <Input
+                  value={edit.displayName}
+                  onChange={(event) => setEdit({ ...edit, displayName: event.target.value })}
+                />
               </div>
               <div className="grid gap-1.5">
                 <Label>Email</Label>
-                <Input type="email" value={edit.email} onChange={(event) => setEdit({ ...edit, email: event.target.value })} />
+                <Input
+                  type="email"
+                  value={edit.email}
+                  onChange={(event) => setEdit({ ...edit, email: event.target.value })}
+                />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Role</Label>
-                <Select value={edit.roleId} onValueChange={(roleId) => setEdit({ ...edit, roleId })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={edit.roleId}
+                  onValueChange={(roleId) => setEdit({ ...edit, roleId })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {assignableRoles.map((role) => <SelectItem key={role.id} value={role.id}>{role.name}</SelectItem>)}
+                    {assignableRoles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-1.5">
                 <Label>Status</Label>
-                <Select value={edit.status} onValueChange={(status) => setEdit({ ...edit, status: status as typeof edit.status })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={edit.status}
+                  onValueChange={(status) =>
+                    setEdit({ ...edit, status: status as typeof edit.status })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="disabled">Disabled</SelectItem>
@@ -490,19 +542,32 @@ function Users() {
             </div>
             <div className="grid gap-1.5">
               <Label>Allowed server paths</Label>
-              <Textarea className="min-h-28 font-mono text-xs" value={edit.allowedPaths} onChange={(event) => setEdit({ ...edit, allowedPaths: event.target.value })} />
+              <Textarea
+                className="min-h-28 font-mono text-xs"
+                value={edit.allowedPaths}
+                onChange={(event) => setEdit({ ...edit, allowedPaths: event.target.value })}
+              />
             </div>
             <div className="grid gap-1.5">
               <Label>New temporary password (optional)</Label>
-              <Input type="password" value={edit.password} onChange={(event) => setEdit({ ...edit, password: event.target.value })} />
+              <Input
+                type="password"
+                value={edit.password}
+                onChange={(event) => setEdit({ ...edit, password: event.target.value })}
+              />
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={edit.mustChangePassword} onCheckedChange={(value) => setEdit({ ...edit, mustChangePassword: !!value })} />
+              <Checkbox
+                checked={edit.mustChangePassword}
+                onCheckedChange={(value) => setEdit({ ...edit, mustChangePassword: !!value })}
+              />
               Force password change
             </label>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
             <Button
               disabled={
                 saving ||
@@ -518,12 +583,16 @@ function Users() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(value) => !value && !deleting && setDeleteTarget(null)}>
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(value) => !value && !deleting && setDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {deleteTarget?.displayName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the account, sessions, notifications and path rules. Server files are not deleted.
+              This permanently removes the account, sessions, notifications and path rules. Server
+              files are not deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -531,7 +600,10 @@ function Users() {
             <AlertDialogAction
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(event) => { event.preventDefault(); void remove(); }}
+              onClick={(event) => {
+                event.preventDefault();
+                void remove();
+              }}
             >
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Delete user
             </AlertDialogAction>

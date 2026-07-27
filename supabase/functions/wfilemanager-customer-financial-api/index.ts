@@ -286,9 +286,7 @@ async function initiatePayment(
     source: "api",
   };
   if (
-    ["orange_money", "mtn_momo", "stripe", "paypal"].includes(
-      config.camerpayMethod.toLowerCase(),
-    )
+    ["orange_money", "mtn_momo", "stripe", "paypal"].includes(config.camerpayMethod.toLowerCase())
   )
     requestBody.payment_method = config.camerpayMethod.toLowerCase();
   const { response, payload } = await fetchJson(`${config.camerpayBaseUrl}/api/payment/initiate`, {
@@ -872,8 +870,7 @@ Deno.serve(async (request: Request) => {
     }
     if (action === "topup-status" && request.method === "GET")
       return topupStatus(config, customer, url);
-    if (action === "order" && request.method === "GET")
-      return orderStatus(config, customer, url);
+    if (action === "order" && request.method === "GET") return orderStatus(config, customer, url);
     return json({ error: "Not found" }, 404);
   } catch (error) {
     console.error(error);

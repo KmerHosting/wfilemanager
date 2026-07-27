@@ -37,13 +37,7 @@ const MAX_ACTIVE_GLOBAL = Math.max(
 
 type OperationName = "copy" | "move" | "delete";
 type OperationStatus =
-  | "queued"
-  | "running"
-  | "cancelling"
-  | "cancelled"
-  | "completed"
-  | "failed"
-  | "interrupted";
+  "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
 type OperationPhase = "queued" | "scanning" | "copying" | "source_cleanup" | "deleting" | "done";
 
 type TreeItem = {
@@ -148,7 +142,10 @@ async function scanTree(root: string, job?: PersistentOperationJob) {
   const entries: TreeItem[] = [];
   async function visit(target: string, relative: string, depth: number) {
     if (depth > MAX_TREE_DEPTH)
-      throw new LocalApiError(413, `The filesystem tree exceeds the depth limit of ${MAX_TREE_DEPTH}`);
+      throw new LocalApiError(
+        413,
+        `The filesystem tree exceeds the depth limit of ${MAX_TREE_DEPTH}`,
+      );
     if (entries.length >= MAX_TREE_ENTRIES)
       throw new LocalApiError(
         413,
@@ -272,7 +269,11 @@ async function perform(job: PersistentOperationJob) {
     const destination = path.join(job.destinationDirectory, path.basename(job.source));
     if (destination === job.source || destination.startsWith(`${job.source}${path.sep}`))
       throw new LocalApiError(400, "The destination cannot be inside the source");
-    if (await lstat(destination).then(() => true).catch(() => false))
+    if (
+      await lstat(destination)
+        .then(() => true)
+        .catch(() => false)
+    )
       throw new LocalApiError(409, `Destination already exists: ${destination}`);
 
     if (job.operation === "move") {
@@ -365,7 +366,10 @@ export async function startOperationJob(
   if (!["copy", "move", "delete"].includes(operation))
     throw new LocalApiError(400, "Unsupported operation");
   if (activeJobs(ownerUserId).length >= MAX_ACTIVE_PER_USER)
-    throw new LocalApiError(429, "Too many filesystem operations are already running for this account");
+    throw new LocalApiError(
+      429,
+      "Too many filesystem operations are already running for this account",
+    );
   if (activeJobs().length >= MAX_ACTIVE_GLOBAL)
     throw new LocalApiError(503, "The filesystem operation queue is currently full");
   const conflicts = activeJobs().some(
