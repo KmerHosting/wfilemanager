@@ -20,7 +20,6 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
 import { Route as AppAboutRouteImport } from './routes/_app.about'
 import { Route as AppAccountRouteImport } from './routes/_app.account'
-import { Route as AppDocsRouteImport } from './routes/_app.docs'
 import { Route as AppExplorerRouteImport } from './routes/_app.explorer'
 import { Route as AppLogsRouteImport } from './routes/_app.logs'
 import { Route as AppNotificationsRouteImport } from './routes/_app.notifications'
@@ -90,11 +89,6 @@ const AppAboutRoute = AppAboutRouteImport.update({
 const AppAccountRoute = AppAccountRouteImport.update({
   id: '/account',
   path: '/account',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDocsRoute = AppDocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
   getParentRoute: () => AppRoute,
 } as any)
 const AppExplorerRoute = AppExplorerRouteImport.update({
@@ -192,7 +186,6 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/about': typeof AppAboutRoute
   '/account': typeof AppAccountRoute
-  '/docs': typeof AppDocsRoute
   '/explorer': typeof AppExplorerRoute
   '/logs': typeof AppLogsRoute
   '/notifications': typeof AppNotificationsRoute
@@ -220,7 +213,6 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/about': typeof AppAboutRoute
   '/account': typeof AppAccountRoute
-  '/docs': typeof AppDocsRoute
   '/explorer': typeof AppExplorerRoute
   '/logs': typeof AppLogsRoute
   '/notifications': typeof AppNotificationsRoute
@@ -251,7 +243,6 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/about': typeof AppAboutRoute
   '/_app/account': typeof AppAccountRoute
-  '/_app/docs': typeof AppDocsRoute
   '/_app/explorer': typeof AppExplorerRoute
   '/_app/logs': typeof AppLogsRoute
   '/_app/notifications': typeof AppNotificationsRoute
@@ -283,7 +274,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/about'
     | '/account'
-    | '/docs'
     | '/explorer'
     | '/logs'
     | '/notifications'
@@ -311,7 +301,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/about'
     | '/account'
-    | '/docs'
     | '/explorer'
     | '/logs'
     | '/notifications'
@@ -341,7 +330,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_app/about'
     | '/_app/account'
-    | '/_app/docs'
     | '/_app/explorer'
     | '/_app/logs'
     | '/_app/notifications'
@@ -456,13 +444,6 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AppAccountRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/docs': {
-      id: '/_app/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof AppDocsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/explorer': {
@@ -583,7 +564,6 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppAboutRoute: typeof AppAboutRoute
   AppAccountRoute: typeof AppAccountRoute
-  AppDocsRoute: typeof AppDocsRoute
   AppExplorerRoute: typeof AppExplorerRoute
   AppLogsRoute: typeof AppLogsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -599,7 +579,6 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAboutRoute: AppAboutRoute,
   AppAccountRoute: AppAccountRoute,
-  AppDocsRoute: AppDocsRoute,
   AppExplorerRoute: AppExplorerRoute,
   AppLogsRoute: AppLogsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
