@@ -56,7 +56,9 @@ function Tasks() {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => localApi.subscribeBackgroundUploads(() => setUploads(localApi.backgroundUploads())), []);
+  useEffect(() => {
+    return localApi.subscribeBackgroundUploads(() => setUploads(localApi.backgroundUploads()));
+  }, []);
 
   const cancelJob = async (job: OperationJob) => {
     setCancelling(job.id);
