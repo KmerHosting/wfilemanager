@@ -106,13 +106,10 @@ function providerInvoice(payload: Record<string, unknown>) {
   return clean(
     pick(payload, [
       "merchant_invoice_id",
-      "invoice_id",
       "idempotency_key",
       "transaction.merchant_invoice_id",
-      "transaction.invoice_id",
       "transaction.idempotency_key",
       "data.merchant_invoice_id",
-      "data.invoice_id",
       "data.idempotency_key",
     ]),
   );
@@ -394,7 +391,8 @@ async function reconcileTopups(config: Config) {
           amount !== null &&
           Math.abs(amount - Number(topup.amount_xaf || 0)) <= 0.01 &&
           providerCurrency(payload) === "XAF" &&
-          providerInvoice(payload) === clean(topup.topup_reference) &&
+          (!providerInvoice(payload) ||
+            providerInvoice(payload) === clean(topup.topup_reference)) &&
           providerReference(payload) === clean(topup.provider_reference);
         if (verified) {
           const paidAt = topup.paid_at || new Date().toISOString();

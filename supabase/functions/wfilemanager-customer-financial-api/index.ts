@@ -113,16 +113,12 @@ function paymentInvoice(payload: Row) {
     pick(payload, [
       "merchant_invoice_id",
       "merchantInvoiceId",
-      "invoice_id",
-      "invoiceId",
       "idempotency_key",
       "transaction.merchant_invoice_id",
       "transaction.merchantInvoiceId",
-      "transaction.invoice_id",
       "transaction.idempotency_key",
       "data.merchant_invoice_id",
       "data.merchantInvoiceId",
-      "data.invoice_id",
       "data.idempotency_key",
     ]),
   );
@@ -338,7 +334,7 @@ async function verifyPayment(
   if (amount === null || Math.abs(amount - Number(row.amount_xaf || 0)) > 0.01)
     throw new Error("CamerPay amount does not exactly match the expected XAF amount");
   if (currency !== "XAF") throw new Error("CamerPay currency does not match XAF");
-  if (!invoice || invoice !== clean(row[referenceField]))
+  if (invoice && invoice !== clean(row[referenceField]))
     throw new Error("CamerPay merchant invoice reference does not match");
   if (providerReference && providerReference !== clean(row.provider_reference))
     throw new Error("CamerPay transaction reference does not match");
