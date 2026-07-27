@@ -114,7 +114,6 @@ install_release_commands() {
     fi
     if [[ "$database_mode" == "supabase" ]]; then
       systemctl enable --now "$HEARTBEAT_TIMER" || true
-      systemctl start "$HEARTBEAT_SERVICE" || true
       if [[ -x "$RECOVERY_KIT_COMMAND" && ! -s /root/wfilemanager-recovery-kit.txt ]]; then
         "$RECOVERY_KIT_COMMAND" export /root/wfilemanager-recovery-kit.txt >/dev/null || true
       fi

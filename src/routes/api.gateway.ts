@@ -86,7 +86,11 @@ function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {
-    return new URL(origin).origin === new URL(request.url).origin;
+    const publicBaseUrl = process.env.WFILEMANAGER_PUBLIC_BASE_URL?.trim();
+    const expectedOrigin = publicBaseUrl
+      ? new URL(publicBaseUrl).origin
+      : new URL(request.url).origin;
+    return new URL(origin).origin === expectedOrigin;
   } catch {
     return false;
   }
