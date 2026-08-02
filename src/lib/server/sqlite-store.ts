@@ -71,9 +71,7 @@ function now() {
 }
 
 function ensureColumn(table: string, column: string, definition: string) {
-  const columns = db()
-    .prepare(`PRAGMA table_info(${table})`)
-    .all() as Array<{ name?: string }>;
+  const columns = db().prepare(`PRAGMA table_info(${table})`).all() as Array<{ name?: string }>;
   if (!columns.some((item) => item.name === column))
     db().exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
@@ -765,7 +763,9 @@ function publicNotification(row: Row) {
 }
 
 export function notifications(user: UserRow) {
-  db().prepare("DELETE FROM wfm_notifications WHERE expires_at IS NOT NULL AND expires_at <= ?").run(now());
+  db()
+    .prepare("DELETE FROM wfm_notifications WHERE expires_at IS NOT NULL AND expires_at <= ?")
+    .run(now());
   const rows = db()
     .prepare("SELECT * FROM wfm_notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 200")
     .all(user.id) as Row[];
