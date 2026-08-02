@@ -281,59 +281,69 @@ function TerminalPage() {
 
       <div
         className={cn(
-          "flex items-center gap-2 border-y border-border bg-surface/60 px-2 py-1.5",
+          "flex flex-wrap items-center gap-1.5 border-y border-border bg-surface/60 px-2 py-1.5",
           !fullscreen && "mt-3",
         )}
       >
-        <Badge variant="destructive" className="font-mono">
+        <Badge variant="destructive" className="shrink-0 font-mono">
           root
         </Badge>
-        <span className="min-w-0 flex-1 text-xs capitalize text-muted-foreground">{status}</span>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-xs"
-          onClick={() => {
-            const current = sessionIdRef.current;
-            sessionIdRef.current = null;
-            if (current) void localApi.ptyClose(current).catch(() => undefined);
-            setUnlockRequest(null);
-            setStatus("locked");
-            setPassword("");
-          }}
-        >
-          <RotateCw className="mr-1 h-3.5 w-3.5" /> Re-authenticate
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-xs"
-          onClick={async () => {
-            const selection = terminalRef.current?.getSelection() || "";
-            if (!selection) return void toast.info("Select terminal text first");
-            await navigator.clipboard.writeText(selection);
-            toast.success("Selection copied");
-          }}
-        >
-          <Copy className="mr-1 h-3.5 w-3.5" /> Copy
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="text-xs"
-          onClick={() => terminalRef.current?.clear()}
-        >
-          <Trash2 className="mr-1 h-3.5 w-3.5" /> Clear
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8"
-          onClick={() => setFullscreen((value) => !value)}
-          aria-label="Toggle fullscreen"
-        >
-          {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
+        <span className="order-3 basis-full text-xs capitalize text-muted-foreground sm:order-none sm:basis-auto sm:flex-1">
+          {status}
+        </span>
+        <div className="order-2 ml-auto flex shrink-0 flex-wrap items-center justify-end gap-1 sm:order-none">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0 px-2 text-xs"
+            onClick={() => {
+              const current = sessionIdRef.current;
+              sessionIdRef.current = null;
+              if (current) void localApi.ptyClose(current).catch(() => undefined);
+              setUnlockRequest(null);
+              setStatus("locked");
+              setPassword("");
+            }}
+            aria-label="Re-authenticate terminal"
+          >
+            <RotateCw className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Re-authenticate</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0 px-2 text-xs"
+            onClick={async () => {
+              const selection = terminalRef.current?.getSelection() || "";
+              if (!selection) return void toast.info("Select terminal text first");
+              await navigator.clipboard.writeText(selection);
+              toast.success("Selection copied");
+            }}
+            aria-label="Copy selected terminal text"
+          >
+            <Copy className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Copy</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="shrink-0 px-2 text-xs"
+            onClick={() => terminalRef.current?.clear()}
+            aria-label="Clear terminal"
+          >
+            <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
+            <span className="hidden sm:inline">Clear</span>
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setFullscreen((value) => !value)}
+            aria-label="Toggle fullscreen"
+          >
+            {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
       <div className="relative min-h-0 flex-1 bg-[#171719]">

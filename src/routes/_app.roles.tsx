@@ -376,7 +376,7 @@ function Roles() {
       </div>
 
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-3xl overflow-y-auto p-4 sm:max-h-[calc(100dvh-2rem)] sm:w-full sm:p-6">
           <DialogHeader>
             <DialogTitle>Create role</DialogTitle>
             <DialogDescription>

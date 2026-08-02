@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import {
   SqliteAuthError,
+  auditLogs,
   changePassword,
   createNotification,
   createRole,
@@ -212,6 +213,7 @@ export const Route = createFileRoute("/api/sqlite")({
           const user = sessionUser(sessionToken);
           if (scope === "auth" && action === "me")
             return json(sanitizeResult({ user: userResponse(user), instance: instanceInfo() }));
+          if (scope === "auth" && action === "logs") return json(auditLogs(user));
           if (scope === "auth" && action === "users") return json(sanitizeResult(listUsers(user)));
           if (scope === "roles" && action === "permissions") {
             const access = rolePermissions(user) as Record<string, unknown>;

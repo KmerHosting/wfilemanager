@@ -70,6 +70,29 @@ function now() {
   return new Date().toISOString();
 }
 
+function ensureColumn(table: string, column: string, definition: string) {
+  const columns = db()
+    .prepare(`PRAGMA table_info(${table})`)
+    .all() as Array<{ name?: string }>;
+  if (!columns.some((item) => item.name === column))
+    db().exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+function migrateExistingNotifications() {
+  ensureColumn("wfm_notifications", "expires_at", "TEXT");
+  const rows = db()
+    .prepare("SELECT id, created_at FROM wfm_notifications WHERE expires_at IS NULL")
+    .all() as Row[];
+  const update = db().prepare("UPDATE wfm_notifications SET expires_at = ? WHERE id = ?");
+  for (const row of rows) {
+    const createdAt = new Date(String(row.created_at));
+    const expiresAt = Number.isNaN(createdAt.getTime())
+      ? new Date(Date.now() + 7 * 86400_000).toISOString()
+      : new Date(createdAt.getTime() + 7 * 86400_000).toISOString();
+    update.run(expiresAt, String(row.id));
+  }
+}
+
 function db() {
   if (database) return database;
   mkdirSync(path.dirname(DB_PATH), { recursive: true, mode: 0o700 });
@@ -149,6 +172,7 @@ function db() {
     CREATE INDEX IF NOT EXISTS wfm_sessions_expires_at_idx ON wfm_sessions(expires_at);
     CREATE INDEX IF NOT EXISTS wfm_notifications_user_id_idx ON wfm_notifications(user_id);
   `);
+  migrateExistingNotifications();
   return database;
 }
 
@@ -555,6 +579,28 @@ export function rolePermissions(user: UserRow) {
   };
 }
 
+export function auditLogs(user: UserRow) {
+  assertPermission(user, "view_logs");
+  const rows = db()
+    .prepare(
+      "SELECT id, username, action, target, result, created_at FROM wfm_audit_logs ORDER BY id DESC LIMIT 500",
+    )
+    .all() as Row[];
+  return {
+    logs: rows.map((row) => ({
+      id: String(row.id),
+      username: row.username ? String(row.username) : null,
+      action: String(row.action),
+      target: row.target ? String(row.target) : null,
+      result: String(row.result || "success"),
+      metadata: {},
+      ip_address: null,
+      user_agent: null,
+      created_at: String(row.created_at),
+    })),
+  };
+}
+
 export function listRoles(user: UserRow) {
   assertPermission(user, "manage_roles");
   const rows = db()
@@ -719,7 +765,7 @@ function publicNotification(row: Row) {
 }
 
 export function notifications(user: UserRow) {
-  db().prepare("DELETE FROM wfm_notifications WHERE expires_at <= ?").run(now());
+  db().prepare("DELETE FROM wfm_notifications WHERE expires_at IS NOT NULL AND expires_at <= ?").run(now());
   const rows = db()
     .prepare("SELECT * FROM wfm_notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 200")
     .all(user.id) as Row[];
