@@ -1,7 +1,7 @@
 <h1 align="center">wFileManager</h1>
 
 <p align="center">
-  A secure, open source file manager and server workspace for Linux.
+  A secure, open source web based file manager for Linux servers.
 </p>
 
 <p align="center">
