@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_app")({
   component: AppLayout,
 });
 
-const UPDATE_CHECK_INTERVAL_MS = 1_800;
+const UPDATE_CHECK_INTERVAL_MS = 60_000;
 const UPDATE_START_GRACE_MS = 6_000;
 const UPDATE_BLOCKING_PHASES = new Set([
   "downloading",
@@ -99,6 +99,7 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
   const [starting, setStarting] = useState(false);
   const [startingSince, setStartingSince] = useState<number | null>(null);
   const [promptOpen, setPromptOpen] = useState(false);
+  const [promptedVersion, setPromptedVersion] = useState<string | null>(null);
   const activeUpdate = isUpdateBlocking(update);
   const blocking = starting || activeUpdate;
 
@@ -109,7 +110,13 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
       try {
         const result = await localApi.updateInfo();
         setUpdate(result);
-        if (allowPrompt && result.updateAvailable && !isUpdateBlocking(result)) {
+        if (
+          allowPrompt &&
+          result.updateAvailable &&
+          result.latestVersion !== promptedVersion &&
+          !isUpdateBlocking(result)
+        ) {
+          setPromptedVersion(result.latestVersion);
           setPromptOpen(true);
         }
         return result;
@@ -121,7 +128,7 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
         setChecking(false);
       }
     },
-    [isAdmin],
+    [isAdmin, promptedVersion],
   );
 
   useEffect(() => {
@@ -129,13 +136,13 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
   }, [checkUpdates]);
 
   useEffect(() => {
-    if (!blocking) return;
+    if (!isAdmin) return;
     const timer = window.setInterval(
-      () => void checkUpdates(false, false),
+      () => void checkUpdates(false, !blocking),
       UPDATE_CHECK_INTERVAL_MS,
     );
     return () => window.clearInterval(timer);
-  }, [blocking, checkUpdates]);
+  }, [blocking, checkUpdates, isAdmin]);
 
   useEffect(() => {
     if (!starting || activeUpdate || !update) return;
