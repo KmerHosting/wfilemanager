@@ -104,3 +104,10 @@ jobs:
             --title "wFileManager $VERSION" \
             --notes-file release-notes.md \
             --latest
+
+      - name: Sync stable updater channel
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bash deploy/sync-stable-channel.sh "$VERSION"
