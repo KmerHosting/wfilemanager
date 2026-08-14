@@ -7,6 +7,13 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  vite: {
+    css: { transformer: "postcss" },
+    // Carbon 1.114 emits modern @position-try rules used by DatePicker. Vite 8's default
+    // Lightning CSS minifier currently rejects the nested selector inside that rule. Keep JS
+    // minification enabled while leaving the already-optimized Carbon CSS unminified.
+    build: { cssMinify: false },
+  },
   nitro: { preset: "node-server" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).

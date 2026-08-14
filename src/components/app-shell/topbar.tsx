@@ -15,6 +15,13 @@ import {
   Info,
   Trash2,
 } from "lucide-react";
+import {
+  Header,
+  HeaderGlobalAction,
+  HeaderGlobalBar,
+  HeaderName,
+  SkipToContent,
+} from "@carbon/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -42,23 +49,27 @@ export function Topbar() {
   const notifications = useNotifications();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-background/80 px-3 backdrop-blur">
+    <Header aria-label="wFileManager" className="wfm-carbon-header">
+      <SkipToContent />
       <Sheet>
         <SheetTrigger asChild>
-          <Button size="icon" variant="ghost" className="lg:hidden" aria-label="Open navigation">
+          <HeaderGlobalAction
+            aria-label="Open navigation"
+            className="wfm-mobile-nav-action lg:hidden"
+          >
             <Menu className="h-5 w-5" />
-          </Button>
+          </HeaderGlobalAction>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
-          <AppSidebar />
+          <AppSidebar className="wfm-carbon-sidenav--mobile" />
         </SheetContent>
       </Sheet>
 
-      <Link to="/" className="flex items-center gap-2 lg:hidden">
-        <span className="text-sm font-semibold">wFileManager</span>
-      </Link>
+      <HeaderName href="/" prefix="">
+        wFileManager
+      </HeaderName>
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <HeaderGlobalBar>
         <Popover
           open={notifOpen}
           onOpenChange={(open) => {
@@ -67,27 +78,27 @@ export function Topbar() {
           }}
         >
           <PopoverTrigger asChild>
-            <Button size="icon" variant="ghost" aria-label="Notifications" className="relative">
+            <HeaderGlobalAction aria-label="Notifications" className="relative">
               <Bell className="h-4 w-4" />
               {notifications.unreadCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-semibold text-primary-foreground">
+                <span className="wfm-carbon-header__count">
                   {notifications.unreadCount > 99 ? "99+" : notifications.unreadCount}
                 </span>
               )}
-            </Button>
+            </HeaderGlobalAction>
           </PopoverTrigger>
-          <PopoverContent className="w-96 p-0" align="end">
-            <div className="flex items-center justify-between border-b border-border p-3">
+          <PopoverContent className="w-96 rounded-none border-border p-0 shadow-none" align="end">
+            <div className="flex items-center justify-between border-b border-border p-4">
               <div>
                 <div className="text-sm font-semibold">Notifications</div>
-                <div className="text-[11px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   Automatically removed after 7 days
                 </div>
               </div>
               {notifications.unreadCount > 0 && (
                 <button
                   onClick={() => void notifications.markAllRead()}
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="text-xs text-primary hover:underline"
                 >
                   Mark all read
                 </button>
@@ -114,8 +125,8 @@ export function Topbar() {
                             ? CircleX
                             : Info;
                     return (
-                      <li key={item.id} className={!item.readAt ? "bg-primary/[0.04]" : undefined}>
-                        <div className="flex items-start gap-3 p-3">
+                      <li key={item.id} className={!item.readAt ? "bg-primary/[0.05]" : undefined}>
+                        <div className="flex items-start gap-3 p-4">
                           <ToneIcon
                             className={
                               item.tone === "error"
@@ -128,14 +139,12 @@ export function Topbar() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start gap-2">
                               <p className="flex-1 text-sm font-medium">{item.title}</p>
-                              {!item.readAt && (
-                                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
-                              )}
+                              {!item.readAt && <span className="mt-1.5 h-1.5 w-1.5 bg-primary" />}
                             </div>
                             {item.message && (
-                              <p className="mt-0.5 text-xs text-muted-foreground">{item.message}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
                             )}
-                            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
                               <span>{formatRelative(item.createdAt)}</span>
                               {!item.readAt && (
                                 <button
@@ -172,18 +181,18 @@ export function Topbar() {
                 </ul>
               )}
             </div>
-            <div className="flex items-center justify-between border-t border-border p-2">
+            <div className="flex items-center justify-between border-t border-border p-3">
               <Link
                 to="/notifications"
                 onClick={() => setNotifOpen(false)}
-                className="px-2 text-xs text-muted-foreground hover:text-foreground"
+                className="text-xs text-primary hover:underline"
               >
                 Open notification center
               </Link>
               {notifications.notifications.length > 0 && (
                 <button
                   onClick={() => void notifications.clearAll()}
-                  className="px-2 text-xs text-muted-foreground hover:text-destructive"
+                  className="text-xs text-muted-foreground hover:text-destructive"
                 >
                   Clear all
                 </button>
@@ -194,7 +203,7 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" aria-label="Theme">
+            <HeaderGlobalAction aria-label="Theme">
               {theme === "dark" ? (
                 <Moon className="h-4 w-4" />
               ) : theme === "light" ? (
@@ -202,9 +211,9 @@ export function Topbar() {
               ) : (
                 <Monitor className="h-4 w-4" />
               )}
-            </Button>
+            </HeaderGlobalAction>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-44 rounded-none shadow-none">
             <DropdownMenuLabel>Theme</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {(["light", "dark", "system"] as const).map((item) => (
@@ -225,34 +234,23 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              className="ml-1 flex items-center gap-2 rounded-md border border-border bg-muted/30 px-2 py-1 text-left hover:bg-muted/60"
-              aria-label="Account menu"
-            >
-              <div className="grid h-6 w-6 place-items-center rounded-full bg-primary/20 text-[11px] font-semibold text-primary">
+            <HeaderGlobalAction aria-label="Account menu" className="wfm-carbon-header__account">
+              <span className="wfm-carbon-header__avatar">
                 {(auth.user?.displayName || auth.user?.username || "A")
                   .split(" ")
                   .map((part) => part[0])
                   .slice(0, 2)
                   .join("")
                   .toUpperCase()}
-              </div>
-              <div className="hidden md:flex flex-col leading-tight">
-                <span className="text-xs font-medium">
-                  {auth.user?.displayName || auth.user?.username}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {auth.user?.isAdmin ? "Administrator" : auth.user?.roleName || "User"}
-                </span>
-              </div>
-            </button>
+              </span>
+            </HeaderGlobalAction>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-60 rounded-none shadow-none">
             <DropdownMenuLabel>
               <div className="flex flex-col">
                 <span>{auth.user?.displayName || auth.user?.username}</span>
                 <span className="text-xs font-normal text-muted-foreground">
-                  {auth.user?.email || auth.user?.username}
+                  {auth.user?.isAdmin ? "Administrator" : auth.user?.roleName || "User"}
                 </span>
               </div>
             </DropdownMenuLabel>
@@ -275,8 +273,8 @@ export function Topbar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-    </header>
+      </HeaderGlobalBar>
+    </Header>
   );
 }
 
@@ -316,22 +314,8 @@ export function ConnectionBanner() {
         : "Unable to read the current online-user count.";
 
   return (
-    <div
-      className={
-        state === "failed"
-          ? "flex items-center gap-2 border-b border-border bg-destructive/10 px-4 py-1.5 text-[11px] text-destructive"
-          : "flex items-center gap-2 border-b border-border bg-primary/10 px-4 py-1.5 text-[11px] text-foreground"
-      }
-    >
-      <span
-        className={
-          state === "checking"
-            ? "h-1.5 w-1.5 animate-pulse rounded-full bg-warning"
-            : state === "connected"
-              ? "h-1.5 w-1.5 rounded-full bg-primary"
-              : "h-1.5 w-1.5 rounded-full bg-destructive"
-        }
-      />
+    <div className={`wfm-connection-banner wfm-connection-banner--${state}`}>
+      <span className="wfm-connection-banner__dot" />
       <span>{label}</span>
     </div>
   );

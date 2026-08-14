@@ -1,0 +1,12 @@
+@use '@carbon/react';
+@use '@carbon/react/scss/themes';
+@use '@carbon/react/scss/theme';
+@use './carbon-bridge.css';
+
+:root {
+  @include theme.theme(themes.$white);
+}
+
+:root.dark {
+  @include theme.theme(themes.$g100);
+}

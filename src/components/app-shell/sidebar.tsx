@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   ListTodo,
@@ -17,7 +17,7 @@ import {
   Globe2,
   ScrollText,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { SideNav, SideNavDivider, SideNavItems, SideNavLink } from "@carbon/react";
 import { SERVER_INFO } from "@/lib/demo/data";
 import { useAuth } from "@/lib/auth";
 import { localApi } from "@/lib/local-api";
@@ -26,7 +26,7 @@ type Item = {
   to?: string;
   href?: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; size?: number | string }>;
   permission?: string;
   anyPermission?: string[];
   adminOnly?: boolean;
@@ -117,80 +117,42 @@ export function AppSidebar({ className }: { className?: string }) {
   }, []);
 
   return (
-    <aside
-      className={cn(
-        "flex h-full w-full shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:w-60",
-        className,
-      )}
+    <SideNav
+      expanded
+      isFixedNav
+      isChildOfHeader={false}
+      aria-label="wFileManager navigation"
+      className={`wfm-carbon-sidenav ${className || ""}`}
     >
-      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-tight">wFileManager</span>
-          <span className="text-[10px] tracking-wide text-muted-foreground">
-            From KmerHosting LLC
-          </span>
-        </div>
+      <div className="wfm-carbon-sidenav__brand">
+        <strong>wFileManager</strong>
+        <span>From KmerHosting LLC</span>
       </div>
-
-      <nav className="scroll-thin flex-1 overflow-y-auto px-2 py-3">
-        {NAV.map((group) => (
-          <div key={group.label} className="mb-4">
-            <div className="px-2 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-              {group.label}
-            </div>
-            <ul className="space-y-0.5">
-              {group.items.filter(canSee).map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.to);
-                const itemClassName = cn(
-                  "group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
-                  active
-                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                    : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
-                );
-                const content = (
-                  <>
-                    <Icon
-                      className={cn(
-                        "h-4 w-4",
-                        active
-                          ? "text-primary"
-                          : "text-muted-foreground group-hover:text-foreground",
-                      )}
-                    />
-                    <span className="truncate">{item.label}</span>
-                  </>
-                );
-                return (
-                  <li key={item.to || item.href}>
-                    {item.href ? (
-                      <a
-                        href={item.href}
-                        target={item.newTab ? "_blank" : undefined}
-                        rel={item.newTab ? "noreferrer" : undefined}
-                        className={itemClassName}
-                      >
-                        {content}
-                      </a>
-                    ) : (
-                      <Link to={item.to!} className={itemClassName}>
-                        {content}
-                      </Link>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+      <SideNavItems>
+        {NAV.map((group, groupIndex) => (
+          <div key={group.label} className="wfm-carbon-sidenav__group">
+            {groupIndex > 0 && <SideNavDivider />}
+            <div className="wfm-carbon-sidenav__label">{group.label}</div>
+            {group.items.filter(canSee).map((item) => {
+              const Icon = item.icon;
+              const href = item.to || item.href || "#";
+              return (
+                <SideNavLink
+                  key={href}
+                  href={href}
+                  isActive={isActive(item.to)}
+                  renderIcon={Icon}
+                  target={item.newTab ? "_blank" : undefined}
+                  rel={item.newTab ? "noreferrer" : undefined}
+                >
+                  {item.label}
+                </SideNavLink>
+              );
+            })}
           </div>
         ))}
-      </nav>
-
-      <div className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          <span>v{version}</span>
-        </div>
-      </div>
-    </aside>
+      </SideNavItems>
+      <div className="wfm-carbon-sidenav__version">v{version}</div>
+    </SideNav>
   );
 }

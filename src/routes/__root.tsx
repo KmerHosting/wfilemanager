@@ -1,14 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
-  Link,
   createRootRouteWithContext,
   useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Button } from "@carbon/react";
 
+import carbonCss from "../carbon.scss?url";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "../lib/theme";
@@ -17,25 +18,14 @@ import { AuthProvider } from "../lib/auth";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          404 · not found
-        </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
-          That path does not exist
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you were looking for has been moved, renamed, or never existed.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go to overview
-          </Link>
-        </div>
+    <div className="wfm-state-page">
+      <div className="wfm-state-page__content">
+        <p className="wfm-eyebrow">404 · not found</p>
+        <h1>That path does not exist</h1>
+        <p>The page you were looking for has been moved, renamed, or never existed.</p>
+        <Button href="/" kind="primary">
+          Go to overview
+        </Button>
       </div>
     </div>
   );
@@ -49,30 +39,23 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. Try again or head back to the overview.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
+    <div className="wfm-state-page">
+      <div className="wfm-state-page__content">
+        <h1>This page didn't load</h1>
+        <p>Something went wrong. Try again or head back to the overview.</p>
+        <div className="wfm-button-row">
+          <Button
+            kind="primary"
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
+          </Button>
+          <Button href="/" kind="tertiary">
             Go to overview
-          </a>
+          </Button>
         </div>
       </div>
     </div>
@@ -91,24 +74,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "wFileManager is a web-based file manager for Linux servers. Browse, edit, upload, share and audit files with a modern administration panel. A project from KmerHosting LLC.",
       },
       { name: "author", content: "KmerHosting LLC" },
-      { name: "theme-color", content: "#151718" },
+      { name: "theme-color", content: "#161616" },
       { property: "og:title", content: "wFileManager — Linux file manager for servers" },
       {
         property: "og:description",
         content:
-          "A modern, web-based Linux file manager built for Ubuntu 24.04 LTS. A project from KmerHosting LLC.",
+          "A modern, web-based Linux file manager built for Ubuntu servers. A project from KmerHosting LLC.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
+      { rel: "stylesheet", href: carbonCss },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
       },
     ],
   }),
