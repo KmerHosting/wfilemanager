@@ -109,5 +109,11 @@ jobs:
         shell: bash
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: bash deploy/sync-stable-channel.sh "$VERSION"
+          RELEASE_SYNC_URL: https://igihzeyfgwhnuiflamvn.supabase.co/functions/v1/wfilemanager-release-sync
+        run: |
+          set -Eeuo pipefail
+          curl -fsS --retry 3 -X POST "$RELEASE_SYNC_URL" \
+            -H 'content-type: application/json' \
+            --data '{}' > stable-sync.json
+          cat stable-sync.json
+          jq -e --arg version "$VERSION" '.ok == true and .version == $version' stable-sync.json >/dev/null
