@@ -435,6 +435,34 @@ export function login(data: Record<string, unknown>, request?: Request) {
   return { token, expiresAt, user: publicUser(current) };
 }
 
+export function loginWithCentralEmail(emailInput: string, request?: Request) {
+  if (!isConfigured()) throw new SqliteAuthError(409, "wFileManager setup is not complete.");
+  const email = String(emailInput || "").trim().toLowerCase();
+  const user = db()
+    .prepare("SELECT * FROM wfm_users WHERE email = ? COLLATE NOCASE LIMIT 1")
+    .get(email) as UserRow | undefined;
+  if (!user) throw new SqliteAuthError(404, "No wFileManager user is linked to this KmerHosting Account.");
+  if (user.status !== "active") throw new SqliteAuthError(403, "This wFileManager account is not active.");
+
+  cleanExpiredSessions();
+  const token = randomBytes(48).toString("base64url");
+  const createdAt = now();
+  const expiresAt = new Date(Date.now() + SESSION_LONG_MS).toISOString();
+  const ip = requestIp(request);
+  const userAgent = request?.headers.get("user-agent") || null;
+  db()
+    .prepare(
+      "INSERT INTO wfm_sessions(id, user_id, token_hash, expires_at, last_seen_at, ip_address, user_agent, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(randomUUID(), user.id, tokenHash(token), expiresAt, createdAt, ip, userAgent, createdAt);
+  db()
+    .prepare("UPDATE wfm_users SET last_login_at = ?, updated_at = ? WHERE id = ?")
+    .run(createdAt, createdAt, user.id);
+  const current = getUserById(user.id)!;
+  audit(current, "login_kmerhosting", current.username);
+  return { token, expiresAt, user: publicUser(current) };
+}
+
 export function sessionUser(token: string, touch = true) {
   if (!token) throw new SqliteAuthError(401, "Missing session token.");
   cleanExpiredSessions();
