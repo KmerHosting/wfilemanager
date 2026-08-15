@@ -38,6 +38,7 @@ const TIMEZONES = [
 
 function deviceLabel(userAgent: string | null) {
   if (!userAgent) return "Browser on unavailable device";
+  if (/^node(?:\.js)?\b/i.test(userAgent.trim())) return "Node.js client";
   const browser = /Firefox/i.test(userAgent)
     ? "Firefox"
     : /Edg/i.test(userAgent)

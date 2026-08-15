@@ -131,6 +131,10 @@ async function proxy(request: Request) {
     const headers = new Headers({ Accept: "application/json" });
     const sessionToken = cookieValue(request, COOKIE_NAME);
     if (sessionToken) headers.set("Authorization", `Bearer ${sessionToken}`);
+    for (const name of ["user-agent", "cf-connecting-ip", "x-forwarded-for", "x-real-ip"]) {
+      const value = request.headers.get(name);
+      if (value) headers.set(name, value);
+    }
     if (!["GET", "HEAD"].includes(request.method)) headers.set("Content-Type", "application/json");
 
     const controller = new AbortController();
