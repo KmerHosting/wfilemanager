@@ -96,7 +96,7 @@ export function Topbar() {
             )}
           </HeaderGlobalAction>
           <CarbonPopoverContent className="wfm-notifications-panel">
-            <div className="flex items-center justify-between border-b border-border p-4">
+            <div className="wfm-notifications-panel__header">
               <div>
                 <div className="text-sm font-semibold">Notifications</div>
                 <div className="text-xs text-muted-foreground">
@@ -106,13 +106,13 @@ export function Topbar() {
               {notifications.unreadCount > 0 && (
                 <button
                   onClick={() => void notifications.markAllRead()}
-                  className="text-xs text-primary hover:underline"
+                  className="wfm-notifications-panel__link"
                 >
                   Mark all read
                 </button>
               )}
             </div>
-            <div className="max-h-96 overflow-y-auto">
+            <div className="wfm-notifications-panel__body">
               {notifications.loading && notifications.notifications.length === 0 ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">
                   Loading notifications…
@@ -134,7 +134,7 @@ export function Topbar() {
                             : Information;
                     return (
                       <li key={item.id} className={!item.readAt ? "bg-primary/[0.05]" : undefined}>
-                        <div className="flex items-start gap-3 p-4">
+                        <div className="wfm-notifications-panel__item">
                           <ToneIcon
                             size={20}
                             className={
@@ -145,7 +145,7 @@ export function Topbar() {
                                   : "mt-0.5 shrink-0 text-primary"
                             }
                           />
-                          <div className="min-w-0 flex-1">
+                          <div className="wfm-notifications-panel__item-content">
                             <div className="flex items-start gap-2">
                               <p className="flex-1 text-sm font-medium">{item.title}</p>
                               {!item.readAt && <span className="mt-1.5 h-1.5 w-1.5 bg-primary" />}
@@ -153,12 +153,12 @@ export function Topbar() {
                             {item.message && (
                               <p className="mt-1 text-xs text-muted-foreground">{item.message}</p>
                             )}
-                            <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                            <div className="wfm-notifications-panel__item-meta">
                               <span>{formatRelative(item.createdAt)}</span>
                               {!item.readAt && (
                                 <button
                                   onClick={() => void notifications.markRead(item.id)}
-                                  className="hover:text-foreground"
+                                  className="wfm-notifications-panel__link"
                                 >
                                   Mark read
                                 </button>
@@ -167,7 +167,7 @@ export function Topbar() {
                                 <a
                                   href={item.link}
                                   onClick={() => void notifications.markRead(item.id)}
-                                  className="hover:text-foreground"
+                                  className="wfm-notifications-panel__link"
                                 >
                                   Open
                                 </a>
@@ -177,7 +177,7 @@ export function Topbar() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="shrink-0 text-muted-foreground hover:text-destructive"
+                            className="wfm-notifications-panel__delete shrink-0 text-muted-foreground hover:text-destructive"
                             aria-label="Delete notification"
                             onClick={() => void notifications.remove(item.id)}
                           >
@@ -190,18 +190,18 @@ export function Topbar() {
                 </ul>
               )}
             </div>
-            <div className="flex items-center justify-between border-t border-border p-3">
+            <div className="wfm-notifications-panel__footer">
               <Link
                 to="/notifications"
                 onClick={() => setNotifOpen(false)}
-                className="text-xs text-primary hover:underline"
+                className="wfm-notifications-panel__link"
               >
                 Open notification center
               </Link>
               {notifications.notifications.length > 0 && (
                 <button
                   onClick={() => void notifications.clearAll()}
-                  className="text-xs text-muted-foreground hover:text-destructive"
+                  className="wfm-notifications-panel__link wfm-notifications-panel__link--danger"
                 >
                   Clear all
                 </button>

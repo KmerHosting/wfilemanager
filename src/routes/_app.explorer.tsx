@@ -909,16 +909,14 @@ function Explorer() {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex items-center gap-2">
-            <div
-              className="flex items-center rounded-md border border-border bg-background p-0.5"
-              aria-label="Explorer layout"
-            >
+            <div className="wfm-explorer-layout-toggle" aria-label="Explorer layout">
               <Button
                 size="icon"
                 variant={layout === "list" ? "secondary" : "ghost"}
-                className="h-7 w-7 rounded-sm"
+                className="wfm-explorer-layout-toggle__button"
                 onClick={() => setLayout("list")}
                 aria-label="List layout"
+                aria-pressed={layout === "list"}
                 title="List layout"
               >
                 <List className="h-4 w-4" />
@@ -926,9 +924,10 @@ function Explorer() {
               <Button
                 size="icon"
                 variant={layout === "grid" ? "secondary" : "ghost"}
-                className="h-7 w-7 rounded-sm"
+                className="wfm-explorer-layout-toggle__button"
                 onClick={() => setLayout("grid")}
                 aria-label="Mosaic layout"
+                aria-pressed={layout === "grid"}
                 title="Mosaic layout"
               >
                 <Grid2X2 className="h-4 w-4" />
@@ -1007,7 +1006,7 @@ function Explorer() {
             </div>
           </div>
         ) : layout === "grid" ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5">
+          <div className="wfm-explorer-grid">
             {visibleEntries.map((entry) => {
               const visual = entryVisual(entry);
               const Icon = visual.Icon;
@@ -1021,10 +1020,8 @@ function Explorer() {
                       aria-label={`${entry.kind === "directory" ? "Folder" : "File"} ${entry.name}`}
                       aria-selected={active}
                       className={cn(
-                        "group relative flex min-h-40 cursor-pointer flex-col overflow-hidden rounded-lg border border-border bg-card p-2.5 outline-none no-underline transition-colors",
-                        "hover:border-primary/35 hover:bg-muted/30 hover:no-underline",
-                        "focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25",
-                        active && "border-primary/60 bg-primary/8 ring-1 ring-primary/30",
+                        "wfm-explorer-grid__item group relative flex cursor-pointer flex-col outline-none no-underline",
+                        active && "wfm-explorer-grid__item--selected",
                       )}
                       onClick={(event) =>
                         selectEntry(entry, {
@@ -1042,7 +1039,7 @@ function Explorer() {
                       }}
                     >
                       <div
-                        className="absolute left-2 top-2 z-10"
+                        className="wfm-explorer-grid__select absolute left-3 top-3 z-10"
                         onClick={(event) => event.stopPropagation()}
                         onDoubleClick={(event) => event.stopPropagation()}
                       >
@@ -1052,40 +1049,40 @@ function Explorer() {
                           aria-label={`Select ${entry.name}`}
                         />
                       </div>
-                      <div className="absolute right-1.5 top-1.5 z-10 opacity-70 group-hover:opacity-100">
+                      <div className="wfm-explorer-grid__actions absolute right-2 top-2 z-10">
                         {dropdownMenu(entry)}
                       </div>
-                      <div className="flex flex-1 flex-col items-center justify-center px-1 pt-4 text-center">
+                      <div className="wfm-explorer-grid__content flex flex-1 flex-col items-center justify-center text-center">
                         <div
                           className={cn(
-                            "mb-2.5 grid h-14 w-14 place-items-center rounded-xl border",
+                            "wfm-explorer-grid__icon grid place-items-center",
                             visual.tone,
                           )}
                         >
-                          <Icon className={cn("h-8 w-8", visual.icon)} />
+                          <Icon className={cn("wfm-explorer-grid__icon-svg", visual.icon)} />
                         </div>
                         <div
-                          className="w-full truncate text-sm font-medium no-underline group-hover:no-underline"
+                          className="wfm-explorer-grid__name w-full truncate text-sm font-medium no-underline group-hover:no-underline"
                           title={entry.name}
                         >
                           {entry.name}
                         </div>
                         {entry.linkTarget && (
                           <div
-                            className="mt-1 w-full truncate font-mono text-[10px] text-muted-foreground no-underline"
+                            className="wfm-explorer-grid__link mt-1 w-full truncate font-mono text-[10px] text-muted-foreground no-underline"
                             title={entry.linkTarget}
                           >
                             → {entry.linkTarget}
                           </div>
                         )}
                       </div>
-                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/65 pt-2 text-[10px] text-muted-foreground">
+                      <div className="wfm-explorer-grid__meta mt-2 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
                         <span className="truncate">
                           {entry.kind === "directory" ? "Folder" : formatBytes(entry.size)}
                         </span>
                         <Badge
                           variant="outline"
-                          className="h-5 px-1.5 font-mono text-[9px] font-normal"
+                          className="wfm-explorer-grid__mode h-5 px-1.5 font-mono text-[9px] font-normal"
                         >
                           {entry.mode}
                         </Badge>
