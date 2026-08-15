@@ -118,10 +118,6 @@ export function AppSidebar({ className }: { className?: string }) {
       aria-label="wFileManager navigation"
       className={`wfm-carbon-sidenav ${className || ""}`}
     >
-      <div className="wfm-carbon-sidenav__brand">
-        <strong>wFileManager</strong>
-        <span>From KmerHosting LLC</span>
-      </div>
       <SideNavItems>
         {NAV.map((group, groupIndex) => (
           <div key={group.label} className="wfm-carbon-sidenav__group">

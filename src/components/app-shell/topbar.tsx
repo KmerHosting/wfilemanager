@@ -83,6 +83,8 @@ export function Topbar() {
             isActive={notifOpen}
             onClick={() => {
               setNotifOpen((open) => !open);
+              setThemeOpen(false);
+              setAccountOpen(false);
               if (!notifOpen) void notifications.refresh();
             }}
           >
@@ -220,7 +222,11 @@ export function Topbar() {
           <HeaderGlobalAction
             aria-label="Theme"
             isActive={themeOpen}
-            onClick={() => setThemeOpen((open) => !open)}
+            onClick={() => {
+              setThemeOpen((open) => !open);
+              setNotifOpen(false);
+              setAccountOpen(false);
+            }}
           >
             {theme === "dark" ? (
               <Moon size={20} />
@@ -269,7 +275,11 @@ export function Topbar() {
             aria-label="Account menu"
             className="wfm-carbon-header__account"
             isActive={accountOpen}
-            onClick={() => setAccountOpen((open) => !open)}
+            onClick={() => {
+              setAccountOpen((open) => !open);
+              setNotifOpen(false);
+              setThemeOpen(false);
+            }}
           >
             <UserAvatar size={20} />
           </HeaderGlobalAction>

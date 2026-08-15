@@ -685,7 +685,7 @@ function Explorer() {
   );
 
   const contextMenu = (entry: LocalFileEntry) => (
-    <ContextMenuContent className="min-w-56">
+    <ContextMenuContent className="wfm-carbon-context-menu min-w-56">
       <ContextMenuItem onClick={() => void openEntry(entry)}>
         <Eye className="mr-2 h-4 w-4" />
         {entry.kind === "directory" ? "Open" : "View / edit"}
