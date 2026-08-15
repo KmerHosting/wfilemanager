@@ -32,7 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "@/lib/theme";
 import { AppSidebar } from "./sidebar";
 import { toast } from "sonner";
@@ -61,7 +61,11 @@ export function Topbar() {
           </HeaderGlobalAction>
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
-          <AppSidebar className="wfm-carbon-sidenav--mobile" />
+          <SheetClose asChild>
+            <div className="h-full">
+              <AppSidebar className="wfm-carbon-sidenav--mobile" />
+            </div>
+          </SheetClose>
         </SheetContent>
       </Sheet>
 

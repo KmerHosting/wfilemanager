@@ -100,6 +100,14 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const searchSchema = z.object({
   path: z.string().optional(),
@@ -1090,27 +1098,33 @@ function Explorer() {
             })}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="grid grid-cols-[34px_minmax(0,1fr)_90px_42px] items-center gap-3 border-b border-border bg-muted/35 px-3 py-2 text-[11px] font-medium text-muted-foreground md:grid-cols-[34px_minmax(0,1fr)_100px_86px_80px_150px_42px]">
-              <Checkbox
-                checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
-                onCheckedChange={() =>
-                  setSelectedPaths(
-                    allVisibleSelected
-                      ? new Set()
-                      : new Set(visibleEntries.map((entry) => entry.path)),
-                  )
-                }
-                aria-label="Select all visible items"
-              />
-              <span>Name</span>
-              <span className="text-right">Size</span>
-              <span className="hidden md:block">Mode</span>
-              <span className="hidden md:block">Owner</span>
-              <span className="hidden md:block">Modified</span>
-              <span />
-            </div>
-            <div className="divide-y divide-border/80">
+          <Table className="wfm-explorer__table">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
+                    }
+                    onCheckedChange={() =>
+                      setSelectedPaths(
+                        allVisibleSelected
+                          ? new Set()
+                          : new Set(visibleEntries.map((entry) => entry.path)),
+                      )
+                    }
+                    aria-label="Select all visible items"
+                  />
+                </TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-right">Size</TableHead>
+                <TableHead className="hidden md:table-cell">Mode</TableHead>
+                <TableHead className="hidden md:table-cell">Owner</TableHead>
+                <TableHead className="hidden md:table-cell">Modified</TableHead>
+                <TableHead aria-label="Actions" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {visibleEntries.map((entry) => {
                 const visual = entryVisual(entry);
                 const Icon = visual.Icon;
@@ -1118,15 +1132,13 @@ function Explorer() {
                 return (
                   <ContextMenu key={entry.path}>
                     <ContextMenuTrigger asChild onContextMenu={() => selectForContextMenu(entry)}>
-                      <article
-                        role="button"
+                      <TableRow
                         tabIndex={0}
                         aria-label={`${entry.kind === "directory" ? "Folder" : "File"} ${entry.name}`}
                         aria-selected={active}
                         className={cn(
-                          "grid min-h-12 cursor-pointer grid-cols-[34px_minmax(0,1fr)_90px_42px] items-center gap-3 px-3 py-1.5 outline-none no-underline transition-colors md:grid-cols-[34px_minmax(0,1fr)_100px_86px_80px_150px_42px]",
-                          "hover:bg-muted/45 hover:no-underline",
-                          "focus-visible:bg-muted/45 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
+                          "cursor-pointer",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                           active && "bg-primary/10",
                         )}
                         onClick={(event) =>
@@ -1144,7 +1156,7 @@ function Explorer() {
                           }
                         }}
                       >
-                        <div
+                        <TableCell
                           onClick={(event) => event.stopPropagation()}
                           onDoubleClick={(event) => event.stopPropagation()}
                         >
@@ -1153,62 +1165,63 @@ function Explorer() {
                             onCheckedChange={() => toggleEntry(entry)}
                             aria-label={`Select ${entry.name}`}
                           />
-                        </div>
-                        <div className="flex min-w-0 items-center gap-3 no-underline">
-                          <div
-                            className={cn(
-                              "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
-                              visual.tone,
-                            )}
-                          >
-                            <Icon className={cn("h-5 w-5", visual.icon)} />
-                          </div>
-                          <div className="min-w-0 no-underline">
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex min-w-0 items-center gap-3">
                             <div
-                              className="truncate text-sm font-medium no-underline group-hover:no-underline"
-                              title={entry.name}
+                              className={cn(
+                                "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
+                                visual.tone,
+                              )}
                             >
-                              {entry.name}
+                              <Icon className={cn("h-5 w-5", visual.icon)} />
                             </div>
-                            {entry.linkTarget && (
-                              <div
-                                className="truncate font-mono text-[10px] text-muted-foreground no-underline"
-                                title={entry.linkTarget}
-                              >
-                                → {entry.linkTarget}
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-medium" title={entry.name}>
+                                {entry.name}
                               </div>
-                            )}
+                              {entry.linkTarget && (
+                                <div
+                                  className="truncate font-mono text-[10px] text-muted-foreground"
+                                  title={entry.linkTarget}
+                                >
+                                  ? {entry.linkTarget}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <span className="truncate text-right text-xs text-muted-foreground">
-                          {entry.kind === "directory" ? "—" : formatBytes(entry.size)}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="hidden h-5 w-fit px-1.5 font-mono text-[10px] font-normal md:inline-flex"
-                        >
-                          {entry.mode}
-                        </Badge>
-                        <span className="hidden font-mono text-xs text-muted-foreground md:block">
+                        </TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">
+                          {entry.kind === "directory" ? "?" : formatBytes(entry.size)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge
+                            variant="outline"
+                            className="h-5 w-fit px-1.5 font-mono text-[10px] font-normal"
+                          >
+                            {entry.mode}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                           {entry.uid}:{entry.gid}
-                        </span>
-                        <span className="hidden truncate text-xs text-muted-foreground md:block">
+                        </TableCell>
+                        <TableCell className="hidden truncate text-xs text-muted-foreground md:table-cell">
                           {formatDate(entry.modifiedAt)}
-                        </span>
-                        <div
-                          className="flex justify-end"
+                        </TableCell>
+                        <TableCell
+                          className="text-right"
                           onDoubleClick={(event) => event.stopPropagation()}
                         >
                           {dropdownMenu(entry)}
-                        </div>
-                      </article>
+                        </TableCell>
+                      </TableRow>
                     </ContextMenuTrigger>
                     {contextMenu(entry)}
                   </ContextMenu>
                 );
               })}
-            </div>
-          </div>
+            </TableBody>
+          </Table>
         )}
       </div>
 

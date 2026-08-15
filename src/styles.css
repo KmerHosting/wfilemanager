@@ -344,3 +344,38 @@ kbd {
     min-width: 16rem !important;
   }
 }
+
+
+/* Carbon data table refinements */
+.wfm-explorer__table .cds--data-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.wfm-explorer__table .cds--data-table th,
+.wfm-explorer__table .cds--data-table td {
+  vertical-align: middle;
+}
+
+.wfm-explorer__table .cds--data-table tbody tr {
+  min-height: 3rem;
+}
+
+.wfm-explorer__table .cds--data-table tbody tr:focus-visible {
+  outline: 2px solid var(--cds-focus);
+  outline-offset: -2px;
+}
+
+.wfm-explorer__table .cds--data-table td:nth-child(2) {
+  min-width: 14rem;
+}
+
+@media (max-width: 671px) {
+  .wfm-explorer__table .cds--data-table {
+    min-width: 32rem;
+  }
+
+  .wfm-explorer__table .cds--data-table td:nth-child(2) {
+    min-width: 12rem;
+  }
+}
