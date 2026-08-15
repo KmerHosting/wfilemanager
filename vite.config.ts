@@ -14,7 +14,7 @@ export default defineConfig({
     // minification enabled while leaving the already-optimized Carbon CSS unminified.
     build: { cssMinify: false },
   },
-  nitro: { preset: "node-server" },
+  nitro: { preset: process.env.VERCEL ? "vercel" : "node-server" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
