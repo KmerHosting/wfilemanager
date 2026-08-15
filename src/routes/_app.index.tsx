@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   CircleCheck,
@@ -6,6 +6,8 @@ import {
   FolderCheck,
   FolderTree,
   RefreshCw,
+  Server,
+  ShieldCheck,
   TerminalSquare,
   Trash2,
   Users,
@@ -28,27 +30,37 @@ type OverviewInfo = Awaited<ReturnType<typeof localApi.overview>>;
 function Stat({
   label,
   value,
-  sub,
+  detail,
   icon: Icon,
 }: {
   label: string;
   value: string;
-  sub: string;
-  icon: React.ComponentType<{ className?: string }>;
+  detail: string;
+  icon: ComponentType<{ className?: string }>;
 }) {
   return (
-    <Card className="min-h-0">
-      <CardHeader className="flex-row items-center justify-between space-y-0 px-3 pb-1 pt-3">
-        <CardTitle className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </CardTitle>
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+    <Card className="wfm-overview-stat">
+      <CardHeader className="wfm-overview-stat__header">
+        <CardTitle>{label}</CardTitle>
+        <Icon className="wfm-overview-stat__icon" />
       </CardHeader>
-      <CardContent className="px-3 pb-3 pt-0">
-        <div className="text-xl font-semibold tabular-nums">{value}</div>
-        <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-muted-foreground">{sub}</p>
+      <CardContent className="wfm-overview-stat__content">
+        <strong>{value}</strong>
+        <p>{detail}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function StatusBar({ label, value, percent }: { label: string; value: string; percent: number }) {
+  return (
+    <div className="wfm-overview-bar">
+      <div className="wfm-overview-bar__label">
+        <span>{label}</span>
+        <span className="font-mono">{value}</span>
+      </div>
+      <Progress value={percent} />
+    </div>
   );
 }
 
@@ -92,31 +104,20 @@ function Overview() {
     : 0;
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] p-4 sm:p-6 lg:p-8">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+    <div className="wfm-page wfm-overview-page">
+      <header className="wfm-page__header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            File access, transfer limits and workspace status for this installation.
-          </p>
+          <p className="wfm-eyebrow">Workspace control center</p>
+          <h1>Overview</h1>
+          <p>See what is available, writable and ready for file operations.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="wfm-page__actions">
           <Badge
             variant="outline"
-            className={
-              error
-                ? "border-destructive/40 text-destructive"
-                : "border-primary/40 bg-primary/10 text-primary"
-            }
+            className={error ? "wfm-status-badge wfm-status-badge--error" : "wfm-status-badge"}
           >
-            <span
-              className={
-                error
-                  ? "mr-1.5 h-1.5 w-1.5 rounded-full bg-destructive"
-                  : "mr-1.5 h-1.5 w-1.5 rounded-full bg-primary"
-              }
-            />
-            {loading ? "Connecting" : error ? "Local engine unavailable" : "Local engine connected"}
+            <span className="wfm-status-badge__dot" />
+            {loading ? "Connecting" : error ? "Engine unavailable" : "Local engine connected"}
           </Badge>
           <Button
             size="icon"
@@ -127,19 +128,19 @@ function Overview() {
             <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           </Button>
         </div>
-      </div>
+      </header>
 
       {error && (
-        <Card className="mb-4 border-destructive/40">
-          <CardContent className="pt-6 text-sm text-destructive">{error}</CardContent>
+        <Card className="wfm-overview-alert">
+          <CardContent>{error}</CardContent>
         </Card>
       )}
 
-      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+      <section className="wfm-overview-stats" aria-label="Workspace summary">
         <Stat
           label="Root items"
           value={summary?.root.entries == null ? "—" : summary.root.entries.toLocaleString()}
-          sub={
+          detail={
             summary?.root.readable
               ? "Visible in the root directory"
               : "Root directory is not readable"
@@ -149,150 +150,137 @@ function Overview() {
         <Stat
           label="Accessible locations"
           value={summary ? `${summary.availableLocations}/${summary.totalCommonLocations}` : "—"}
-          sub="Common server paths available to File Explorer"
+          detail="Common server paths available to File Explorer"
           icon={FolderCheck}
         />
         <Stat
           label="Server users"
           value={summary ? summary.loginUsers.toLocaleString() : "—"}
-          sub="Linux accounts with interactive login access"
+          detail="Linux accounts with interactive login access"
           icon={Users}
         />
         <Stat
           label="Trash"
           value={loading ? "—" : String(trash.items)}
-          sub={
-            trash.items
-              ? `${formatBytes(trash.size)} waiting for restore or deletion`
-              : "Trash is empty"
-          }
+          detail={trash.items ? `${formatBytes(trash.size)} waiting for action` : "Trash is empty"}
           icon={Trash2}
         />
-      </div>
+      </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="gap-2 pb-6">
-            <CardTitle className="text-base">File manager status</CardTitle>
+      <section className="wfm-overview-layout">
+        <Card className="wfm-overview-health">
+          <CardHeader>
+            <CardTitle>File manager health</CardTitle>
             <CardDescription>
-              Information that directly affects navigation, editing and file transfers.
+              Signals that affect navigation, editing and transfers.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-7">
-            <div className="grid gap-x-6 gap-y-7 text-sm sm:grid-cols-2 xl:grid-cols-4">
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Hostname</p>
-                <p className="mt-2 break-words font-mono">{summary?.hostname || "—"}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">OS release</p>
-                <p className="mt-2 break-words font-mono">{summary?.os.prettyName || "—"}</p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Kernel / architecture</p>
-                <p className="mt-2 break-words font-mono">
-                  {summary ? `${summary.release} · ${summary.architecture}` : "—"}
-                </p>
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs text-muted-foreground">Service port</p>
-                <p className="mt-2 break-words font-mono">127.0.0.1:1973</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between gap-4 text-xs">
-                <span className="text-muted-foreground">Common locations readable</span>
-                <span className="font-mono">
-                  {summary
-                    ? `${summary.availableLocations} of ${summary.totalCommonLocations}`
-                    : "—"}
-                </span>
-              </div>
-              <Progress value={availablePercent} />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between gap-4 text-xs">
-                <span className="text-muted-foreground">Common locations writable</span>
-                <span className="font-mono">
-                  {summary
-                    ? `${summary.writableLocations} of ${summary.totalCommonLocations}`
-                    : "—"}
-                </span>
-              </div>
-              <Progress value={writablePercent} />
-            </div>
-
-            <div className="grid gap-x-6 gap-y-5 rounded-md border border-border p-4 text-xs sm:grid-cols-3">
+          <CardContent className="wfm-overview-health__content">
+            <div className="wfm-overview-facts">
               <div>
-                <p className="text-muted-foreground">Text editor limit</p>
-                <p className="mt-1 font-mono">
-                  {summary ? formatBytes(summary.editorLimitBytes) : "—"}
-                </p>
+                <span>Hostname</span>
+                <strong>{summary?.hostname || "—"}</strong>
               </div>
               <div>
-                <p className="text-muted-foreground">Upload request limit</p>
-                <p className="mt-1 font-mono">
-                  {summary ? formatBytes(summary.uploadLimitBytes) : "—"}
-                </p>
+                <span>Operating system</span>
+                <strong>{summary?.os.prettyName || "—"}</strong>
               </div>
               <div>
-                <p className="text-muted-foreground">Protected pseudo-filesystems</p>
-                <p className="mt-1 font-mono">
-                  {summary ? summary.protectedPseudoFilesystems.length : "—"}
-                </p>
+                <span>Kernel / architecture</span>
+                <strong>{summary ? `${summary.release} · ${summary.architecture}` : "—"}</strong>
+              </div>
+              <div>
+                <span>Service port</span>
+                <strong>127.0.0.1:1973</strong>
               </div>
             </div>
-
-            <div className="flex items-start gap-2 pt-1 text-xs leading-5 text-muted-foreground">
-              <CircleCheck className="h-4 w-4 text-primary" />
-              File and command endpoints require a valid session and the appropriate permission.
+            <div className="wfm-overview-bars">
+              <StatusBar
+                label="Common locations readable"
+                value={
+                  summary ? `${summary.availableLocations} of ${summary.totalCommonLocations}` : "—"
+                }
+                percent={availablePercent}
+              />
+              <StatusBar
+                label="Common locations writable"
+                value={
+                  summary ? `${summary.writableLocations} of ${summary.totalCommonLocations}` : "—"
+                }
+                percent={writablePercent}
+              />
+            </div>
+            <div className="wfm-overview-limits">
+              <div>
+                <span>Text editor limit</span>
+                <strong>{summary ? formatBytes(summary.editorLimitBytes) : "—"}</strong>
+              </div>
+              <div>
+                <span>Upload request limit</span>
+                <strong>{summary ? formatBytes(summary.uploadLimitBytes) : "—"}</strong>
+              </div>
+              <div>
+                <span>Protected pseudo-filesystems</span>
+                <strong>{summary ? summary.protectedPseudoFilesystems.length : "—"}</strong>
+              </div>
+            </div>
+            <div className="wfm-overview-note">
+              <CircleCheck /> File and command endpoints require a valid session and the appropriate
+              permission.
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="wfm-overview-access">
           <CardHeader>
-            <CardTitle className="text-base">Quick access</CardTitle>
-            <CardDescription>
-              Open common server locations and administrative tools.
-            </CardDescription>
+            <CardTitle>Quick access</CardTitle>
+            <CardDescription>Open common server locations and admin tools.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2">
+          <CardContent className="wfm-overview-access__content">
             {["/", "/root", "/etc", "/var/www", "/opt"].map((path) => (
-              <Button key={path} asChild variant="outline" className="justify-start">
+              <Button key={path} asChild variant="outline" className="wfm-overview-access__link">
                 <Link to="/explorer" search={{ path }}>
-                  <FolderTree className="mr-2 h-4 w-4" />
-                  Open <span className="ml-1 font-mono">{path}</span>
+                  <FolderTree /> <span>Open</span>
+                  <code>{path}</code>
                 </Link>
               </Button>
             ))}
             {user?.isAdmin && (
-              <Button asChild className="justify-start">
+              <Button asChild className="wfm-overview-access__link">
                 <Link to="/terminal">
-                  <TerminalSquare className="mr-2 h-4 w-4" />
-                  Open terminal
+                  <TerminalSquare /> Open terminal
                 </Link>
               </Button>
             )}
             {user?.isAdmin && (
-              <Button asChild variant="outline" className="justify-start">
+              <Button asChild variant="outline" className="wfm-overview-access__link">
                 <Link to="/users">
-                  <Users className="mr-2 h-4 w-4" />
-                  Manage users
+                  <Users /> Manage users
                 </Link>
               </Button>
             )}
-            <Button asChild variant="outline" className="justify-start">
+            <Button asChild variant="outline" className="wfm-overview-access__link">
               <Link to="/explorer" search={{ path: "/" }}>
-                <FileText className="mr-2 h-4 w-4" />
-                Browse files
+                <FileText /> Browse files
               </Link>
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </section>
+
+      <section className="wfm-overview-callout">
+        <div>
+          <ShieldCheck />
+          <div>
+            <strong>Ready for controlled file operations</strong>
+            <p>
+              Use the Explorer for files, Uploads for transfers and Terminal only when elevated
+              access is required.
+            </p>
+          </div>
+        </div>
+        <Server aria-hidden="true" />
+      </section>
     </div>
   );
 }

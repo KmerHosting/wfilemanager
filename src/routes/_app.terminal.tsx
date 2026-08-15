@@ -273,9 +273,7 @@ function TerminalPage() {
       {!fullscreen && (
         <Alert variant="destructive" className="m-3 mb-0 rounded-md">
           <ShieldAlert className="h-4 w-4" />
-          <AlertDescription>
-            This terminal is running as root and is available only to administrators.
-          </AlertDescription>
+          <AlertDescription>This terminal is running as root, be careful.</AlertDescription>
         </Alert>
       )}
 

@@ -39,13 +39,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { wfilemanagerApi, type AuthUser, type WFileManagerRole } from "@/lib/wfilemanager-api";
 import { formatRelative } from "@/lib/format";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select as CarbonSelect, SelectItem as CarbonSelectItem } from "@carbon/react";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/users")({
@@ -288,21 +282,19 @@ function Users() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label>Role</Label>
-                    <Select
+                    <CarbonSelect
+                      id="create-user-role"
+                      noLabel
+                      labelText="Role"
+                      size="md"
                       value={form.roleId}
-                      onValueChange={(roleId) => setForm({ ...form, roleId })}
+                      onChange={(event) => setForm({ ...form, roleId: event.target.value })}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assignableRoles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <CarbonSelectItem value="" text="Choose a role" />
+                      {assignableRoles.map((role) => (
+                        <CarbonSelectItem key={role.id} value={role.id} text={role.name} />
+                      ))}
+                    </CarbonSelect>
                   </div>
                 </div>
                 <div className="grid gap-1.5">
@@ -505,39 +497,36 @@ function Users() {
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
                 <Label>Role</Label>
-                <Select
+                <CarbonSelect
+                  id="edit-user-role"
+                  noLabel
+                  labelText="Role"
+                  size="md"
                   value={edit.roleId}
-                  onValueChange={(roleId) => setEdit({ ...edit, roleId })}
+                  onChange={(event) => setEdit({ ...edit, roleId: event.target.value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignableRoles.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <CarbonSelectItem value="" text="Choose a role" />
+                  {assignableRoles.map((role) => (
+                    <CarbonSelectItem key={role.id} value={role.id} text={role.name} />
+                  ))}
+                </CarbonSelect>
               </div>
               <div className="grid gap-1.5">
                 <Label>Status</Label>
-                <Select
+                <CarbonSelect
+                  id="edit-user-status"
+                  noLabel
+                  labelText="Status"
+                  size="md"
                   value={edit.status}
-                  onValueChange={(status) =>
-                    setEdit({ ...edit, status: status as typeof edit.status })
+                  onChange={(event) =>
+                    setEdit({ ...edit, status: event.target.value as typeof edit.status })
                   }
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="disabled">Disabled</SelectItem>
-                    <SelectItem value="invited">Invited</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <CarbonSelectItem value="active" text="Active" />
+                  <CarbonSelectItem value="disabled" text="Disabled" />
+                  <CarbonSelectItem value="invited" text="Invited" />
+                </CarbonSelect>
               </div>
             </div>
             <div className="grid gap-1.5">

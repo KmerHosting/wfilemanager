@@ -100,7 +100,7 @@ function Uploads() {
 
   useEffect(() => {
     if (pickerOpen) void loadPicker(destination);
-  }, [pickerOpen]);
+  }, [pickerOpen, destination]);
 
   const directories = useMemo(
     () => pickerData?.entries.filter((entry) => entry.kind === "directory" && !entry.hidden) || [],
@@ -149,37 +149,46 @@ function Uploads() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight">Upload files</h1>
-        <p className="text-sm text-muted-foreground">
-          Choose a server folder visually, then upload files up to 5 GB per file with progress and
-          cancellation.
-        </p>
+    <div className="wfm-page wfm-uploads-page">
+      <div className="wfm-page__header">
+        <div>
+          <p className="wfm-eyebrow">File transfers</p>
+          <h1>Upload files</h1>
+          <p>
+            Choose a server folder visually, then upload files up to 5 GB per file with progress and
+            cancellation.
+          </p>
+        </div>
       </div>
 
-      <Card>
+      <Card className="wfm-upload-card">
         <CardHeader>
-          <CardTitle className="text-base">Destination</CardTitle>
+          <div className="wfm-section-kicker">Step 1</div>
+          <CardTitle>Choose a destination</CardTitle>
           <CardDescription>
             Select a known location or browse the server instead of typing the complete path
             manually.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
+        <CardContent className="wfm-upload-card__content">
+          <div className="wfm-upload-destination">
             <Input
               value={destination}
               onChange={(event) => setDestination(event.target.value)}
               className="font-mono"
             />
-            <Button type="button" variant="outline" onClick={() => setPickerOpen(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPickerOpen(true)}
+              className="wfm-upload-browse"
+            >
               <FolderOpen className="mr-2 h-4 w-4" />
               Browse
             </Button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="wfm-upload-quick-list" aria-label="Common destinations">
             {QUICK_DESTINATIONS.map((path) => (
               <Button
                 key={path}
@@ -195,11 +204,9 @@ function Uploads() {
           </div>
 
           {recent.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Recent destinations
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <div className="wfm-upload-recent">
+              <p>Recent destinations</p>
+              <div className="wfm-upload-quick-list">
                 {recent.map((path) => (
                   <Button
                     key={path}
@@ -217,10 +224,7 @@ function Uploads() {
           )}
 
           <div
-            className={cn(
-              "grid min-h-48 place-items-center rounded-lg border border-dashed border-border p-8 text-center transition-colors",
-              dragging && "border-primary bg-primary/5",
-            )}
+            className={cn("wfm-upload-dropzone", dragging && "wfm-upload-dropzone--active")}
             onDragOver={(event) => {
               event.preventDefault();
               if (!uploading) setDragging(true);
@@ -232,11 +236,11 @@ function Uploads() {
               if (!uploading) void upload(event.dataTransfer.files);
             }}
           >
-            <div>
+            <div className="wfm-upload-dropzone__content">
               <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-3 text-sm font-medium">Drop files here</p>
-              <p className="mt-1 text-xs text-muted-foreground">or choose files from this device</p>
-              <div className="mt-4 flex justify-center">
+              <p className="wfm-upload-dropzone__title">Drop files here</p>
+              <p className="wfm-upload-dropzone__hint">or choose files from this device</p>
+              <div className="wfm-upload-dropzone__action">
                 <Button
                   disabled={uploading || !destination.startsWith("/")}
                   onClick={() => inputRef.current?.click()}
@@ -260,10 +264,11 @@ function Uploads() {
       </Card>
 
       {results.length > 0 && (
-        <Card className="mt-4">
-          <CardHeader className="space-y-3">
+        <Card className="wfm-upload-results">
+          <CardHeader>
+            <div className="wfm-section-kicker">Step 3</div>
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-base">Latest upload</CardTitle>
+              <CardTitle>Transfer status</CardTitle>
               <div className="flex items-center gap-3">
                 <span className="font-mono text-xs text-muted-foreground">{progress.percent}%</span>
                 {uploading && (
@@ -275,16 +280,16 @@ function Uploads() {
               </div>
             </div>
             <Progress value={progress.percent} />
-            <CardDescription>
+            <CardDescription className="wfm-upload-progress-detail">
               {formatBytes(progress.loaded)} of{" "}
               {formatBytes(progress.total || results.reduce((sum, item) => sum + item.size, 0))}
               {progress.detail ? ` · ${progress.detail}` : ""}
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="wfm-upload-results__content">
             <div className="divide-y divide-border">
               {results.map((result) => (
-                <div key={result.name} className="flex items-center gap-3 px-6 py-3">
+                <div key={result.name} className="wfm-upload-result-row">
                   {result.status === "uploading" ? (
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   ) : result.status === "completed" ? (
@@ -317,8 +322,8 @@ function Uploads() {
               Browse server directories and choose the folder that will receive the uploaded files.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="flex gap-2">
+          <div className="wfm-upload-picker">
+            <div className="wfm-upload-picker__toolbar">
               <Button
                 size="icon"
                 variant="outline"
@@ -337,7 +342,7 @@ function Uploads() {
                 <ChevronUp className="h-4 w-4" />
               </Button>
               <form
-                className="flex flex-1 gap-2"
+                className="wfm-upload-picker__path"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void loadPicker(pickerInput);
@@ -353,7 +358,7 @@ function Uploads() {
                 </Button>
               </form>
             </div>
-            <div className="rounded-md border border-border">
+            <div className="wfm-upload-picker__list">
               <ScrollArea className="h-80">
                 {pickerLoading ? (
                   <div className="grid h-80 place-items-center text-sm text-muted-foreground">

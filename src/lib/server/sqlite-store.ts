@@ -420,7 +420,7 @@ export function login(data: Record<string, unknown>, request?: Request) {
   const expiresAt = new Date(
     Date.now() + (data.remember ? SESSION_LONG_MS : SESSION_SHORT_MS),
   ).toISOString();
-  const ip = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const ip = requestIp(request);
   const userAgent = request?.headers.get("user-agent") || null;
   db()
     .prepare(
@@ -715,12 +715,31 @@ export function changePassword(user: UserRow, data: Record<string, unknown>, cur
   return { success: true as const };
 }
 
-export function listSessions(user: UserRow, currentToken: string) {
+function requestIp(request?: Request) {
+  if (!request) return null;
+  return (
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    null
+  );
+}
+
+export function listSessions(user: UserRow, currentToken: string, request?: Request) {
   cleanExpiredSessions();
+  const currentHash = tokenHash(currentToken);
+  const currentIp = requestIp(request);
+  const currentUserAgent = request?.headers.get("user-agent")?.trim() || null;
+  if (currentIp || currentUserAgent) {
+    db()
+      .prepare(
+        "UPDATE wfm_sessions SET ip_address = COALESCE(ip_address, ?), user_agent = COALESCE(user_agent, ?) WHERE user_id = ? AND token_hash = ?",
+      )
+      .run(currentIp, currentUserAgent, user.id, currentHash);
+  }
   const rows = db()
     .prepare("SELECT * FROM wfm_sessions WHERE user_id = ? ORDER BY created_at DESC")
     .all(user.id) as Row[];
-  const currentHash = tokenHash(currentToken);
   return {
     sessions: rows.map((row) => ({
       id: String(row.id),

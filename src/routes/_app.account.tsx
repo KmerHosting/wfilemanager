@@ -11,13 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select as CarbonSelect, SelectItem as CarbonSelectItem } from "@carbon/react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -43,28 +37,36 @@ const TIMEZONES = [
 ];
 
 function deviceLabel(userAgent: string | null) {
-  if (!userAgent) return "Unknown device";
+  if (!userAgent) return "Browser on unavailable device";
   const browser = /Firefox/i.test(userAgent)
     ? "Firefox"
     : /Edg/i.test(userAgent)
       ? "Edge"
-      : /Chrome/i.test(userAgent)
-        ? "Chrome"
-        : /Safari/i.test(userAgent)
-          ? "Safari"
-          : "Browser";
+      : /OPR|Opera/i.test(userAgent)
+        ? "Opera"
+        : /Chrome/i.test(userAgent)
+          ? "Chrome"
+          : /Safari/i.test(userAgent)
+            ? "Safari"
+            : "Browser";
   const system = /Windows/i.test(userAgent)
     ? "Windows"
-    : /Android/i.test(userAgent)
-      ? "Android"
-      : /iPhone|iPad/i.test(userAgent)
-        ? "iOS"
+    : /iPhone|iPad/i.test(userAgent)
+      ? "iOS"
+      : /Android/i.test(userAgent)
+        ? "Android"
         : /Mac OS/i.test(userAgent)
           ? "macOS"
           : /Linux/i.test(userAgent)
             ? "Linux"
-            : "Unknown OS";
+            : /CrOS/i.test(userAgent)
+              ? "ChromeOS"
+              : "unavailable OS";
   return `${browser} on ${system}`;
+}
+
+function sessionAddress(session: WFileManagerSession) {
+  return session.ipAddress || "Address unavailable for this session";
 }
 
 function Account() {
@@ -114,15 +116,14 @@ function Account() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-4xl p-6">
-      <div className="mb-6 flex items-center gap-3">
-        <UserCircle2 className="h-5 w-5" />
+    <div className="wfm-page wfm-account-page">
+      <div className="wfm-page__header">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Account</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your profile, application password and active sessions.
-          </p>
+          <p className="wfm-eyebrow">Identity and access</p>
+          <h1>Account</h1>
+          <p>Manage your profile, application password and active sessions.</p>
         </div>
+        <UserCircle2 className="h-5 w-5" />
       </div>
 
       {error && (
@@ -131,7 +132,7 @@ function Account() {
         </Alert>
       )}
 
-      <div className="grid gap-4">
+      <div className="wfm-account-sections">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Profile</CardTitle>
@@ -161,22 +162,19 @@ function Account() {
             </div>
             <div className="grid gap-1.5">
               <Label>Timezone</Label>
-              <Select
+              <CarbonSelect
+                id="account-timezone"
+                noLabel
+                labelText="Timezone"
+                size="md"
                 value={profile.timezone}
                 disabled={profileLoading}
-                onValueChange={(timezone) => setProfile({ ...profile, timezone })}
+                onChange={(event) => setProfile({ ...profile, timezone: event.target.value })}
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIMEZONES.map((timezone) => (
-                    <SelectItem key={timezone} value={timezone}>
-                      {timezone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {TIMEZONES.map((timezone) => (
+                  <CarbonSelectItem key={timezone} value={timezone} text={timezone} />
+                ))}
+              </CarbonSelect>
             </div>
             <div className="sm:col-span-2 flex justify-end">
               <Button
@@ -306,16 +304,16 @@ function Account() {
                 No active sessions.
               </div>
             ) : (
-              <ul className="divide-y divide-border">
+              <ul className="wfm-session-list">
                 {sessions.map((session) => (
-                  <li key={session.id} className="flex items-center gap-3 py-3">
+                  <li key={session.id} className="wfm-session-row">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <span className="truncate">{deviceLabel(session.userAgent)}</span>
                         {session.current && <Badge variant="outline">Current</Badge>}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span className="font-mono">{session.ipAddress || "Unknown IP"}</span>
+                        <span className="font-mono">{sessionAddress(session)}</span>
                         <span>Last used {formatRelative(session.lastSeenAt)}</span>
                         <span>Expires {formatRelative(session.expiresAt)}</span>
                       </div>

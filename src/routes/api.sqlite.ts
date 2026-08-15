@@ -236,7 +236,7 @@ export const Route = createFileRoute("/api/sqlite")({
           if (scope === "account" && action === "profile")
             return json(sanitizeResult(profile(user)));
           if (scope === "account" && action === "sessions")
-            return json(listSessions(user, sessionToken));
+            return json(listSessions(user, sessionToken, request));
           if (scope === "notifications" && action === "notifications")
             return json(notifications(user));
           if (scope === "presence" && action === "presence") return json(presence());
