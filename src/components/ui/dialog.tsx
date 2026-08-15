@@ -25,7 +25,7 @@ function Dialog({
 const DialogTrigger = React.forwardRef<
   HTMLElement,
   React.ComponentPropsWithoutRef<typeof Slot> & { asChild?: boolean }
->(({ onClick, ...props }, ref) => {
+>(({ onClick, asChild: _asChild, ...props }, ref) => {
   const context = React.useContext(DialogContext);
   return (
     <Slot

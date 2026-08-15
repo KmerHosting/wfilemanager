@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Checkmark,
   CheckmarkOutline,
@@ -38,10 +38,49 @@ export function Topbar() {
   const { theme, setTheme } = useTheme();
   const auth = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [notifOpen, setNotifOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const notifications = useNotifications();
+
+  useEffect(() => {
+    setNotifOpen(false);
+    setThemeOpen(false);
+    setAccountOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!notifOpen && !themeOpen && !accountOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setNotifOpen(false);
+        setThemeOpen(false);
+        setAccountOpen(false);
+      }
+    };
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (
+        target.closest(
+          ".wfm-notifications-panel, .wfm-theme-panel, .wfm-account-panel, [aria-label='Notifications'], [aria-label='Theme'], [aria-label='Account menu']",
+        )
+      )
+        return;
+      setNotifOpen(false);
+      setThemeOpen(false);
+      setAccountOpen(false);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    };
+  }, [accountOpen, notifOpen, themeOpen]);
 
   return (
     <Header aria-label="wFileManager" className="wfm-carbon-header">
