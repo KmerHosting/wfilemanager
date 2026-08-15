@@ -33,6 +33,7 @@ import { Route as ApiGatewayRouteImport } from './routes/api.gateway'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as ApiLocalRouteImport } from './routes/api.local'
 import { Route as ApiSqliteRouteImport } from './routes/api.sqlite'
+import { Route as ApiAuthKmerhostingRouteImport } from './routes/api.auth.kmerhosting'
 import { Route as ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport } from './routes/api.sqlite-proxy.functions.v1.wfilemanager-api.me'
 import { Route as ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRouteImport } from './routes/api.sqlite-proxy.functions.v1.wfilemanager-api.verify-password'
 import { Route as ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRouteImport } from './routes/api.sqlite-proxy.functions.v1.wfilemanager-roles-api.permissions'
@@ -156,6 +157,11 @@ const ApiSqliteRoute = ApiSqliteRouteImport.update({
   path: '/api/sqlite',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthKmerhostingRoute = ApiAuthKmerhostingRouteImport.update({
+  id: '/api/auth/kmerhosting',
+  path: '/api/auth/kmerhosting',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute =
   ApiSqliteProxyFunctionsV1WfilemanagerApiMeRouteImport.update({
     id: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/local': typeof ApiLocalRoute
   '/api/sqlite': typeof ApiSqliteRoute
+  '/api/auth/kmerhosting': typeof ApiAuthKmerhostingRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/api/local': typeof ApiLocalRoute
   '/api/sqlite': typeof ApiSqliteRoute
   '/': typeof AppIndexRoute
+  '/api/auth/kmerhosting': typeof ApiAuthKmerhostingRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/api/local': typeof ApiLocalRoute
   '/api/sqlite': typeof ApiSqliteRoute
   '/_app/': typeof AppIndexRoute
+  '/api/auth/kmerhosting': typeof ApiAuthKmerhostingRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password': typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
   '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions': typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/local'
     | '/api/sqlite'
+    | '/api/auth/kmerhosting'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/api/local'
     | '/api/sqlite'
     | '/'
+    | '/api/auth/kmerhosting'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/api/local'
     | '/api/sqlite'
     | '/_app/'
+    | '/api/auth/kmerhosting'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-api/verify-password'
     | '/api/sqlite-proxy/functions/v1/wfilemanager-roles-api/permissions'
@@ -362,6 +374,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiLocalRoute: typeof ApiLocalRoute
   ApiSqliteRoute: typeof ApiSqliteRoute
+  ApiAuthKmerhostingRoute: typeof ApiAuthKmerhostingRoute
   ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute
   ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute
   ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute: typeof ApiSqliteProxyFunctionsV1WfilemanagerRolesApiPermissionsRoute
@@ -537,6 +550,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSqliteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/kmerhosting': {
+      id: '/api/auth/kmerhosting'
+      path: '/api/auth/kmerhosting'
+      fullPath: '/api/auth/kmerhosting'
+      preLoaderRoute: typeof ApiAuthKmerhostingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sqlite-proxy/functions/v1/wfilemanager-api/me': {
       id: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
       path: '/api/sqlite-proxy/functions/v1/wfilemanager-api/me'
@@ -606,6 +626,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiLocalRoute: ApiLocalRoute,
   ApiSqliteRoute: ApiSqliteRoute,
+  ApiAuthKmerhostingRoute: ApiAuthKmerhostingRoute,
   ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute:
     ApiSqliteProxyFunctionsV1WfilemanagerApiMeRoute,
   ApiSqliteProxyFunctionsV1WfilemanagerApiVerifyPasswordRoute:

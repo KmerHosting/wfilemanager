@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
-  KeyRound,
-  Loader2,
   MonitorSmartphone,
   RefreshCw,
   UserCircle2,
@@ -75,9 +73,6 @@ function Account() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({ displayName: "", email: "", timezone: "UTC" });
   const [profileLoading, setProfileLoading] = useState(true);
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [password, setPassword] = useState({ current: "", next: "", confirm: "" });
-  const [passwordSaving, setPasswordSaving] = useState(false);
   const [sessions, setSessions] = useState<WFileManagerSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -137,15 +132,14 @@ function Account() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Profile</CardTitle>
-            <CardDescription>Your identity inside this wFileManager installation.</CardDescription>
+              <CardDescription>Your identity is managed by your central KmerHosting Account.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Display name</Label>
               <Input
                 value={profile.displayName}
-                disabled={profileLoading}
-                onChange={(event) => setProfile({ ...profile, displayName: event.target.value })}
+                disabled
               />
             </div>
             <div className="grid gap-1.5">
@@ -157,8 +151,7 @@ function Account() {
               <Input
                 type="email"
                 value={profile.email}
-                disabled={profileLoading}
-                onChange={(event) => setProfile({ ...profile, email: event.target.value })}
+                disabled
               />
             </div>
             <div className="grid gap-1.5">
@@ -169,109 +162,23 @@ function Account() {
                 labelText="Timezone"
                 size="md"
                 value={profile.timezone}
-                disabled={profileLoading}
-                onChange={(event) => setProfile({ ...profile, timezone: event.target.value })}
+                disabled
               >
                 {TIMEZONES.map((timezone) => (
                   <CarbonSelectItem key={timezone} value={timezone} text={timezone} />
                 ))}
               </CarbonSelect>
             </div>
-            <div className="sm:col-span-2 flex justify-end">
-              <Button
-                disabled={profileSaving || profileLoading || profile.displayName.trim().length < 2}
-                onClick={async () => {
-                  setProfileSaving(true);
-                  try {
-                    await wfilemanagerApi.updateAccountProfile({
-                      displayName: profile.displayName.trim(),
-                      email: profile.email.trim() || null,
-                      timezone: profile.timezone,
-                    });
-                    await auth.refresh();
-                    toast.success("Profile updated");
-                  } catch (value) {
-                    toast.error(
-                      value instanceof Error ? value.message : "Unable to update profile",
-                    );
-                  } finally {
-                    setProfileSaving(false);
-                  }
-                }}
-              >
-                {profileSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save profile
-              </Button>
-            </div>
+            <p className="sm:col-span-2 text-sm text-muted-foreground">Update your identity, avatar and account details from Account settings on the KmerHosting Dashboard.</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <KeyRound className="h-4 w-4" /> Password
-            </CardTitle>
-            <CardDescription>
-              This password authenticates only your wFileManager account. It does not create or
-              modify a Linux account.
-            </CardDescription>
+            <CardTitle>Password</CardTitle>
+            <CardDescription>Password changes are handled with the OTP-protected Security tab on the KmerHosting Dashboard.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            <div className="grid gap-1.5">
-              <Label>Current password</Label>
-              <Input
-                type="password"
-                autoComplete="current-password"
-                value={password.current}
-                onChange={(event) => setPassword({ ...password, current: event.target.value })}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>New password</Label>
-              <Input
-                type="password"
-                autoComplete="new-password"
-                value={password.next}
-                onChange={(event) => setPassword({ ...password, next: event.target.value })}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Confirm password</Label>
-              <Input
-                type="password"
-                autoComplete="new-password"
-                value={password.confirm}
-                onChange={(event) => setPassword({ ...password, confirm: event.target.value })}
-              />
-            </div>
-            <div className="sm:col-span-3 flex justify-end">
-              <Button
-                disabled={
-                  passwordSaving ||
-                  password.current.length < 1 ||
-                  password.next.length < 8 ||
-                  password.next !== password.confirm
-                }
-                onClick={async () => {
-                  setPasswordSaving(true);
-                  try {
-                    await wfilemanagerApi.changePassword(password.current, password.next);
-                    setPassword({ current: "", next: "", confirm: "" });
-                    await loadSessions();
-                    toast.success("Password changed. Other sessions were revoked.");
-                  } catch (value) {
-                    toast.error(
-                      value instanceof Error ? value.message : "Unable to change password",
-                    );
-                  } finally {
-                    setPasswordSaving(false);
-                  }
-                }}
-              >
-                {passwordSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Change
-                password
-              </Button>
-            </div>
-          </CardContent>
+          <CardContent><Button asChild variant="outline"><a href="https://dashboard.kmerhosting.com/?view=account">Open central account security</a></Button></CardContent>
         </Card>
 
         <Card>
