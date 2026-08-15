@@ -156,8 +156,8 @@ function entryVisual(entry: LocalFileEntry) {
   if (entry.kind === "directory") {
     return {
       Icon: Folder,
-      tone: "border-primary/20 bg-primary/10 text-primary",
-      icon: "fill-primary/15 text-primary",
+      tone: "wfm-file-icon-tile--folder",
+      icon: "wfm-file-icon--folder",
     };
   }
   if (entry.kind === "symlink") {
@@ -998,7 +998,7 @@ function Explorer() {
           <div className="grid h-64 place-items-center rounded-xl border border-dashed border-border bg-muted/10 text-center">
             <div>
               <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl border border-primary/20 bg-primary/10 shadow-sm">
-                <Folder className="h-9 w-9 fill-primary/15 text-primary" />
+                <Folder className="wfm-file-icon--folder h-9 w-9" />
               </div>
               <p className="font-medium">This directory is empty</p>
               <p className="mt-1 text-sm text-muted-foreground">

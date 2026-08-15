@@ -209,27 +209,24 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
         open={promptOpen && Boolean(update?.updateAvailable) && !blocking}
         onOpenChange={setPromptOpen}
       >
-        <DialogContent className="overflow-hidden border-border bg-background p-0 shadow-xl sm:max-w-[520px]">
-          <div className="border-b border-border bg-muted/30 px-5 py-4">
-            <div className="mb-3 flex items-center justify-between gap-3 pr-9">
+        <DialogContent className="wfm-update-modal" size="sm">
+          <DialogHeader>
+            <div className="wfm-update-modal__meta">
               <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary">
                 Stable update
               </Badge>
-              <span className="font-mono text-xs text-muted-foreground">
+              <span className="wfm-update-modal__version">
                 {update?.currentVersion} → {latestVersion}
               </span>
             </div>
-            <DialogHeader>
-              <DialogTitle className="text-base">New wFileManager release available</DialogTitle>
-              <DialogDescription>
-                An administrator should install verified stable releases to keep the instance secure
-                and current.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+            <DialogTitle>New wFileManager release available</DialogTitle>
+            <DialogDescription>
+              Install a verified stable release to keep this instance secure and current.
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="space-y-4 px-5 py-4">
-            <div className="grid gap-2 rounded-md border border-border bg-muted/20 p-4 text-sm">
+          <div className="wfm-update-modal__body">
+            <div className="wfm-update-modal__details">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Latest stable</span>
                 <span className="font-mono font-medium">{latestVersion}</span>
@@ -248,18 +245,17 @@ function UpdateGate({ isAdmin }: { isAdmin: boolean }) {
               )}
             </div>
 
-            <Alert className="border-amber-500/40 bg-amber-500/5">
-              <ShieldAlert className="h-4 w-4 text-amber-500" />
-              <AlertDescription className="text-sm">
-                During installation, the interface will be locked. The updater downloads, verifies,
-                builds, switches releases, performs a health check and rolls back automatically if
-                the new release is unhealthy.
+            <Alert className="wfm-update-modal__notice">
+              <ShieldAlert />
+              <AlertDescription>
+                The interface will be locked while the updater downloads, verifies, builds and
+                health-checks the release. It rolls back automatically if needed.
               </AlertDescription>
             </Alert>
           </div>
 
-          <DialogFooter className="gap-2 border-t border-border bg-muted/20 px-5 py-4">
-            <Button type="button" variant="outline" onClick={() => setPromptOpen(false)}>
+          <DialogFooter className="wfm-update-modal__actions">
+            <Button variant="secondary" type="button" onClick={() => setPromptOpen(false)}>
               Later
             </Button>
             <Button

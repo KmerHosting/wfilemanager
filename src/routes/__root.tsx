@@ -74,7 +74,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "wFileManager is a web-based file manager for Linux servers. Browse, edit, upload, share and audit files with a modern administration panel. A project from KmerHosting LLC.",
       },
       { name: "author", content: "KmerHosting LLC" },
-      { name: "theme-color", content: "#161616" },
+      { name: "theme-color", content: "#f4f4f4" },
       { property: "og:title", content: "wFileManager — Linux file manager for servers" },
       {
         property: "og:description",
@@ -104,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark" style={{ colorScheme: "dark" }}>
+    <html lang="en" style={{ colorScheme: "light" }}>
       <head>
         <HeadContent />
       </head>

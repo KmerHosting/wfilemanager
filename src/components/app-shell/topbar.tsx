@@ -20,18 +20,11 @@ import {
   HeaderGlobalBar,
   HeaderMenuButton,
   HeaderName,
+  Popover as CarbonPopover,
+  PopoverContent as CarbonPopoverContent,
   SkipToContent,
 } from "@carbon/react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "@/lib/theme";
 import { AppSidebar } from "./sidebar";
@@ -46,6 +39,8 @@ export function Topbar() {
   const auth = useAuth();
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const notifications = useNotifications();
 
   return (
@@ -73,24 +68,32 @@ export function Topbar() {
       </HeaderName>
 
       <HeaderGlobalBar>
-        <Popover
+        <CarbonPopover
           open={notifOpen}
-          onOpenChange={(open) => {
-            setNotifOpen(open);
-            if (open) void notifications.refresh();
-          }}
+          autoAlign
+          align="bottom-end"
+          caret={false}
+          border
+          className="wfm-header-popover"
+          onRequestClose={() => setNotifOpen(false)}
         >
-          <PopoverTrigger asChild>
-            <HeaderGlobalAction aria-label="Notifications" className="relative">
-              <Notification size={20} />
-              {notifications.unreadCount > 0 && (
-                <span className="wfm-carbon-header__count">
-                  {notifications.unreadCount > 99 ? "99+" : notifications.unreadCount}
-                </span>
-              )}
-            </HeaderGlobalAction>
-          </PopoverTrigger>
-          <PopoverContent className="w-96 rounded-none border-border p-0 shadow-none" align="end">
+          <HeaderGlobalAction
+            aria-label="Notifications"
+            className="relative"
+            isActive={notifOpen}
+            onClick={() => {
+              setNotifOpen((open) => !open);
+              if (!notifOpen) void notifications.refresh();
+            }}
+          >
+            <Notification size={20} />
+            {notifications.unreadCount > 0 && (
+              <span className="wfm-carbon-header__count">
+                {notifications.unreadCount > 99 ? "99+" : notifications.unreadCount}
+              </span>
+            )}
+          </HeaderGlobalAction>
+          <CarbonPopoverContent className="wfm-notifications-panel">
             <div className="flex items-center justify-between border-b border-border p-4">
               <div>
                 <div className="text-sm font-semibold">Notifications</div>
@@ -202,26 +205,43 @@ export function Topbar() {
                 </button>
               )}
             </div>
-          </PopoverContent>
-        </Popover>
+          </CarbonPopoverContent>
+        </CarbonPopover>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <HeaderGlobalAction aria-label="Theme">
-              {theme === "dark" ? (
-                <Moon size={20} />
-              ) : theme === "light" ? (
-                <Light size={20} />
-              ) : (
-                <Laptop size={20} />
-              )}
-            </HeaderGlobalAction>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 rounded-none shadow-none">
-            <DropdownMenuLabel>Theme</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+        <CarbonPopover
+          open={themeOpen}
+          autoAlign
+          align="bottom-end"
+          caret={false}
+          border
+          className="wfm-header-popover"
+          onRequestClose={() => setThemeOpen(false)}
+        >
+          <HeaderGlobalAction
+            aria-label="Theme"
+            isActive={themeOpen}
+            onClick={() => setThemeOpen((open) => !open)}
+          >
+            {theme === "dark" ? (
+              <Moon size={20} />
+            ) : theme === "light" ? (
+              <Light size={20} />
+            ) : (
+              <Laptop size={20} />
+            )}
+          </HeaderGlobalAction>
+          <CarbonPopoverContent className="wfm-theme-panel">
+            <div className="wfm-theme-panel__label">Theme</div>
             {(["light", "dark", "system"] as const).map((item) => (
-              <DropdownMenuItem key={item} onClick={() => setTheme(item)}>
+              <button
+                key={item}
+                type="button"
+                className={`wfm-theme-panel__item${theme === item ? " wfm-theme-panel__item--active" : ""}`}
+                onClick={() => {
+                  setTheme(item);
+                  setThemeOpen(false);
+                }}
+              >
                 {item === "light" ? (
                   <Light size={16} />
                 ) : item === "dark" ? (
@@ -230,46 +250,57 @@ export function Topbar() {
                   <Laptop size={16} />
                 )}
                 <span className="capitalize">{item}</span>
-                {theme === item && <Checkmark size={16} className="ml-auto text-primary" />}
-              </DropdownMenuItem>
+                {theme === item && <Checkmark size={16} className="wfm-theme-panel__check" />}
+              </button>
             ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </CarbonPopoverContent>
+        </CarbonPopover>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <HeaderGlobalAction aria-label="Account menu" className="wfm-carbon-header__account">
-              <UserAvatar size={20} />
-            </HeaderGlobalAction>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60 rounded-none shadow-none">
-            <DropdownMenuLabel>
-              <div className="flex flex-col">
-                <span>{auth.user?.displayName || auth.user?.username}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {auth.user?.isAdmin ? "Administrator" : auth.user?.roleName || "User"}
-                </span>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/account">
-                <UserAvatar size={16} /> Account
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
+        <CarbonPopover
+          open={accountOpen}
+          autoAlign
+          align="bottom-end"
+          caret={false}
+          border
+          className="wfm-header-popover"
+          onRequestClose={() => setAccountOpen(false)}
+        >
+          <HeaderGlobalAction
+            aria-label="Account menu"
+            className="wfm-carbon-header__account"
+            isActive={accountOpen}
+            onClick={() => setAccountOpen((open) => !open)}
+          >
+            <UserAvatar size={20} />
+          </HeaderGlobalAction>
+          <CarbonPopoverContent className="wfm-account-panel">
+            <div className="wfm-account-panel__identity">
+              <span className="wfm-account-panel__name">
+                {auth.user?.displayName || auth.user?.username}
+              </span>
+              <span className="wfm-account-panel__role">
+                {auth.user?.isAdmin ? "Administrator" : auth.user?.roleName || "User"}
+              </span>
+            </div>
+            <Link to="/account" className="wfm-account-panel__item">
+              <UserAvatar size={16} />
+              <span>Account</span>
+            </Link>
+            <button
+              type="button"
+              className="wfm-account-panel__item wfm-account-panel__item--danger"
               onClick={async () => {
                 await auth.logout();
+                setAccountOpen(false);
                 toast.success("Signed out");
                 navigate({ to: "/login" });
               }}
             >
-              <Logout size={16} /> Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Logout size={16} />
+              <span>Sign out</span>
+            </button>
+          </CarbonPopoverContent>
+        </CarbonPopover>
       </HeaderGlobalBar>
     </Header>
   );

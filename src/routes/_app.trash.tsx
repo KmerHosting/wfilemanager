@@ -203,7 +203,7 @@ function Trash() {
                             className={cn(
                               "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
                               item.kind === "directory"
-                                ? "border-primary/20 bg-primary/10"
+                                ? "wfm-file-icon-tile--folder"
                                 : "border-border bg-muted/40",
                             )}
                           >
@@ -211,7 +211,7 @@ function Trash() {
                               className={cn(
                                 "h-4 w-4",
                                 item.kind === "directory"
-                                  ? "fill-primary/15 text-primary"
+                                  ? "wfm-file-icon--folder"
                                   : "text-muted-foreground",
                               )}
                             />

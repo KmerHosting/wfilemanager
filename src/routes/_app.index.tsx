@@ -170,38 +170,38 @@ function Overview() {
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="gap-2 pb-6">
             <CardTitle className="text-base">File manager status</CardTitle>
             <CardDescription>
               Information that directly affects navigation, editing and file transfers.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div>
+          <CardContent className="space-y-7">
+            <div className="grid gap-x-6 gap-y-7 text-sm sm:grid-cols-2 xl:grid-cols-4">
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Hostname</p>
-                <p className="mt-1 font-mono">{summary?.hostname || "—"}</p>
+                <p className="mt-2 break-words font-mono">{summary?.hostname || "—"}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">OS release</p>
-                <p className="mt-1 font-mono">{summary?.os.prettyName || "—"}</p>
+                <p className="mt-2 break-words font-mono">{summary?.os.prettyName || "—"}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Kernel / architecture</p>
-                <p className="mt-1 font-mono">
+                <p className="mt-2 break-words font-mono">
                   {summary ? `${summary.release} · ${summary.architecture}` : "—"}
                 </p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Service port</p>
-                <p className="mt-1 font-mono">127.0.0.1:1973</p>
+                <p className="mt-2 break-words font-mono">127.0.0.1:1973</p>
               </div>
             </div>
 
-            <div>
-              <div className="mb-1.5 flex justify-between gap-4 text-xs">
+            <div className="space-y-2">
+              <div className="flex justify-between gap-4 text-xs">
                 <span className="text-muted-foreground">Common locations readable</span>
                 <span className="font-mono">
                   {summary
@@ -209,11 +209,11 @@ function Overview() {
                     : "—"}
                 </span>
               </div>
-              <Progress value={availablePercent} className="h-2" />
+              <Progress value={availablePercent} />
             </div>
 
-            <div>
-              <div className="mb-1.5 flex justify-between gap-4 text-xs">
+            <div className="space-y-2">
+              <div className="flex justify-between gap-4 text-xs">
                 <span className="text-muted-foreground">Common locations writable</span>
                 <span className="font-mono">
                   {summary
@@ -221,10 +221,10 @@ function Overview() {
                     : "—"}
                 </span>
               </div>
-              <Progress value={writablePercent} className="h-2" />
+              <Progress value={writablePercent} />
             </div>
 
-            <div className="grid gap-3 rounded-md border border-border p-3 text-xs sm:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-5 rounded-md border border-border p-4 text-xs sm:grid-cols-3">
               <div>
                 <p className="text-muted-foreground">Text editor limit</p>
                 <p className="mt-1 font-mono">
@@ -245,7 +245,7 @@ function Overview() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-start gap-2 pt-1 text-xs leading-5 text-muted-foreground">
               <CircleCheck className="h-4 w-4 text-primary" />
               File and command endpoints require a valid session and the appropriate permission.
             </div>
