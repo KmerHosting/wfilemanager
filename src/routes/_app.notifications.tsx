@@ -8,7 +8,7 @@ import {
   Info,
   RefreshCw,
   Trash2,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { useNotifications } from "@/lib/notifications";
 import { formatDate, formatRelative } from "@/lib/format";
 import { Button } from "@/components/ui/button";

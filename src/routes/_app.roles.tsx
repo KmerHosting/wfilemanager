@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Loader2, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, Loader2, Plus, RefreshCw, ShieldCheck, Trash2 } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";

@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Download, RefreshCw, ShieldAlert } from "lucide-react";
+import { Download, RefreshCw, ShieldAlert } from "@/components/ui/icons";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app")({

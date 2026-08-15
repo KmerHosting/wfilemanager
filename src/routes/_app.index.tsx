@@ -9,7 +9,7 @@ import {
   TerminalSquare,
   Trash2,
   Users,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { localApi } from "@/lib/local-api";
 import { formatBytes } from "@/lib/format";
 import { Button } from "@/components/ui/button";

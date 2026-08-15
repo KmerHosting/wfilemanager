@@ -37,7 +37,7 @@ import {
   Shield,
   Trash2,
   UploadCloud,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { toast } from "sonner";
 import {
   localApi,

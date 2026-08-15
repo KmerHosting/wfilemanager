@@ -9,7 +9,7 @@ import {
   RotateCw,
   ShieldAlert,
   Trash2,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import type { Terminal as XTermTerminal } from "@xterm/xterm";
 import type { FitAddon as XTermFitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";

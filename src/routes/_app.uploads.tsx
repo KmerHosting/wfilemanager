@@ -10,7 +10,7 @@ import {
   UploadCloud,
   X,
   XCircle,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { localApi, type DirectoryResult, type ProgressState } from "@/lib/local-api";
 import { formatBytes } from "@/lib/format";
 import { Button } from "@/components/ui/button";
