@@ -1,5 +1,4 @@
 import * as React from "react";
-
 import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
@@ -8,7 +7,7 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
       <div className="cds--data-table-content">
         <table
           ref={ref}
-          className={cn("cds--data-table cds--data-table--lg", className)}
+          className={cn("cds--data-table cds--data-table--md", className)}
           {...props}
         />
       </div>

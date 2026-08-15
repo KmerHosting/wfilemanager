@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Loader2, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, RefreshCw, Search, Trash2 } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

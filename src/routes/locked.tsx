@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lock } from "lucide-react";
+import { Lock } from "@/components/ui/icons";
 
 export const Route = createFileRoute("/locked")({
   head: () => ({ meta: [{ title: "Account locked — wFileManager" }] }),

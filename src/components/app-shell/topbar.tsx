@@ -1,24 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  Bell,
-  Menu,
+  Checkmark,
+  CheckmarkOutline,
+  ErrorOutline,
+  Information,
+  Laptop,
+  Light,
+  Logout,
   Moon,
-  Sun,
-  Monitor,
-  LogOut,
-  UserCircle2,
-  Check,
-  CircleCheck,
-  CircleAlert,
-  CircleX,
-  Info,
-  Trash2,
-} from "lucide-react";
+  Notification,
+  TrashCan,
+  UserAvatar,
+  WarningAlt,
+} from "@carbon/icons-react";
 import {
   Header,
   HeaderGlobalAction,
   HeaderGlobalBar,
+  HeaderMenuButton,
   HeaderName,
   SkipToContent,
 } from "@carbon/react";
@@ -53,12 +53,11 @@ export function Topbar() {
       <SkipToContent />
       <Sheet>
         <SheetTrigger asChild>
-          <HeaderGlobalAction
+          <HeaderMenuButton
             aria-label="Open navigation"
-            className="wfm-mobile-nav-action lg:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </HeaderGlobalAction>
+            isActive={false}
+            className="wfm-mobile-nav-action"
+          />
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <SheetClose asChild>
@@ -83,7 +82,7 @@ export function Topbar() {
         >
           <PopoverTrigger asChild>
             <HeaderGlobalAction aria-label="Notifications" className="relative">
-              <Bell className="h-4 w-4" />
+              <Notification size={20} />
               {notifications.unreadCount > 0 && (
                 <span className="wfm-carbon-header__count">
                   {notifications.unreadCount > 99 ? "99+" : notifications.unreadCount}
@@ -122,22 +121,23 @@ export function Topbar() {
                   {notifications.notifications.slice(0, 6).map((item) => {
                     const ToneIcon =
                       item.tone === "success"
-                        ? CircleCheck
+                        ? CheckmarkOutline
                         : item.tone === "warning"
-                          ? CircleAlert
+                          ? WarningAlt
                           : item.tone === "error"
-                            ? CircleX
-                            : Info;
+                            ? ErrorOutline
+                            : Information;
                     return (
                       <li key={item.id} className={!item.readAt ? "bg-primary/[0.05]" : undefined}>
                         <div className="flex items-start gap-3 p-4">
                           <ToneIcon
+                            size={20}
                             className={
                               item.tone === "error"
-                                ? "mt-0.5 h-4 w-4 shrink-0 text-destructive"
+                                ? "mt-0.5 shrink-0 text-destructive"
                                 : item.tone === "warning"
-                                  ? "mt-0.5 h-4 w-4 shrink-0 text-warning"
-                                  : "mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                  ? "mt-0.5 shrink-0 text-warning"
+                                  : "mt-0.5 shrink-0 text-primary"
                             }
                           />
                           <div className="min-w-0 flex-1">
@@ -172,11 +172,11 @@ export function Topbar() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                            className="shrink-0 text-muted-foreground hover:text-destructive"
                             aria-label="Delete notification"
                             onClick={() => void notifications.remove(item.id)}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <TrashCan size={16} />
                           </Button>
                         </div>
                       </li>
@@ -209,11 +209,11 @@ export function Topbar() {
           <DropdownMenuTrigger asChild>
             <HeaderGlobalAction aria-label="Theme">
               {theme === "dark" ? (
-                <Moon className="h-4 w-4" />
+                <Moon size={20} />
               ) : theme === "light" ? (
-                <Sun className="h-4 w-4" />
+                <Light size={20} />
               ) : (
-                <Monitor className="h-4 w-4" />
+                <Laptop size={20} />
               )}
             </HeaderGlobalAction>
           </DropdownMenuTrigger>
@@ -223,14 +223,14 @@ export function Topbar() {
             {(["light", "dark", "system"] as const).map((item) => (
               <DropdownMenuItem key={item} onClick={() => setTheme(item)}>
                 {item === "light" ? (
-                  <Sun className="mr-2 h-4 w-4" />
+                  <Light size={16} />
                 ) : item === "dark" ? (
-                  <Moon className="mr-2 h-4 w-4" />
+                  <Moon size={16} />
                 ) : (
-                  <Monitor className="mr-2 h-4 w-4" />
+                  <Laptop size={16} />
                 )}
                 <span className="capitalize">{item}</span>
-                {theme === item && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                {theme === item && <Checkmark size={16} className="ml-auto text-primary" />}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -239,14 +239,7 @@ export function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <HeaderGlobalAction aria-label="Account menu" className="wfm-carbon-header__account">
-              <span className="wfm-carbon-header__avatar">
-                {(auth.user?.displayName || auth.user?.username || "A")
-                  .split(" ")
-                  .map((part) => part[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase()}
-              </span>
+              <UserAvatar size={20} />
             </HeaderGlobalAction>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60 rounded-none shadow-none">
@@ -261,7 +254,7 @@ export function Topbar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/account">
-                <UserCircle2 className="mr-2 h-4 w-4" /> Account
+                <UserAvatar size={16} /> Account
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -273,7 +266,7 @@ export function Topbar() {
                 navigate({ to: "/login" });
               }}
             >
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
+              <Logout size={16} /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -316,7 +309,6 @@ export function ConnectionBanner() {
       : state === "connected"
         ? `${onlineUsers ?? 0} ${onlineUsers === 1 ? "user" : "users"} online`
         : "Unable to read the current online-user count.";
-
   return (
     <div className={`wfm-connection-banner wfm-connection-banner--${state}`}>
       <span className="wfm-connection-banner__dot" />

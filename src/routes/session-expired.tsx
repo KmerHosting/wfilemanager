@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
+import { Clock } from "@/components/ui/icons";
 
 export const Route = createFileRoute("/session-expired")({
   head: () => ({ meta: [{ title: "Session expired — wFileManager" }] }),

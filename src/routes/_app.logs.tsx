@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { RefreshCw, Search, ShieldCheck } from "@/components/ui/icons";
 import { wfilemanagerApi, type AuditLog } from "@/lib/wfilemanager-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,22 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  ListTodo,
-  FolderTree,
-  UploadCloud,
-  Trash2,
-  TerminalSquare,
-  Users,
-  ShieldCheck,
-  UserCircle2,
-  BookOpen,
-  Info,
-  Bell,
-  LifeBuoy,
-  Globe2,
-  ScrollText,
-} from "lucide-react";
+  Book,
+  CloudUpload,
+  Dashboard,
+  FolderOpen,
+  Globe,
+  Help,
+  Information,
+  Notification,
+  Security,
+  Task,
+  Terminal,
+  TrashCan,
+  UserAvatar,
+  UserMultiple,
+} from "@carbon/icons-react";
 import { SideNav, SideNavDivider, SideNavItems, SideNavLink } from "@carbon/react";
 import { SERVER_INFO } from "@/lib/demo/data";
 import { useAuth } from "@/lib/auth";
@@ -26,7 +25,7 @@ type Item = {
   to?: string;
   href?: string;
   label: string;
-  icon: React.ComponentType<{ className?: string; size?: number | string }>;
+  icon: ComponentType<{ size?: number | string; className?: string }>;
   permission?: string;
   anyPermission?: string[];
   adminOnly?: boolean;
@@ -37,14 +36,14 @@ const NAV: { label: string; items: Item[] }[] = [
   {
     label: "Workspace",
     items: [
-      { to: "/", label: "Overview", icon: LayoutDashboard },
-      { to: "/explorer", label: "File Explorer", icon: FolderTree, permission: "browse" },
-      { to: "/uploads", label: "Uploads", icon: UploadCloud, permission: "upload" },
-      { to: "/tasks", label: "Background tasks", icon: ListTodo },
+      { to: "/", label: "Overview", icon: Dashboard },
+      { to: "/explorer", label: "File Explorer", icon: FolderOpen, permission: "browse" },
+      { to: "/uploads", label: "Uploads", icon: CloudUpload, permission: "upload" },
+      { to: "/tasks", label: "Background tasks", icon: Task },
       {
         to: "/trash",
         label: "Trash",
-        icon: Trash2,
+        icon: TrashCan,
         anyPermission: ["delete", "restore", "permanently_delete"],
       },
     ],
@@ -52,17 +51,17 @@ const NAV: { label: string; items: Item[] }[] = [
   {
     label: "Administration",
     items: [
-      { to: "/terminal", label: "Terminal", icon: TerminalSquare, adminOnly: true },
-      { to: "/users", label: "Users", icon: Users, permission: "manage_users" },
-      { to: "/roles", label: "Roles & permissions", icon: ShieldCheck, permission: "manage_roles" },
-      { to: "/logs", label: "Audit logs", icon: ScrollText, adminOnly: true },
+      { to: "/terminal", label: "Terminal", icon: Terminal, adminOnly: true },
+      { to: "/users", label: "Users", icon: UserMultiple, permission: "manage_users" },
+      { to: "/roles", label: "Roles & permissions", icon: Security, permission: "manage_roles" },
+      { to: "/logs", label: "Audit logs", icon: Information, adminOnly: true },
     ],
   },
   {
     label: "Personal",
     items: [
-      { to: "/notifications", label: "Notifications", icon: Bell },
-      { to: "/account", label: "Account", icon: UserCircle2 },
+      { to: "/notifications", label: "Notifications", icon: Notification },
+      { to: "/account", label: "Account", icon: UserAvatar },
     ],
   },
   {
@@ -71,17 +70,12 @@ const NAV: { label: string; items: Item[] }[] = [
       {
         href: "https://wfilemanager.kmerhosting.com/docs",
         label: "Documentation",
-        icon: BookOpen,
+        icon: Book,
         newTab: true,
       },
-      { to: "/about", label: "About & updates", icon: Info },
-      { href: "mailto:support@kmerhosting.com", label: "Support", icon: LifeBuoy },
-      {
-        href: "https://wfilemanager.kmerhosting.com",
-        label: "Website",
-        icon: Globe2,
-        newTab: true,
-      },
+      { to: "/about", label: "About & updates", icon: Information },
+      { href: "mailto:support@kmerhosting.com", label: "Support", icon: Help },
+      { href: "https://wfilemanager.kmerhosting.com", label: "Website", icon: Globe, newTab: true },
     ],
   },
 ];
@@ -120,7 +114,7 @@ export function AppSidebar({ className }: { className?: string }) {
     <SideNav
       expanded
       isFixedNav
-      isChildOfHeader={false}
+      isChildOfHeader
       aria-label="wFileManager navigation"
       className={`wfm-carbon-sidenav ${className || ""}`}
     >
@@ -134,14 +128,13 @@ export function AppSidebar({ className }: { className?: string }) {
             {groupIndex > 0 && <SideNavDivider />}
             <div className="wfm-carbon-sidenav__label">{group.label}</div>
             {group.items.filter(canSee).map((item) => {
-              const Icon = item.icon;
               const href = item.to || item.href || "#";
               return (
                 <SideNavLink
                   key={href}
                   href={href}
                   isActive={isActive(item.to)}
-                  renderIcon={Icon}
+                  renderIcon={item.icon}
                   target={item.newTab ? "_blank" : undefined}
                   rel={item.newTab ? "noreferrer" : undefined}
                 >

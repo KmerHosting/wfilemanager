@@ -1,14 +1,10 @@
 import * as React from "react";
-
+import { Tile } from "@carbon/react";
 import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("cds--tile wfm-carbon-card text-card-foreground", className)}
-      {...props}
-    />
+    <Tile ref={ref} className={cn("wfm-carbon-card", className)} {...props} />
   ),
 );
 Card.displayName = "Card";

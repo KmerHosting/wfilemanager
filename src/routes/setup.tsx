@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CircleCheck, Server, User } from "lucide-react";
+import { CircleCheck, Server, User } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";

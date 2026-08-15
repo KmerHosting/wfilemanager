@@ -25,7 +25,7 @@ import {
   RotateCcw,
   ShieldAlert,
   Mail,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { SERVER_INFO } from "@/lib/demo/data";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
 import { formatBytes, formatRelative } from "@/lib/format";
