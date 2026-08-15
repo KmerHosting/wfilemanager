@@ -232,8 +232,6 @@
 }
 
 .wfm-notifications-panel {
-  display: flex;
-  flex-direction: column;
   inline-size: min(22rem, calc(100vw - 2rem));
   max-inline-size: calc(100vw - 2rem);
   max-block-size: min(34rem, calc(100dvh - 5rem));
@@ -258,6 +256,7 @@
 
 .wfm-notifications-panel__body {
   min-block-size: 0;
+  max-block-size: min(26rem, calc(100dvh - 12rem));
   overflow-y: auto;
 }
 
