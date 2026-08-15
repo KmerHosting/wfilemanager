@@ -7,7 +7,7 @@ const ThemeContext = createContext<Ctx | null>(null);
 const STORAGE_KEY = "wfm.theme";
 
 function apply(t: Theme) {
-  if (typeof document === "undefined") return "dark" as const;
+  if (typeof document === "undefined") return "light" as const;
   const sys = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   const resolved = t === "system" ? sys : t;
   document.documentElement.classList.toggle("dark", resolved === "dark");
@@ -16,11 +16,11 @@ function apply(t: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
-  const [resolved, setResolved] = useState<"light" | "dark">("dark");
+  const [theme, setThemeState] = useState<Theme>("light");
+  const [resolved, setResolved] = useState<"light" | "dark">("light");
 
   useEffect(() => {
-    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "dark";
+    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "light";
     setThemeState(stored);
     setResolved(apply(stored));
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
