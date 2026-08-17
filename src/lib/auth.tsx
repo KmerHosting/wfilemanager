@@ -15,52 +15,12 @@ type AuthContextValue = {
   loading: boolean;
   configured: boolean | null;
   refresh: () => Promise<void>;
-  login: (login: string, password: string, remember: boolean) => Promise<void>;
+  login: (password: string, remember: boolean) => Promise<void>;
   setup: (payload: SetupPayload) => Promise<void>;
   logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-async function enrichUser(user: AuthUser) {
-  try {
-    const access = await wfilemanagerApi.rolePermissions();
-    return {
-      ...user,
-      roleId: access.roleId ?? user.roleId,
-      roleName: access.roleName,
-      permissions: access.permissions,
-    };
-  } catch {
-    return {
-      ...user,
-      permissions: user.isAdmin
-        ? [
-            "browse",
-            "view",
-            "preview",
-            "read",
-            "create_files",
-            "create_directories",
-            "edit",
-            "rename",
-            "copy",
-            "move",
-            "upload",
-            "download",
-            "compress",
-            "extract",
-            "delete",
-            "restore",
-            "permanently_delete",
-            "change_permissions",
-            "manage_users",
-            "manage_roles",
-          ]
-        : user.permissions || [],
-    };
-  }
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -77,11 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const me = await wfilemanagerApi.me();
-        setUser(await enrichUser(me.user));
+        setUser((await wfilemanagerApi.me()).user);
       } catch (error) {
         const statusCode = (error as Error & { status?: number }).status;
-        if (statusCode !== 401) console.warn("Unable to restore the application session", error);
+        if (statusCode !== 401) console.warn("Unable to restore the administrator session", error);
         setUser(null);
       }
     } catch {
@@ -101,22 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured,
       refresh,
-      async login(login, password, remember) {
-        const result = await wfilemanagerApi.login(login, password, remember);
-        setUser(await enrichUser(result.user));
+      async login(password, remember) {
+        const result = await wfilemanagerApi.login("admin", password, remember);
+        setUser(result.user);
         setConfigured(true);
       },
       async setup(payload) {
         await setupWFileManager(payload);
-        const result = await wfilemanagerApi.login(payload.username, payload.password, true);
-        setUser(await enrichUser(result.user));
+        const result = await wfilemanagerApi.login("admin", payload.password, true);
+        setUser(result.user);
         setConfigured(true);
       },
       async logout() {
         try {
           await wfilemanagerApi.logout();
         } catch {
-          /* The gateway still clears invalid sessions. */
+          /* Invalid sessions are cleared by the gateway. */
         }
         setUser(null);
       },
