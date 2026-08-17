@@ -14,7 +14,7 @@ LOCK_FILE="$STATE_DIR/update.lock"
 MANIFEST_URL="${WFILEMANAGER_UPDATE_MANIFEST_URL:-https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/stable.json}"
 SERVICE="${WFILEMANAGER_SERVICE:-wfilemanager.service}"
 HEALTH_URL="${WFILEMANAGER_HEALTH_URL:-http://127.0.0.1:${PORT:-1973}/api/health}"
-KEEP_RELEASES="${WFILEMANAGER_KEEP_RELEASES:-3}"
+KEEP_RELEASES="${WFILEMANAGER_KEEP_RELEASES:-2}"
 ROOT_RESET_COMMAND="${WFILEMANAGER_ROOT_RESET_COMMAND:-/usr/local/sbin/wfilemanager-reset-admin-password}"
 UNINSTALL_COMMAND="${WFILEMANAGER_UNINSTALL_COMMAND:-/usr/local/sbin/wfilemanager-uninstall}"
 
@@ -24,6 +24,7 @@ exec 9>"$LOCK_FILE"
 flock -n 9 || { echo "Another wFileManager update is already running" >&2; exit 75; }
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
 state() {
   local status="$1" progress="$2" message="$3" target="${4:-}" error="${5:-}"
   local current="" previous=""
@@ -39,7 +40,7 @@ state() {
     --arg updatedAt "$(now)" \
     --arg error "$error" \
     --arg startedAt "${STARTED_AT:-$(now)}" \
-    '{status:$status,progress:$progress,message:$message,currentVersion:($currentVersion | if length > 0 then . else null end),targetVersion:($targetVersion | if length > 0 then . else null end),previousVersion:($previousVersion | if length > 0 then . else null end),startedAt:$startedAt,updatedAt:$updatedAt,error:($error | if length > 0 then . else null end)}' \
+    '{status:$status,progress:$progress,message:$message,currentVersion:($currentVersion|if length>0 then . else null end),targetVersion:($targetVersion|if length>0 then . else null end),previousVersion:($previousVersion|if length>0 then . else null end),startedAt:$startedAt,updatedAt:$updatedAt,error:($error|if length>0 then . else null end)}' \
     > "$STATE_FILE.tmp"
   mv "$STATE_FILE.tmp" "$STATE_FILE"
   chmod 644 "$STATE_FILE"
@@ -75,50 +76,6 @@ health_check() {
   return 1
 }
 
-activate_release() {
-  local release_dir="$1" previous=""
-  [[ -L "$CURRENT_LINK" ]] && previous="$(readlink -f "$CURRENT_LINK")"
-  if [[ -n "$previous" && "$previous" != "$release_dir" ]]; then
-    printf '%s\n' "$previous" > "$PREVIOUS_FILE"
-  fi
-  ln -sfn "$release_dir" "$CURRENT_LINK.next"
-  mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
-}
-
-install_release_commands() {
-  local release_dir="$1"
-  local reset_source="$release_dir/deploy/wfilemanager-reset-admin-password"
-  local uninstall_source="$release_dir/deploy/uninstall.sh"
-
-  [[ -f "$reset_source" ]] && install -m 700 "$reset_source" "$ROOT_RESET_COMMAND"
-  [[ -f "$uninstall_source" ]] && install -m 700 "$uninstall_source" "$UNINSTALL_COMMAND"
-
-  systemctl disable --now wfilemanager-heartbeat.timer 2>/dev/null || true
-  rm -f \
-    /usr/local/lib/wfilemanager/heartbeat.sh \
-    /etc/systemd/system/wfilemanager-heartbeat.service \
-    /etc/systemd/system/wfilemanager-heartbeat.timer
-  systemctl daemon-reload || true
-}
-
-build_release() {
-  local release_dir="$1"
-  cp "$ENV_FILE" "$release_dir/.env"
-  cd "$release_dir"
-  export PATH="/root/.bun/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
-  command -v bun >/dev/null 2>&1 || fail "Bun is not installed"
-  state installing 62 "Installing dependencies" "$TARGET_VERSION"
-  bun install --frozen-lockfile
-  if [[ "${WFILEMANAGER_RUN_RELEASE_TESTS:-false}" == "true" ]]; then
-    state building 72 "Testing wFileManager" "$TARGET_VERSION"
-    bun run test
-  fi
-  state building 82 "Building wFileManager" "$TARGET_VERSION"
-  bun run build
-  bun run typecheck
-  [[ -f .output/server/index.mjs ]] || fail "The production server was not generated"
-}
-
 verify_release_archive() {
   local archive="$1"
   python3 - "$archive" <<'PY'
@@ -135,70 +92,95 @@ with tarfile.open(archive_path, "r:gz") as archive:
 PY
 }
 
+activate_release() {
+  local release_dir="$1" previous=""
+  [[ -L "$CURRENT_LINK" ]] && previous="$(readlink -f "$CURRENT_LINK")"
+  if [[ -n "$previous" && "$previous" != "$release_dir" ]]; then
+    printf '%s\n' "$previous" > "$PREVIOUS_FILE"
+  fi
+  ln -sfn "$release_dir" "$CURRENT_LINK.next"
+  mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
+}
+
+install_release_commands() {
+  local release_dir="$1"
+  [[ -f "$release_dir/deploy/wfilemanager-reset-admin-password" ]] && \
+    install -m 700 "$release_dir/deploy/wfilemanager-reset-admin-password" "$ROOT_RESET_COMMAND"
+  [[ -f "$release_dir/deploy/uninstall.sh" ]] && \
+    install -m 700 "$release_dir/deploy/uninstall.sh" "$UNINSTALL_COMMAND"
+}
+
 install_release() {
   STARTED_AT="$(now)"
   state checking 5 "Checking the stable release channel"
   load_env
-  local tmp manifest archive expected actual release_url extract_root release_dir current expected_size actual_size product
+
+  local tmp manifest archive expected actual release_url expected_size actual_size product current
+  local extract_root project_dir release_dir old_release
   tmp="$(mktemp -d)"
   trap 'rm -rf "${tmp:-}"' EXIT
   manifest="$tmp/stable.json"
   curl -fsSL --retry 3 --connect-timeout 10 "$MANIFEST_URL" -o "$manifest" || fail "Unable to download the release manifest"
+
   product="$(jq -r '.product // empty' "$manifest")"
   TARGET_VERSION="$(jq -r '.version // empty' "$manifest")"
   release_url="$(jq -r '.releaseUrl // .url // empty' "$manifest")"
   expected="$(jq -r '.sha256 // empty' "$manifest" | tr '[:upper:]' '[:lower:]')"
   expected_size="$(jq -r '.size // 0' "$manifest")"
+
   [[ "$product" == "wfilemanager" ]] || fail "The manifest is not a wFileManager release"
   [[ "$TARGET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || fail "The manifest contains an invalid version"
   [[ "$release_url" == https://* ]] || fail "The release URL must use HTTPS"
   [[ "$expected" =~ ^[a-f0-9]{64}$ ]] || fail "The manifest contains an invalid SHA-256 checksum"
+
   current=""
   [[ -L "$CURRENT_LINK" ]] && current="$(basename "$(readlink -f "$CURRENT_LINK")")"
-  if [[ "${WFILEMANAGER_FORCE_UPDATE:-false}" != "true" ]]; then
+  if [[ "${WFILEMANAGER_FORCE_UPDATE:-false}" != "true" && -n "$current" ]]; then
     if [[ "$current" == "$TARGET_VERSION" ]]; then
       state completed 100 "wFileManager $TARGET_VERSION is already installed" "$TARGET_VERSION"
       install_release_commands "$(readlink -f "$CURRENT_LINK")"
-      exit 0
+      return 0
     fi
-    if [[ -n "$current" ]] && dpkg --compare-versions "$TARGET_VERSION" le "$current"; then
+    if dpkg --compare-versions "$TARGET_VERSION" le "$current"; then
       state completed 100 "No newer stable release is available" "$TARGET_VERSION"
       install_release_commands "$(readlink -f "$CURRENT_LINK")"
-      exit 0
+      return 0
     fi
   fi
 
   archive="$tmp/wfilemanager-$TARGET_VERSION.tar.gz"
-  state downloading 18 "Downloading wFileManager $TARGET_VERSION" "$TARGET_VERSION"
-  curl -fL --retry 3 --connect-timeout 15 --max-time 1800 "$release_url" -o "$archive" || fail "Release download failed"
-  state verifying 42 "Verifying release integrity" "$TARGET_VERSION"
+  state downloading 25 "Downloading prebuilt wFileManager $TARGET_VERSION" "$TARGET_VERSION"
+  curl -fL --retry 3 --connect-timeout 15 --max-time 900 "$release_url" -o "$archive" || fail "Release download failed"
+
+  state verifying 45 "Verifying release integrity" "$TARGET_VERSION"
   actual="$(sha256sum "$archive" | awk '{print $1}')"
   actual_size="$(stat -c%s "$archive")"
   [[ "$actual" == "$expected" ]] || fail "Checksum mismatch: expected $expected, received $actual"
-  [[ "$expected_size" =~ ^[0-9]+$ && "$expected_size" -gt 0 && "$actual_size" -eq "$expected_size" ]] || fail "Release size mismatch: expected $expected_size bytes, received $actual_size"
+  [[ "$expected_size" =~ ^[0-9]+$ && "$expected_size" -gt 0 && "$actual_size" -eq "$expected_size" ]] || fail "Release size mismatch"
   verify_release_archive "$archive" || fail "Release archive validation failed"
+
+  state extracting 65 "Extracting prebuilt application" "$TARGET_VERSION"
+  extract_root="$tmp/extracted"
+  mkdir -p "$extract_root"
+  tar -xzf "$archive" -C "$extract_root" --no-same-owner --no-same-permissions
+  project_dir="$(find "$extract_root" -maxdepth 3 -type f -path '*/.output/server/index.mjs' -printf '%h\n' | sed 's#/.output/server$##' | head -n1)"
+  [[ -n "$project_dir" && -f "$project_dir/package.json" ]] || fail "The prebuilt release is incomplete"
 
   release_dir="$RELEASES_DIR/$TARGET_VERSION"
   rm -rf "$release_dir"
   mkdir -p "$release_dir"
-  state extracting 52 "Extracting release files" "$TARGET_VERSION"
-  extract_root="$tmp/extracted"
-  mkdir -p "$extract_root"
-  tar -xzf "$archive" -C "$extract_root" --no-same-owner --no-same-permissions
-  local project_dir
-  project_dir="$(find "$extract_root" -maxdepth 3 -type f -name package.json -printf '%h\n' | head -n1)"
-  [[ -n "$project_dir" ]] || fail "package.json was not found in the release"
   cp -a "$project_dir"/. "$release_dir"/
-  build_release "$release_dir"
+  [[ -f "$release_dir/.output/server/index.mjs" ]] || fail "The production server was not found"
 
-  state switching 88 "Activating wFileManager $TARGET_VERSION" "$TARGET_VERSION"
-  local old_release=""
+  old_release=""
   [[ -L "$CURRENT_LINK" ]] && old_release="$(readlink -f "$CURRENT_LINK")"
+  state switching 80 "Activating wFileManager $TARGET_VERSION" "$TARGET_VERSION"
   activate_release "$release_dir"
   install_release_commands "$release_dir"
-  state restarting 92 "Restarting wFileManager" "$TARGET_VERSION"
+
+  state restarting 90 "Restarting wFileManager" "$TARGET_VERSION"
   systemctl restart "$SERVICE" || true
-  state health-check 96 "Running application, database and filesystem health checks" "$TARGET_VERSION"
+  state health-check 95 "Running health checks" "$TARGET_VERSION"
   if ! health_check; then
     if [[ -n "$old_release" && -d "$old_release" ]]; then
       state rolling-back 97 "Health check failed; restoring the previous release" "$TARGET_VERSION"
@@ -223,16 +205,16 @@ rollback_release() {
   [[ -f "$PREVIOUS_FILE" ]] || fail "No previous release is available"
   local previous current
   previous="$(cat "$PREVIOUS_FILE")"
-  [[ -d "$previous" && -f "$previous/package.json" ]] || fail "The previous release directory is missing"
+  [[ -d "$previous" && -f "$previous/.output/server/index.mjs" ]] || fail "The previous release directory is missing"
   current=""
   [[ -L "$CURRENT_LINK" ]] && current="$(readlink -f "$CURRENT_LINK")"
   TARGET_VERSION="$(basename "$previous")"
-  state rolling-back 30 "Switching to wFileManager $TARGET_VERSION" "$TARGET_VERSION"
+  state rolling-back 35 "Switching to wFileManager $TARGET_VERSION" "$TARGET_VERSION"
   ln -sfn "$previous" "$CURRENT_LINK.next"
   mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
   install_release_commands "$previous"
   [[ -n "$current" ]] && printf '%s\n' "$current" > "$PREVIOUS_FILE"
-  state restarting 70 "Restarting wFileManager" "$TARGET_VERSION"
+  state restarting 75 "Restarting wFileManager" "$TARGET_VERSION"
   systemctl restart "$SERVICE" || true
   state health-check 90 "Checking the restored release" "$TARGET_VERSION"
   health_check || fail "The rolled back release failed its health check"
