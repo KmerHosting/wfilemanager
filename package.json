@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "start": "node .output/server/index.mjs",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audit:carbon": "node scripts/audit-carbon.mjs"
   },
   "dependencies": {
     "@carbon/icons-react": "11.86.0",
@@ -83,10 +84,10 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
+    "sass": "^1.93.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^8.0.16",
-    "sass": "^1.93.2"
+    "vite": "^8.0.16"
   },
-  "version": "0.11.4"
+  "version": "0.11.5"
 }

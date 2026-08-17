@@ -1,4 +1,3 @@
-import { useEffect, useState, type ComponentType } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import {
   Book,
@@ -11,100 +10,90 @@ import {
   UserAvatar,
 } from "@carbon/icons-react";
 import { SideNav, SideNavDivider, SideNavItems, SideNavLink } from "@carbon/react";
-import { localApi } from "@/lib/local-api";
+import type { ElementType } from "react";
 
 type Item = {
   to?: string;
   href?: string;
   label: string;
-  icon: ComponentType<{ size?: number | string; className?: string }>;
+  icon: ElementType;
   newTab?: boolean;
 };
 
-const NAV: { label: string; items: Item[] }[] = [
+const FILE_ITEMS: Item[] = [
+  { to: "/", label: "Overview", icon: Dashboard },
+  { to: "/explorer", label: "File Explorer", icon: FolderOpen },
+  { to: "/trash", label: "Trash", icon: TrashCan },
+];
+
+const ADMIN_ITEMS: Item[] = [
+  { to: "/account", label: "Administrator", icon: UserAvatar },
+  { to: "/about", label: "About & updates", icon: Information },
+];
+
+const RESOURCE_ITEMS: Item[] = [
   {
-    label: "Files",
-    items: [
-      { to: "/", label: "Overview", icon: Dashboard },
-      { to: "/explorer", label: "File Explorer", icon: FolderOpen },
-      { to: "/trash", label: "Trash", icon: TrashCan },
-    ],
+    href: "https://kmerhosting.com/docs",
+    label: "Documentation",
+    icon: Book,
+    newTab: true,
   },
+  { href: "mailto:support@kmerhosting.com", label: "Support", icon: Help },
   {
-    label: "Settings",
-    items: [
-      { to: "/account", label: "Administrator", icon: UserAvatar },
-      { to: "/about", label: "About & updates", icon: Information },
-    ],
-  },
-  {
-    label: "Resources",
-    items: [
-      {
-        href: "https://kmerhosting.com/docs",
-        label: "Documentation",
-        icon: Book,
-        newTab: true,
-      },
-      { href: "mailto:support@kmerhosting.com", label: "Support", icon: Help },
-      { href: "https://wfilemanager.kmerhosting.com", label: "Website", icon: Globe, newTab: true },
-    ],
+    href: "https://wfilemanager.kmerhosting.com",
+    label: "Website",
+    icon: Globe,
+    newTab: true,
   },
 ];
 
-export function AppSidebar({ className }: { className?: string }) {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const [version, setVersion] = useState("");
+function NavLinks({ items, pathname }: { items: Item[]; pathname: string }) {
   const isActive = (to?: string) =>
-    Boolean(
-      to && (to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`)),
-    );
+    Boolean(to && (to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`)));
 
-  useEffect(() => {
-    let mounted = true;
-    void localApi
-      .updateInfo()
-      .then((result) => {
-        if (mounted && result.currentVersion) setVersion(result.currentVersion);
-      })
-      .catch(() => undefined);
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  return items.map((item) => {
+    const href = item.to || item.href || "#";
+    return (
+      <SideNavLink
+        key={href}
+        href={href}
+        isActive={isActive(item.to)}
+        renderIcon={item.icon}
+        target={item.newTab ? "_blank" : undefined}
+        rel={item.newTab ? "noreferrer" : undefined}
+      >
+        {item.label}
+      </SideNavLink>
+    );
+  });
+}
+
+export function AppSidebar({
+  expanded,
+  onOverlayClick,
+}: {
+  expanded: boolean;
+  onOverlayClick?: () => void;
+}) {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
     <SideNav
-      expanded
-      isFixedNav
+      isRail
+      expanded={expanded}
       isChildOfHeader
       aria-label="wFileManager navigation"
-      className={`wfm-carbon-sidenav ${className || ""}`}
+      className="wfm-carbon-sidenav"
+      onOverlayClick={onOverlayClick}
     >
       <SideNavItems>
-        {NAV.map((group, groupIndex) => (
-          <div key={group.label} className="wfm-carbon-sidenav__group">
-            {groupIndex > 0 && <SideNavDivider />}
-            <div className="wfm-carbon-sidenav__label">{group.label}</div>
-            {group.items.map((item) => {
-              const href = item.to || item.href || "#";
-              return (
-                <SideNavLink
-                  key={href}
-                  href={href}
-                  isActive={isActive(item.to)}
-                  renderIcon={item.icon}
-                  target={item.newTab ? "_blank" : undefined}
-                  rel={item.newTab ? "noreferrer" : undefined}
-                >
-                  {item.label}
-                </SideNavLink>
-              );
-            })}
-          </div>
-        ))}
+        <NavLinks items={FILE_ITEMS} pathname={pathname} />
+        <SideNavDivider />
+        <NavLinks items={ADMIN_ITEMS} pathname={pathname} />
+        <SideNavDivider />
+        <NavLinks items={RESOURCE_ITEMS} pathname={pathname} />
+        <p className="wfm-rail-hint">Hover or focus the rail to expand navigation.</p>
       </SideNavItems>
-      {version && <div className="wfm-carbon-sidenav__version">v{version}</div>}
     </SideNav>
   );
 }

@@ -5,6 +5,7 @@
 **A small, self-hosted web file manager for Linux servers.**
 
 ![React](https://img.shields.io/badge/React-19-20232a?logo=react&logoColor=61DAFB)
+![Carbon](https://img.shields.io/badge/Carbon-Design%20System-161616)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-24+-339933?logo=nodedotjs&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)
@@ -15,21 +16,16 @@
 
 wFileManager gives one administrator direct browser access to the server filesystem. It is intentionally simple: no hosted database, roles, secondary users, licence service or web terminal.
 
-## Screenshots
-
-### File Explorer
-
-![wFileManager File Explorer](https://wfilemanager.kmerhosting.com/assets/wfilemanager-file-explorer.png)
-
-### About & updates
-
-![wFileManager About and updates](https://wfilemanager.kmerhosting.com/assets/wfilemanager-about-updates.png)
+The application interface is built with IBM Carbon Design System for React. Carbon components, semantic theme tokens, typography, spacing, breakpoints, icons and motion are used as the UI source of truth.
 
 ## Features
 
 - Browse, upload, download and edit files.
 - Create, rename, copy and move files or folders.
 - Trash, restore and permanently delete items.
+- Native Carbon UI shell with responsive rail navigation.
+- Carbon data tables, forms, modals, notifications and loading states.
+- White and G100 Carbon themes, plus system theme selection.
 - One local `admin` account.
 - Local SQLite state.
 - Prebuilt verified updates with rollback.
@@ -76,12 +72,15 @@ Application state:
 
 ```bash
 bun install --frozen-lockfile
-bun run dev
+bun run audit:carbon
 bun run test
 bun run typecheck
 bun run lint
 bun run build
+bun run dev
 ```
+
+See `docs/CARBON.md` for the frontend conformance rules.
 
 Documentation: https://kmerhosting.com/docs  
 Security reports: `support@kmerhosting.com`  

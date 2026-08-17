@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
 import { Column, Grid } from "@carbon/react";
+import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 export function AuthShell({
   title,
@@ -14,21 +14,21 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <Grid fullWidth className="wfm-auth-shell">
+    <Grid fullWidth condensed className="wfm-auth-shell">
       <Column sm={4} md={4} lg={6} className="wfm-auth-aside">
         <div className="wfm-auth-aside__content">
           <Link to="/" className="wfm-auth-brand">
             wFileManager
           </Link>
           <div className="wfm-auth-aside__copy">
-            <h2>A modern and open source file manager for Linux servers.</h2>
+            <h2>Server file management with a native Carbon interface.</h2>
             <p>
-              Browse, edit, upload, share and audit files from a single administration panel. Built
-              for Ubuntu 24.04 LTS.
+              Browse, edit, upload and recover files directly on this Linux server. One local
+              administrator account and local SQLite state.
             </p>
           </div>
           <p className="wfm-auth-aside__legal">
-            © {new Date().getFullYear()} KmerHosting LLC. All rights reserved.
+            © {new Date().getFullYear()} KmerHosting LLC. MIT licensed.
           </p>
         </div>
       </Column>
@@ -38,11 +38,11 @@ export function AuthShell({
             wFileManager
           </Link>
           <h1>{title}</h1>
-          {desc && <p className="wfm-auth-description">{desc}</p>}
+          {desc ? <p className="wfm-auth-description">{desc}</p> : null}
           <div className="wfm-auth-content">{children}</div>
-          {footer && <div className="wfm-auth-footer">{footer}</div>}
+          {footer ? <div>{footer}</div> : null}
           <p className="wfm-auth-legal--mobile">
-            © {new Date().getFullYear()} KmerHosting LLC. All rights reserved.
+            © {new Date().getFullYear()} KmerHosting LLC. MIT licensed.
           </p>
         </div>
       </Column>
