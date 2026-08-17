@@ -83,6 +83,16 @@ if (!app.includes("HeaderContainer") || !app.includes("Content")) {
 if (!app.includes('<Loading description="Loading wFileManager" withOverlay />')) {
   violations.push("app shell: full-page loading must use Carbon Loading with its standard overlay");
 }
+if (!app.includes("function AppLoadingShell") || !app.includes("SkeletonText")) {
+  violations.push(
+    "app shell: full-page loading must preserve visible Carbon shell/skeleton content beneath the translucent overlay",
+  );
+}
+if (!app.includes('aria-hidden="true" inert')) {
+  violations.push(
+    "app shell: loading preview underneath the blocking overlay must be inert and hidden from assistive technology",
+  );
+}
 
 const sidebar = await readFile(new URL("src/components/app-shell/sidebar.tsx", root), "utf8");
 if (!sidebar.includes("isRail") || !sidebar.includes("SideNav")) {
