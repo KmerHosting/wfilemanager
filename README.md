@@ -15,6 +15,16 @@
 
 wFileManager gives one administrator direct browser access to the server filesystem. It is intentionally simple: no hosted database, roles, secondary users, licence service or web terminal.
 
+## Screenshots
+
+### File Explorer
+
+![wFileManager File Explorer](https://raw.githubusercontent.com/KmerHosting/wfilemanager-website/main/assets/wfilemanager-file-explorer.svg)
+
+### About & updates
+
+![wFileManager About and updates](https://raw.githubusercontent.com/KmerHosting/wfilemanager-website/main/assets/wfilemanager-about-updates.svg)
+
 ## Features
 
 - Browse, upload, download and edit files.
