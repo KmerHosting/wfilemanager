@@ -12,14 +12,10 @@ const MAX_JSON_BODY_BYTES = Math.max(
 type Scope = keyof typeof allowedActions;
 
 const allowedActions = {
-  auth: new Set(["status", "me", "logout", "logs"]),
+  auth: new Set(["status", "me", "logout"]),
   login: new Set(["login"]),
   setup: new Set(["setup"]),
-  roles: new Set(["permissions", "roles"]),
   account: new Set(["profile", "password", "sessions"]),
-  users: new Set(["users"]),
-  presence: new Set(["presence"]),
-  notifications: new Set(["notifications"]),
 } as const;
 
 function json(body: unknown, status = 200, headers?: HeadersInit) {
@@ -60,8 +56,7 @@ function clearCookie(request: Request) {
 }
 
 function sameOrigin(request: Request) {
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite === "cross-site") return false;
+  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {
@@ -79,15 +74,12 @@ function validScope(value: string): value is Scope {
   return Object.prototype.hasOwnProperty.call(allowedActions, value);
 }
 
-function upstreamFor(request: Request, scope: Scope, action: string) {
+function upstreamFor(scope: Scope, action: string) {
   const port = Number(process.env.PORT || 1973);
   if (!Number.isInteger(port) || port < 1 || port > 65_535)
     throw Object.assign(new Error("The local application port is invalid"), { status: 500 });
   const url = new URL(`http://127.0.0.1:${port}/api/sqlite`);
-  url.searchParams.set(
-    "scope",
-    scope === "login" || scope === "setup" ? "auth" : scope === "users" ? "auth" : scope,
-  );
+  url.searchParams.set("scope", scope === "login" || scope === "setup" ? "auth" : scope);
   url.searchParams.set("action", action);
   return url;
 }
@@ -107,9 +99,7 @@ async function requestBody(request: Request, scope: Scope) {
   if (bytes.byteLength > MAX_JSON_BODY_BYTES)
     throw Object.assign(new Error("The request body is too large"), { status: 413 });
   if (scope !== "setup") return bytes;
-
-  const text = new TextDecoder().decode(bytes);
-  const payload = (JSON.parse(text || "{}") || {}) as Record<string, unknown>;
+  const payload = JSON.parse(new TextDecoder().decode(bytes) || "{}") as Record<string, unknown>;
   return JSON.stringify({ ...payload, setupSecret: await sqliteSetupSecret() });
 }
 
@@ -123,11 +113,7 @@ async function proxy(request: Request) {
     if (!["GET", "HEAD"].includes(request.method) && !sameOrigin(request))
       return json({ error: "Cross-origin request rejected" }, 403);
 
-    const upstreamUrl = upstreamFor(request, scopeValue, action);
-    for (const [key, value] of url.searchParams) {
-      if (key !== "scope" && key !== "action") upstreamUrl.searchParams.append(key, value);
-    }
-
+    const upstreamUrl = upstreamFor(scopeValue, action);
     const headers = new Headers({ Accept: "application/json" });
     const sessionToken = cookieValue(request, COOKIE_NAME);
     if (sessionToken) headers.set("Authorization", `Bearer ${sessionToken}`);
@@ -164,10 +150,7 @@ async function proxy(request: Request) {
     });
 
     if (scopeValue === "login" && upstream.ok && typeof payload.token === "string") {
-      responseHeaders.append(
-        "Set-Cookie",
-        sessionCookie(request, payload.token, payload.expiresAt),
-      );
+      responseHeaders.append("Set-Cookie", sessionCookie(request, payload.token, payload.expiresAt));
       delete payload.token;
     }
     if (action === "logout" || upstream.status === 401 || payload.currentRevoked === true)
@@ -179,10 +162,7 @@ async function proxy(request: Request) {
     });
   } catch (error) {
     const status = Number((error as { status?: number }).status || 500);
-    return json(
-      { error: error instanceof Error ? error.message : "Gateway request failed" },
-      status,
-    );
+    return json({ error: error instanceof Error ? error.message : "Gateway request failed" }, status);
   }
 }
 

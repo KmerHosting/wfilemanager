@@ -1,35 +1,66 @@
-# Local engine status
+# Local engine
 
-The local engine is implemented inside the TanStack Start Node server at `/api/local`.
+wFileManager is a local Node.js application backed by SQLite.
 
-Implemented operations:
+## Account model
 
-- list directories
-- read and save text files
-- create files and directories
-- upload and download files
-- rename, copy and move
-- move to trash, restore, permanent trash deletion and empty trash
-- chmod
-- system summary
-- command execution
+There is exactly one application account:
 
-Every request requires an opaque application session issued and verified by the local wFileManager
-runtime. Authorization policies are evaluated on the same server before filesystem access.
+```text
+admin
+```
 
-The terminal now uses a persistent Linux PTY rendered with xterm.js. It supports interactive programs, terminal resizing, multiple tabs, and live input/output. The browser currently exchanges PTY data through short authenticated polling requests rather than a WebSocket.
+The account is stored locally and is not a Linux user. There are no secondary users, custom roles,
+path ACLs or hosted identities. The administrator can access the filesystem exposed by the
+wFileManager service process, subject to the built-in safety rules that protect pseudo-filesystems and
+the private trash directory.
 
-## v0.4 terminal identity model
+The administrator password can be reset from the server shell with:
 
-Each active wFileManager account is mapped to a dedicated Ubuntu account named `wfm_<username>_<id>`. The local account is created with a home directory, Bash login shell and membership in the `sudo` group. Its password is synchronized when the user logs in, when an administrator creates the user, or when the user confirms root elevation.
+```bash
+sudo wfilemanager-reset-admin-password
+```
 
-Terminal tabs start under the dedicated Linux UID/GID. Root tabs are created only after the current
-wFileManager password is verified locally.
+## File operations
 
-## Transfer progress
+The local engine supports:
 
-Uploads use XMLHttpRequest upload events and can be aborted. The server writes to a temporary `.part` file and removes it when the request is cancelled. Downloads consume the response stream in the browser, update progress from `Content-Length`, and support `AbortController` cancellation before the final browser save is triggered.
+- directory listing and search
+- text-file reading and saving
+- file and directory creation
+- upload and download
+- rename
+- copy and move
+- trash, restore and permanent deletion
+- server overview
 
-## v0.5 trash model
+Large copy and move operations use internal jobs so the HTTP request does not need to remain open for
+the entire filesystem operation. The jobs are an implementation detail and there is no separate task
+center in the UI.
 
-Deleted entries are moved into a private per-user directory under `/var/lib/wfilemanager/trash`. Each trash item contains an opaque payload and a protected metadata file with its original path, deletion time, user, size and filesystem kind. Restoring recreates a missing parent directory when needed and refuses to overwrite an existing path.
+## Storage
+
+Application state:
+
+```text
+/var/lib/wfilemanager/wfilemanager.db
+```
+
+Private trash:
+
+```text
+/var/lib/wfilemanager/trash
+```
+
+No user data is stored in a hosted wFileManager database.
+
+## Runtime
+
+The production service runs the prebuilt Node output:
+
+```text
+/opt/wfilemanager/current/.output/server/index.mjs
+```
+
+Production servers do not build the application and do not require Bun, TypeScript, Vite,
+`build-essential`, `node-gyp` or a web-terminal native module.

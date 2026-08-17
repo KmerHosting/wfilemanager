@@ -1,94 +1,129 @@
 <h1 align="center">wFileManager</h1>
 
 <p align="center">
-  A secure, open source web based file manager for Linux servers.
+  A small, self-hosted web file manager for Linux servers.
 </p>
 
-<p align="center">
-  <img alt="React" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white">
-  <img alt="TanStack" src="https://img.shields.io/badge/TanStack-Start-EF4444">
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white">
-  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-Local-003B57?logo=sqlite&logoColor=white">
-  <img alt="Ubuntu" src="https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?logo=ubuntu&logoColor=white">
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-1A73E8">
-</p>
+wFileManager runs directly on your server, stores its application state in local SQLite and has one
+administrator account. It does not require a licence key, hosted database, domain name or external
+identity service.
 
-wFileManager provides a real filesystem explorer, uploads, downloads, guarded archives, trash,
-application users and roles, notifications, verified updates and an administrator-only root
-terminal. It is fully open source and does not require a license key or hosted data service.
+## Core features
+
+- Browse the real Linux filesystem.
+- Create files and folders.
+- Upload and download files.
+- Edit text files in the browser.
+- Rename, copy and move files and folders.
+- Move items to trash, restore them or permanently delete them.
+- One local administrator account (`admin`).
+- Local SQLite application state.
+- Verified prebuilt updates with atomic activation and rollback.
+- Shell command to reset the administrator password.
+
+wFileManager intentionally does not include application users, roles, a web terminal, notification
+center, audit-log UI, task center, hosted data plans or server-side build tooling.
 
 ## Install
 
-Requirements: Ubuntu 20.04 LTS or newer, root access, systemd, a public IPv4 address and a domain
-whose A record points to the server.
+Requirements:
+
+- Ubuntu 20.04 LTS or newer
+- root access
+- systemd
+- network access to download the stable release
 
 ```bash
 curl -fsSL https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/install.sh | sudo bash
 ```
 
-The installer verifies DNS, configures Nginx and HTTPS, installs a verified release, then opens
-`/setup` to create the first administrator.
+The installer downloads a verified prebuilt release. It does not install Bun, a C/C++ build toolchain,
+Nginx or Certbot and does not require DNS to be configured first.
 
-Application state stays on the machine at:
+The default service listens on port `1973`. After installation, open:
+
+```text
+http://SERVER_IP:1973/setup
+```
+
+Create the administrator password and wFileManager is ready.
+
+If the service is exposed to the Internet, put it behind HTTPS using your preferred reverse proxy,
+load balancer, tunnel or web server.
+
+## Data
+
+Application state is stored at:
 
 ```text
 /var/lib/wfilemanager/wfilemanager.db
 ```
 
-Back up this database together with the files, websites and databases managed through the app.
-
-## Screenshots
-
-### Overview
-
-![wFileManager server overview](docs/screenshots/overview.png)
-
-### File explorer
-
-![wFileManager file explorer](docs/screenshots/file-explorer.png)
-
-### Root terminal
-
-![wFileManager root terminal](docs/screenshots/root-terminal.png)
-
-### Roles and permissions
-
-![wFileManager roles and permissions](docs/screenshots/roles-permissions.png)
-
-The setup screenshot will be added separately.
+The files managed through File Explorer remain in their normal Linux filesystem locations. Back up
+the SQLite database and important server files according to your own backup policy.
 
 ## Operations
 
+Service status:
+
 ```bash
 sudo systemctl status wfilemanager.service --no-pager
+```
+
+Logs:
+
+```bash
 sudo journalctl -u wfilemanager.service -f
+```
+
+Health check:
+
+```bash
 curl -fsS http://127.0.0.1:1973/api/health
+```
+
+Reset the only administrator password:
+
+```bash
 sudo wfilemanager-reset-admin-password
+```
+
+Install the latest verified stable release:
+
+```bash
 sudo systemctl start wfilemanager-updater@install.service
+```
+
+Rollback to the previous release:
+
+```bash
 sudo systemctl start wfilemanager-updater@rollback.service
+```
+
+Remove wFileManager and its application data:
+
+```bash
 sudo wfilemanager-uninstall
 ```
 
-Updates are verified, built separately and activated atomically. A failed health check automatically
-restores the previous release.
-
 ## Development
+
+Development uses Bun, but production installations do not.
 
 ```bash
 bun install --frozen-lockfile
 bun run dev
 ```
 
-Useful checks:
+Checks:
 
 ```bash
-bun run typecheck
 bun run test
+bun run typecheck
 bun run build
 bun run lint
 ```
 
 ## License
 
-[MIT](LICENSE). Security reports: `support@kmerhosting.com`.
+MIT. Security reports: `support@kmerhosting.com`.

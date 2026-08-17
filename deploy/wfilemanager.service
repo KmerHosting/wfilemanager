@@ -10,7 +10,6 @@ Group=root
 WorkingDirectory=/opt/wfilemanager/current
 EnvironmentFile=-/etc/wfilemanager/wfilemanager.env
 Environment=NODE_ENV=production
-Environment=HOST=127.0.0.1
 ExecStartPre=/usr/bin/install -d -m 700 /etc/wfilemanager /var/lib/wfilemanager
 ExecStartPre=/usr/bin/bash -c 'umask 077; test -s /etc/wfilemanager/setup-secret.key || openssl rand -hex 32 > /etc/wfilemanager/setup-secret.key'
 ExecStart=/usr/bin/node /opt/wfilemanager/current/.output/server/index.mjs

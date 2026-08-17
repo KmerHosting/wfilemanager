@@ -54,7 +54,32 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build the canonical archive
+      - name: Set up build runtime
+        if: steps.existing.outputs.exists != 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Set up Node.js
+        if: steps.existing.outputs.exists != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install native build tools
+        if: steps.existing.outputs.exists != 'true'
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3
+
+      - name: Build production runtime
+        if: steps.existing.outputs.exists != 'true'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bun install --frozen-lockfile
+          bun run build
+          test -f .output/server/index.mjs
+
+      - name: Build canonical prebuilt archive
         if: steps.existing.outputs.exists != 'true'
         id: archive
         shell: bash
@@ -63,7 +88,12 @@ jobs:
         run: |
           set -Eeuo pipefail
           ARCHIVE="wfilemanager-$VERSION.tar.gz"
-          git archive --format=tar.gz --prefix="wFileManager-$VERSION/" -o "$ARCHIVE" "$RELEASE_REF"
+          ROOT="wFileManager-$VERSION"
+          mkdir -p "$ROOT"
+          cp -a .output "$ROOT/.output"
+          cp package.json "$ROOT/package.json"
+          cp -a deploy "$ROOT/deploy"
+          tar -czf "$ARCHIVE" "$ROOT"
           SHA256="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
           SIZE="$(stat -c%s "$ARCHIVE")"
           printf '%s  %s\n' "$SHA256" "$ARCHIVE" > SHA256SUMS
@@ -80,11 +110,12 @@ jobs:
           SIZE: ${{ steps.archive.outputs.size }}
         run: |
           cat > release-notes.md <<EOF
-          wFileManager $VERSION is free and open source under the MIT License.
+          wFileManager $VERSION is a prebuilt Linux runtime release.
 
-          - Ships the complete wFileManager application without plans or licence keys.
-          - Keeps application data under the operator's control.
-          - Keeps verified updates and automatic rollback.
+          - Single local administrator account.
+          - Local SQLite data only.
+          - No server-side Bun install or application compilation.
+          - Verified atomic updates with rollback.
 
           SHA-256: \`$SHA256\`
           Size: \`$SIZE bytes\`
@@ -98,7 +129,7 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
           ARCHIVE: ${{ steps.archive.outputs.archive }}
         run: |
-          gh release create "$TAG" "$ARCHIVE#Canonical verified source archive" SHA256SUMS \
+          gh release create "$TAG" "$ARCHIVE#Prebuilt Linux x64 runtime" SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" \
             --target "$RELEASE_REF" \
             --title "wFileManager $VERSION" \
