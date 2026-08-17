@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { assertSafeExistingMutation } from "../src/lib/server/safe-path-runtime";
 import { saveRawUpload } from "../src/lib/server/upload-runtime";
+import { sameOrigin } from "../src/lib/server/request-security";
 
 const execFileAsync = promisify(execFile);
 const roots: string[] = [];
@@ -51,6 +52,18 @@ describe("filesystem mutation safety", () => {
 });
 
 describe("authentication protection", () => {
+  test("accepts the public HTTPS origin when the app is behind an HTTP proxy", () => {
+    const request = new Request("http://127.0.0.1:1973/api/sqlite", {
+      headers: {
+        host: "wfm-s1.kmerhosting.com",
+        origin: "https://wfm-s1.kmerhosting.com",
+        "x-forwarded-proto": "https",
+      },
+    });
+
+    expect(sameOrigin(request)).toBe(true);
+  });
+
   test("blocks repeated administrator login failures from the same IP", async () => {
     process.env.WFILEMANAGER_LOGIN_MAX_FAILURES = "3";
     process.env.WFILEMANAGER_LOGIN_BLOCK_MS = "30000";
