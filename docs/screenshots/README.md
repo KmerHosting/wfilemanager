@@ -1,3 +1,0 @@
-# Screenshots
-
-Temporary screenshot directory.
