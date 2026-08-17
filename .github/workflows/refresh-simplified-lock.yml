@@ -1,4 +1,4 @@
-name: Refresh simplified lockfile
+name: Refresh simplified generated files
 
 on:
   push:
@@ -8,8 +8,12 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: refresh-simplified-generated-files
+  cancel-in-progress: true
+
 jobs:
-  lockfile:
+  generated-files:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -18,18 +22,24 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Refresh lockfile
-        run: bun install --lockfile-only
-      - name: Commit lockfile when needed
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Refresh lockfile and generated routes
+        run: |
+          bun install --lockfile-only
+          bun install --frozen-lockfile
+          bun run build
+      - name: Commit generated files when needed
         shell: bash
         run: |
           set -Eeuo pipefail
-          if git diff --quiet -- bun.lock; then
-            echo "bun.lock already current"
+          if git diff --quiet -- bun.lock src/routeTree.gen.ts; then
+            echo "Generated files already current"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add bun.lock
-          git commit -m "chore: refresh bun lock"
+          git add bun.lock src/routeTree.gen.ts
+          git commit -m "chore: refresh generated files"
           git push origin HEAD:release/0.11-simplified
