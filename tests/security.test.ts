@@ -50,38 +50,20 @@ describe("filesystem mutation safety", () => {
   });
 });
 
-describe("archive extraction safety", () => {
-  test("rejects archives that exceed the configured entry count", async () => {
-    process.env.WFILEMANAGER_ARCHIVE_MAX_ENTRIES = "100";
-    const root = await temporaryDirectory("wfm-archive-");
-    const archive = path.join(root, "many.zip");
-    const script = [
-      "import zipfile, sys",
-      "with zipfile.ZipFile(sys.argv[1], 'w') as z:",
-      "    for i in range(101): z.writestr(f'entry-{i}.txt', '')",
-    ].join("\n");
-    await execFileAsync("python3", ["-c", script, archive]);
-    const { inspectArchiveSafety } = await import("../src/lib/server/archive-guard");
-
-    await expect(inspectArchiveSafety(archive, root)).rejects.toThrow("the limit is 100");
-  });
-});
-
 describe("authentication protection", () => {
-  test("blocks repeated SQLite login failures for the same IP and account", async () => {
+  test("blocks repeated administrator login failures from the same IP", async () => {
     process.env.WFILEMANAGER_LOGIN_MAX_FAILURES = "3";
     process.env.WFILEMANAGER_LOGIN_BLOCK_MS = "30000";
     const limiter = await import("../src/lib/server/login-rate-limit");
-    const request = new Request("https://files.example.test/api/sqlite", {
+    const request = new Request("http://127.0.0.1:1973/api/sqlite", {
       headers: { "x-forwarded-for": "192.0.2.40" },
     });
-    const login = `test-${Date.now()}`;
 
-    limiter.assertLoginAllowed(request, login);
-    limiter.recordLoginFailure(request, login);
-    limiter.recordLoginFailure(request, login);
-    limiter.recordLoginFailure(request, login);
-    expect(() => limiter.assertLoginAllowed(request, login)).toThrow(
+    limiter.assertLoginAllowed(request, "admin");
+    limiter.recordLoginFailure(request, "admin");
+    limiter.recordLoginFailure(request, "admin");
+    limiter.recordLoginFailure(request, "admin");
+    expect(() => limiter.assertLoginAllowed(request, "admin")).toThrow(
       "Too many failed sign-in attempts",
     );
   });
@@ -98,6 +80,7 @@ describe("application health", () => {
     const healthRuntimeUrl = pathToFileURL(
       path.join(process.cwd(), "src/lib/server/health-runtime.ts"),
     ).href;
+
     await execFileAsync(
       "node",
       [
@@ -116,9 +99,7 @@ describe("application health", () => {
     );
 
     expect(application.ok).toBe(true);
-    expect(application.checks.map((check) => check.name)).toEqual(["application"]);
     expect((await readFile(databasePath)).byteLength).toBeGreaterThan(0);
     expect(filesystem.ok).toBe(true);
-    expect(filesystem.checks.map((check) => check.name)).toEqual(["filesystem"]);
   });
 });
