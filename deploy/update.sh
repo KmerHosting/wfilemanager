@@ -15,8 +15,10 @@ MANIFEST_URL="${WFILEMANAGER_UPDATE_MANIFEST_URL:-https://igihzeyfgwhnuiflamvn.s
 SERVICE="${WFILEMANAGER_SERVICE:-wfilemanager.service}"
 HEALTH_URL="${WFILEMANAGER_HEALTH_URL:-http://127.0.0.1:${PORT:-1973}/api/health}"
 KEEP_RELEASES="${WFILEMANAGER_KEEP_RELEASES:-2}"
+UPDATER_COMMAND="${WFILEMANAGER_UPDATE_SCRIPT:-/usr/local/lib/wfilemanager/update.sh}"
 ROOT_RESET_COMMAND="${WFILEMANAGER_ROOT_RESET_COMMAND:-/usr/local/sbin/wfilemanager-reset-admin-password}"
 UNINSTALL_COMMAND="${WFILEMANAGER_UNINSTALL_COMMAND:-/usr/local/sbin/wfilemanager-uninstall}"
+DOCTOR_COMMAND="${WFILEMANAGER_DOCTOR_COMMAND:-/usr/local/sbin/wfilemanager-doctor}"
 
 mkdir -p "$RELEASES_DIR" "$STATE_DIR" "$CONFIG_DIR" /usr/local/lib/wfilemanager
 chmod 700 "$STATE_DIR"
@@ -109,6 +111,12 @@ install_release_commands() {
     install -m 700 "$release_dir/deploy/wfilemanager-reset-admin-password" "$ROOT_RESET_COMMAND"
   [[ -f "$release_dir/deploy/uninstall.sh" ]] && \
     install -m 700 "$release_dir/deploy/uninstall.sh" "$UNINSTALL_COMMAND"
+  [[ -f "$release_dir/deploy/wfilemanager-doctor" ]] && \
+    install -m 700 "$release_dir/deploy/wfilemanager-doctor" "$DOCTOR_COMMAND"
+  if [[ -f "$release_dir/deploy/update.sh" ]]; then
+    install -m 750 "$release_dir/deploy/update.sh" "$UPDATER_COMMAND.next"
+    mv -f "$UPDATER_COMMAND.next" "$UPDATER_COMMAND"
+  fi
 }
 
 install_release() {
