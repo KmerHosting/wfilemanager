@@ -33,9 +33,6 @@ async function uploadRuntime() {
 async function archiveGuard() {
   return import("@/lib/server/archive-guard");
 }
-async function terminalRuntime() {
-  return import("@/lib/server/terminal-runtime");
-}
 async function directoryRuntime() {
   return import("@/lib/server/directory-runtime");
 }
@@ -51,6 +48,7 @@ async function downloadRuntime() {
 async function hashRuntime() {
   return import("@/lib/server/file-hash-runtime");
 }
+
 function sameOrigin(request: Request) {
   if (request.headers.get("sec-fetch-site") === "cross-site") return false;
   const origin = request.headers.get("origin");
@@ -114,22 +112,6 @@ export const Route = createFileRoute("/api/local")({
             await auth.requireAdmin(request);
             return json(await api.updateSummary());
           }
-          if (action === "terminal-user") {
-            const user = await auth.requireAdmin(request);
-            const terminal = await terminalRuntime();
-            return json(terminal.terminalIdentity(user));
-          }
-          if (action === "pty-output") {
-            const user = await auth.requireAdmin(request);
-            const terminal = await terminalRuntime();
-            return json(
-              terminal.readPtyOutput(
-                user.id,
-                url.searchParams.get("id"),
-                url.searchParams.get("cursor"),
-              ),
-            );
-          }
           if (action === "job") {
             const user = await auth.requireUser(request);
             const operations = await operationRuntime();
@@ -156,9 +138,7 @@ export const Route = createFileRoute("/api/local")({
           }
           if (action === "read") {
             const user = await auth.requirePermission(request, "read");
-            return json(
-              await api.readTextFile(await policy.assertExistingPathAllowed(user, target)),
-            );
+            return json(await api.readTextFile(await policy.assertExistingPathAllowed(user, target)));
           }
           if (action === "download") {
             const user = await auth.requirePermission(request, "download");
@@ -181,6 +161,7 @@ export const Route = createFileRoute("/api/local")({
           return handleError(error);
         }
       },
+
       POST: async ({ request }) => {
         try {
           if (!sameOrigin(request)) return json({ error: "Cross-origin request rejected" }, 403);
@@ -190,24 +171,6 @@ export const Route = createFileRoute("/api/local")({
           const safe = await safePathRuntime();
           const url = new URL(request.url);
           const action = url.searchParams.get("action") || "";
-
-          if (["pty-create", "pty-input", "pty-resize", "pty-close"].includes(action)) {
-            const user = await auth.requireAdmin(request);
-            const terminal = await terminalRuntime();
-            const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-            if (action === "pty-create") {
-              await auth.verifyCurrentPassword(request, body.password);
-              return json(
-                await terminal.createRootPtySession(user, body.cwd, body.cols, body.rows),
-                201,
-              );
-            }
-            if (action === "pty-input")
-              return json(terminal.writePty(user.id, body.sessionId, body.data));
-            if (action === "pty-resize")
-              return json(terminal.resizePty(user.id, body.sessionId, body.cols, body.rows));
-            return json(terminal.closePty(user.id, body.sessionId));
-          }
 
           if (action === "upload-raw") {
             const user = await auth.requirePermission(request, "upload");
