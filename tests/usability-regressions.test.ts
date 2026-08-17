@@ -33,8 +33,8 @@ test("long file operations keep a visible toast until success or failure", async
   const api = await read("src/lib/local-api.ts");
   expect(api).toContain("withOperationToast");
   expect(api).toContain("duration: Infinity");
-  expect(api).toContain('toast.success(`${label} completed`');
-  expect(api).toContain('toast.error(errorMessage(error, `${label} failed`)');
+  expect(api).toContain("toast.success(`${label} completed`");
+  expect(api).toContain("toast.error(errorMessage(error, `${label} failed`)");
   expect(api).toContain('"Move to Trash started…", "Moved to Trash"');
   expect(api).toContain('"Saving file…", "File saved"');
   expect(api).toContain("Upload completed");
