@@ -1,15 +1,18 @@
 # Application data
 
-wFileManager stores users, roles, sessions, authentication records, notifications and settings in
-SQLite on the server:
+wFileManager has one data mode: local SQLite.
+
+The database is stored at:
 
 ```text
 /var/lib/wfilemanager/wfilemanager.db
 ```
 
-The application does not provide a hosted data plan or remote filesystem backup service. The server
-administrator is responsible for SQLite backups, restores, migrations, maintenance, local disk
-availability and disaster recovery.
+It contains the single administrator account, administrator sessions and minimal application metadata.
+There are no hosted data plans, product wallets, licences, roles or secondary application users.
 
-Server filesystem content is separate from the wFileManager SQLite database. Maintain an independent,
-tested backup policy for websites, databases, uploads, mounted volumes and operating-system state.
+Filesystem content is not copied into SQLite. Websites, uploads, mounted volumes, databases and other
+server files remain in their normal Linux locations.
+
+The server operator is responsible for backups and disaster recovery of both the SQLite database and
+important filesystem content.
