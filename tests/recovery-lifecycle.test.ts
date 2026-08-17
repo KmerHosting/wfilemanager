@@ -41,7 +41,7 @@ test("GitHub release workflow builds once and publishes an updater-compatible ar
   expect(workflow).toContain("Build production runtime");
   expect(workflow).toContain("bun run build");
   expect(workflow).toContain('tar -czf "$ARCHIVE" .output package.json deploy');
-  expect(workflow).toContain("find \"$CHECK_ROOT\" -maxdepth 3");
+  expect(workflow).toContain('find "$CHECK_ROOT" -maxdepth 3');
   expect(workflow).toContain('test -f "$PROJECT_DIR/.output/server/index.mjs"');
   expect(workflow).toContain('test -f "$PROJECT_DIR/package.json"');
   expect(workflow).toContain('test -f "$PROJECT_DIR/deploy/wfilemanager-reset-admin-password"');
