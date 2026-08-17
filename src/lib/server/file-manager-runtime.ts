@@ -67,6 +67,16 @@ async function linuxLoginUsers() {
   }
 }
 
+function primaryIpv4() {
+  const interfaces = os.networkInterfaces();
+  for (const addresses of Object.values(interfaces)) {
+    for (const address of addresses || []) {
+      if (address.family === "IPv4" && !address.internal) return address.address;
+    }
+  }
+  return null;
+}
+
 export async function fileManagerSummary() {
   const [release, locations, loginUsers] = await Promise.all([
     osRelease(),
@@ -83,6 +93,7 @@ export async function fileManagerSummary() {
 
   return {
     hostname: os.hostname(),
+    ipv4: primaryIpv4(),
     platform: os.platform(),
     release: os.release(),
     architecture: os.arch(),
