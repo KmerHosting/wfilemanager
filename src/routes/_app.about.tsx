@@ -111,16 +111,6 @@ function About() {
           <h1>About & updates</h1>
           <p>wFileManager is a local, single-administrator file manager for Linux servers.</p>
         </div>
-        <Button asChild size="icon" variant="outline" aria-label="Open wFileManager on GitHub">
-          <a
-            href="https://github.com/KmerHosting/wfilemanager"
-            target="_blank"
-            rel="noreferrer"
-            title="GitHub repository"
-          >
-            <Github className="h-4 w-4" />
-          </a>
-        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -147,6 +137,18 @@ function About() {
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">License</span>
               <strong>MIT</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">GitHub</span>
+              <a
+                href="https://github.com/KmerHosting/wfilemanager"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 font-medium text-primary hover:underline"
+              >
+                <Github className="h-4 w-4" />
+                <span>KmerHosting/wfilemanager</span>
+              </a>
             </div>
           </CardContent>
         </Card>
