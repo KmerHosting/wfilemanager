@@ -2,14 +2,12 @@ import {
   sessionUser as sqliteSessionUser,
   userResponse as sqliteUserResponse,
   verifyPassword as sqliteVerifyPassword,
-} from "@/lib/server/sqlite-store";
+} from "@/lib/server/admin-store";
 import { LocalApiError, type LocalUser as BaseLocalUser } from "@/lib/server/local-runtime";
-import type { LocalPathRule } from "@/lib/server/path-policy-runtime";
-import { pathRulesForUser } from "@/lib/server/sqlite-path-policy";
 
 const COOKIE_NAME = "wfm_session";
 
-export type LocalUser = BaseLocalUser & { pathRules?: LocalPathRule[] };
+export type LocalUser = BaseLocalUser;
 export { LocalApiError };
 
 function cookieValue(request: Request, name: string) {
@@ -27,15 +25,6 @@ function tokenFromRequest(request: Request) {
   return cookieValue(request, COOKIE_NAME);
 }
 
-function assignablePermissions(permissions: unknown) {
-  return Array.isArray(permissions)
-    ? permissions.filter(
-        (permission): permission is string =>
-          typeof permission === "string" && permission !== "use_terminal",
-      )
-    : [];
-}
-
 function sqliteUser(request: Request): LocalUser {
   const token = tokenFromRequest(request);
   if (!token) throw new LocalApiError(401, "Missing session token");
@@ -45,12 +34,11 @@ function sqliteUser(request: Request): LocalUser {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      isAdmin: user.isAdmin,
-      status: user.status,
-      roleId: user.roleId,
-      roleName: user.roleName,
-      permissions: assignablePermissions(user.permissions),
-      pathRules: pathRulesForUser(user.id, user.roleId, user.isAdmin),
+      isAdmin: true,
+      status: "active",
+      roleId: null,
+      roleName: "Administrator",
+      permissions: ["admin"],
     };
   } catch (error) {
     const value = error as { status?: number; message?: string };
@@ -70,27 +58,12 @@ export function assertAdmin(user: LocalUser) {
     throw new LocalApiError(403, "Administrator access is required for this operation");
 }
 
-export function assertPermission(user: LocalUser, permission: string) {
-  if (user.isAdmin) return;
-  if (permission === "use_terminal")
-    throw new LocalApiError(403, "Terminal access is reserved for administrators");
-  if (!Array.isArray(user.permissions) || !user.permissions.includes(permission)) {
-    throw new LocalApiError(
-      403,
-      `Your role does not include the ${permission.replace(/_/g, " ")} permission`,
-    );
-  }
+export function assertPermission(user: LocalUser, _permission: string) {
+  assertAdmin(user);
 }
 
-export function assertAnyPermission(user: LocalUser, permissions: string[]) {
-  if (user.isAdmin) return;
-  const assignable = permissions.filter((permission) => permission !== "use_terminal");
-  if (
-    !Array.isArray(user.permissions) ||
-    !assignable.some((permission) => user.permissions?.includes(permission))
-  ) {
-    throw new LocalApiError(403, "Your role does not allow this operation");
-  }
+export function assertAnyPermission(user: LocalUser, _permissions: string[]) {
+  assertAdmin(user);
 }
 
 export async function requireAdmin(request: Request) {
