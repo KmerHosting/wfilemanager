@@ -33,9 +33,9 @@ function AppLayout() {
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <div className="flex min-w-0 flex-1 flex-col pt-12">
+        <div className="flex min-w-0 flex-1 flex-col" style={{ paddingTop: "3rem" }}>
           <ConnectionBanner />
-          <main className="flex min-w-0 flex-1 flex-col">
+          <main className="flex min-w-0 flex-1 flex-col" style={{ paddingTop: "1rem" }}>
             <Outlet />
           </main>
         </div>
