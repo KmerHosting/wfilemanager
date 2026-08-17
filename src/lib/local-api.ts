@@ -331,7 +331,9 @@ export const localApi = {
         post<{ item: TrashItem }>("trash-move", { path }),
       ),
     restore: (id: string) =>
-      withPendingToast("Restore started…", () => post<{ restored: string }>("trash-restore", { id })),
+      withPendingToast("Restore started…", () =>
+        post<{ restored: string }>("trash-restore", { id }),
+      ),
     delete: (id: string) =>
       withPendingToast("Permanent deletion started…", () =>
         post<{ deleted: string }>("trash-delete", { id }),
