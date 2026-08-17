@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Checkmark, Laptop, Light, Logout, Moon, UserAvatar } from "@carbon/icons-react";
 import {
@@ -24,11 +24,25 @@ export function Topbar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [themeOpen, setThemeOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const themePopoverRef = useRef<HTMLSpanElement | null>(null);
+  const accountPopoverRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     setThemeOpen(false);
     setAccountOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (themeOpen && !themePopoverRef.current?.contains(target)) setThemeOpen(false);
+      if (accountOpen && !accountPopoverRef.current?.contains(target)) setAccountOpen(false);
+    };
+
+    window.addEventListener("pointerdown", closeOnOutsidePointer, true);
+    return () => window.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+  }, [themeOpen, accountOpen]);
 
   return (
     <Header aria-label="wFileManager" className="wfm-carbon-header">
@@ -56,6 +70,7 @@ export function Topbar() {
 
       <HeaderGlobalBar>
         <CarbonPopover
+          ref={themePopoverRef}
           open={themeOpen}
           autoAlign
           align="bottom-end"
@@ -107,6 +122,7 @@ export function Topbar() {
         </CarbonPopover>
 
         <CarbonPopover
+          ref={accountPopoverRef}
           open={accountOpen}
           autoAlign
           align="bottom-end"
@@ -133,7 +149,11 @@ export function Topbar() {
               </span>
               <span className="wfm-account-panel__role">Administrator</span>
             </div>
-            <Link to="/account" className="wfm-account-panel__item">
+            <Link
+              to="/account"
+              className="wfm-account-panel__item"
+              onClick={() => setAccountOpen(false)}
+            >
               <UserAvatar size={16} />
               <span>Account</span>
             </Link>
@@ -141,8 +161,8 @@ export function Topbar() {
               type="button"
               className="wfm-account-panel__item wfm-account-panel__item--danger"
               onClick={async () => {
-                await auth.logout();
                 setAccountOpen(false);
+                await auth.logout();
                 toast.success("Signed out");
                 navigate({ to: "/login" });
               }}
