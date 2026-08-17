@@ -40,9 +40,6 @@ async function operationRuntime() {
 async function downloadRuntime() {
   return import("@/lib/server/download-runtime");
 }
-async function hashRuntime() {
-  return import("@/lib/server/file-hash-runtime");
-}
 async function handleError(error: unknown) {
   const { LocalApiError } = await runtime();
   if (error instanceof LocalApiError) return json({ error: error.message }, error.status);
