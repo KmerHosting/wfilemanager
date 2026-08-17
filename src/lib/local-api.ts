@@ -66,6 +66,7 @@ export interface OperationJob {
 
 export interface FileManagerOverview {
   hostname: string;
+  ipv4: string | null;
   platform: string;
   release: string;
   architecture: string;
