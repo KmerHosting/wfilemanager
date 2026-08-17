@@ -1,5 +1,3 @@
-import { toast } from "sonner";
-
 export interface LocalFileEntry {
   name: string;
   path: string;
@@ -77,6 +75,8 @@ export interface OperationJob {
   destinationDirectory?: string;
   cancellable: boolean;
 }
+
+export type OperationProgressCallback = (job: OperationJob) => void;
 
 export interface FileManagerOverview {
   hostname: string;
@@ -177,26 +177,6 @@ async function post<T>(action: string, body: Record<string, unknown>) {
   );
 }
 
-function errorMessage(error: unknown, fallback = "Operation failed") {
-  return error instanceof Error ? error.message : fallback;
-}
-
-async function withOperationToast<T>(
-  pendingMessage: string,
-  successMessage: string,
-  operation: () => Promise<T>,
-) {
-  const toastId = toast.loading(pendingMessage, { duration: Infinity });
-  try {
-    const result = await operation();
-    toast.success(successMessage, { id: toastId, duration: 3500 });
-    return result;
-  } catch (error) {
-    toast.error(errorMessage(error), { id: toastId, duration: 6000 });
-    throw error;
-  }
-}
-
 function uploadSingleFile(
   directory: string,
   file: File,
@@ -249,69 +229,46 @@ async function uploadFiles(
 ) {
   const values = Array.from(files);
   const total = values.reduce((sum, file) => sum + file.size, 0);
-  const toastId = toast.loading(`Upload started · ${values.length} file(s)`, {
-    duration: Infinity,
-  });
   let completed = 0;
   const uploaded: LocalFileEntry[] = [];
-  const report = (progress: ProgressState) => {
-    onProgress?.(progress);
-    toast.loading(
-      progress.detail
-        ? `Uploading ${progress.detail} · ${progress.percent}%`
-        : `Uploading · ${progress.percent}%`,
-      { id: toastId, duration: Infinity },
-    );
-  };
 
-  try {
-    report({ loaded: 0, total, percent: 0 });
-    for (const file of values) {
-      const entry = await uploadSingleFile(directory, file, completed, total, report);
-      completed += file.size;
-      uploaded.push(entry);
-    }
-    report({ loaded: total, total, percent: 100 });
-    toast.success(`Upload completed · ${values.length} file(s)`, { id: toastId, duration: 3500 });
-    return { uploaded };
-  } catch (error) {
-    toast.error(errorMessage(error, "Upload failed"), { id: toastId, duration: 6000 });
-    throw error;
+  onProgress?.({ loaded: 0, total, percent: 0 });
+  for (const file of values) {
+    const entry = await uploadSingleFile(directory, file, completed, total, onProgress);
+    completed += file.size;
+    uploaded.push(entry);
   }
+  onProgress?.({ loaded: total, total, percent: 100 });
+  return { uploaded };
 }
 
-async function runJob(operation: "copy" | "move", source: string, destination: string) {
-  const label = operation === "copy" ? "Copy" : "Move";
-  const toastId = toast.loading(`${label} started…`, { duration: Infinity });
-  try {
-    const started = await post<{ job: OperationJob }>("job-start", {
-      operation,
-      source,
-      destination,
-    });
-    const deadline = Date.now() + 24 * 60 * 60 * 1000;
-    let delay = 400;
-    while (Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      delay = Math.min(1500, Math.round(delay * 1.25));
-      const current = await get<{ job: OperationJob }>("job", { id: started.job.id });
-      toast.loading(`${label} in progress · ${Math.max(0, Math.min(100, current.job.progress))}%`, {
-        id: toastId,
-        duration: Infinity,
-      });
-      if (current.job.status === "completed") {
-        toast.success(`${label} completed`, { id: toastId, duration: 3500 });
-        return current.job;
-      }
-      if (["failed", "cancelled", "interrupted"].includes(current.job.status)) {
-        throw new Error(current.job.error || `${operation} ${current.job.status}`);
-      }
+async function runJob(
+  operation: "copy" | "move",
+  source: string,
+  destination: string,
+  onProgress?: OperationProgressCallback,
+) {
+  const started = await post<{ job: OperationJob }>("job-start", {
+    operation,
+    source,
+    destination,
+  });
+  onProgress?.(started.job);
+
+  const deadline = Date.now() + 24 * 60 * 60 * 1000;
+  let delay = 400;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    delay = Math.min(1500, Math.round(delay * 1.25));
+    const current = await get<{ job: OperationJob }>("job", { id: started.job.id });
+    onProgress?.(current.job);
+    if (current.job.status === "completed") return current.job;
+    if (["failed", "cancelled", "interrupted"].includes(current.job.status)) {
+      throw new Error(current.job.error || `${operation} ${current.job.status}`);
     }
-    throw new Error(`${operation} did not complete within 24 hours`);
-  } catch (error) {
-    toast.error(errorMessage(error, `${label} failed`), { id: toastId, duration: 6000 });
-    throw error;
   }
+
+  throw new Error(`${operation} did not complete within 24 hours`);
 }
 
 function startBrowserDownload(path: string, filename: string) {
@@ -324,7 +281,6 @@ function startBrowserDownload(path: string, filename: string) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  toast.success(`Download started · ${filename}`, { duration: 3500 });
   return Promise.resolve({ downloaded: path, started: true });
 }
 
@@ -348,33 +304,21 @@ export const localApi = {
   createDirectory: (path: string, name: string) =>
     post<LocalFileEntry>("create-directory", { path, name }),
   save: (path: string, content: string, expectedModifiedAt?: string) =>
-    withOperationToast("Saving file…", "File saved", () =>
-      post<LocalFileEntry>("save", { path, content, expectedModifiedAt }),
-    ),
+    post<LocalFileEntry>("save", { path, content, expectedModifiedAt }),
   rename: (path: string, name: string) =>
     post<{ source: string; destination: string }>("rename", { path, name }),
-  copy: (source: string, destination: string) => runJob("copy", source, destination),
-  move: (source: string, destination: string) => runJob("move", source, destination),
+  copy: (source: string, destination: string, onProgress?: OperationProgressCallback) =>
+    runJob("copy", source, destination, onProgress),
+  move: (source: string, destination: string, onProgress?: OperationProgressCallback) =>
+    runJob("move", source, destination, onProgress),
   upload: uploadFiles,
   download: startBrowserDownload,
   trash: {
     list: () => get<TrashResult>("trash-list"),
-    move: (path: string) =>
-      withOperationToast("Move to Trash started…", "Moved to Trash", () =>
-        post<{ item: TrashItem }>("trash-move", { path }),
-      ),
-    restore: (id: string) =>
-      withOperationToast("Restore started…", "Restore completed", () =>
-        post<{ restored: string }>("trash-restore", { id }),
-      ),
-    delete: (id: string) =>
-      withOperationToast("Permanent deletion started…", "Permanent deletion completed", () =>
-        post<{ deleted: string }>("trash-delete", { id }),
-      ),
-    empty: () =>
-      withOperationToast("Empty Trash started…", "Trash emptied", () =>
-        post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {}),
-      ),
+    move: (path: string) => post<{ item: TrashItem }>("trash-move", { path }),
+    restore: (id: string) => post<{ restored: string }>("trash-restore", { id }),
+    delete: (id: string) => post<{ deleted: string }>("trash-delete", { id }),
+    empty: () => post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {}),
   },
   overview: () => get<FileManagerOverview>("overview"),
   updateInfo: () => get<UpdateInfo>("update-info"),

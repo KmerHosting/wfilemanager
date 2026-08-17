@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { FolderTree, RefreshCw, Trash2 } from "@/components/ui/icons";
+import { createFileRoute } from "@tanstack/react-router";
+import { Dashboard, FolderOpen, Renew, TrashCan } from "@carbon/icons-react";
+import { Button, Column, Grid, InlineNotification, Tag, Tile } from "@carbon/react";
 import { localApi } from "@/lib/local-api";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_app/")({
   head: () => ({ meta: [{ title: "Overview — wFileManager" }] }),
@@ -41,74 +39,108 @@ function Overview() {
   }, []);
 
   return (
-    <div className="wfm-page wfm-overview-page">
+    <section className="wfm-page" aria-labelledby="overview-title">
       <header className="wfm-page__header">
         <div>
-          <p className="wfm-eyebrow">Local file manager</p>
-          <h1>Overview</h1>
-          <p>One administrator. One local database. Direct access to this server's files.</p>
+          <h1 id="overview-title" className="wfm-page__heading">
+            Overview
+          </h1>
+          <p className="wfm-page__description">
+            Local server state and direct access to the two day-to-day file management areas.
+          </p>
         </div>
         <div className="wfm-page__actions">
-          <Badge variant="outline">{loading ? "Checking" : error ? "Unavailable" : "Ready"}</Badge>
-          <Button size="icon" variant="outline" onClick={() => void load()} aria-label="Refresh">
-            <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          <Tag type={loading ? "cool-gray" : error ? "red" : "green"}>
+            {loading ? "Checking" : error ? "Unavailable" : "Ready"}
+          </Tag>
+          <Button kind="ghost" size="sm" renderIcon={Renew} onClick={() => void load()}>
+            Refresh
           </Button>
         </div>
       </header>
 
-      {error && (
-        <div className="rounded-md border border-destructive/30 p-4 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {error ? (
+        <InlineNotification
+          kind="error"
+          lowContrast
+          hideCloseButton
+          title="Unable to read this server"
+          subtitle={error}
+        />
+      ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Server</CardTitle>
-            <CardDescription>Runtime information used by the file manager.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Hostname</span>
-              <strong>{summary?.hostname || "—"}</strong>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Operating system</span>
-              <strong>{summary?.os.prettyName || "—"}</strong>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Architecture</span>
-              <strong>{summary?.architecture || "—"}</strong>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Server IPv4</span>
-              <strong className="font-mono">{summary?.ipv4 || "—"}</strong>
-            </div>
-          </CardContent>
-        </Card>
+      <Grid fullWidth condensed className="wfm-kpi-grid">
+        <Column sm={4} md={4} lg={4}>
+          <Tile className="wfm-kpi-tile">
+            <div className="wfm-kpi-tile__label">Hostname</div>
+            <div className="wfm-kpi-tile__value wfm-mono">{summary?.hostname || "—"}</div>
+            <div className="wfm-kpi-tile__helper">Local Linux host</div>
+          </Tile>
+        </Column>
+        <Column sm={4} md={4} lg={4}>
+          <Tile className="wfm-kpi-tile">
+            <div className="wfm-kpi-tile__label">Operating system</div>
+            <div className="wfm-kpi-tile__value">{summary?.os.prettyName || "—"}</div>
+            <div className="wfm-kpi-tile__helper">{summary?.architecture || "Architecture unknown"}</div>
+          </Tile>
+        </Column>
+        <Column sm={4} md={4} lg={4}>
+          <Tile className="wfm-kpi-tile">
+            <div className="wfm-kpi-tile__label">Server IPv4</div>
+            <div className="wfm-kpi-tile__value wfm-mono">{summary?.ipv4 || "—"}</div>
+            <div className="wfm-kpi-tile__helper">Detected address</div>
+          </Tile>
+        </Column>
+        <Column sm={4} md={4} lg={4}>
+          <Tile className="wfm-kpi-tile">
+            <div className="wfm-kpi-tile__label">Trash</div>
+            <div className="wfm-kpi-tile__value">{trashCount}</div>
+            <div className="wfm-kpi-tile__helper">Recoverable item(s)</div>
+          </Tile>
+        </Column>
+      </Grid>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick access</CardTitle>
-            <CardDescription>The two places needed for day-to-day file management.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <Button asChild>
-              <Link to="/explorer" search={{ path: "/" }}>
-                <FolderTree className="mr-2 h-4 w-4" />
+      <Grid fullWidth condensed>
+        <Column sm={4} md={4} lg={8}>
+          <Tile className="wfm-panel-tile">
+            <h2 className="wfm-section-title">Server</h2>
+            <dl className="wfm-definition-list">
+              <div className="wfm-definition-list__row">
+                <dt>Hostname</dt>
+                <dd className="wfm-mono">{summary?.hostname || "—"}</dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>Operating system</dt>
+                <dd>{summary?.os.prettyName || "—"}</dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>Architecture</dt>
+                <dd>{summary?.architecture || "—"}</dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>IPv4</dt>
+                <dd className="wfm-mono">{summary?.ipv4 || "—"}</dd>
+              </div>
+            </dl>
+          </Tile>
+        </Column>
+        <Column sm={4} md={4} lg={8}>
+          <Tile className="wfm-panel-tile">
+            <h2 className="wfm-section-title">Quick access</h2>
+            <div className="wfm-quick-actions">
+              <Button href="/explorer?path=%2F" renderIcon={FolderOpen}>
                 Open File Explorer
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/trash">
-                <Trash2 className="mr-2 h-4 w-4" />
+              </Button>
+              <Button href="/trash" kind="secondary" renderIcon={TrashCan}>
                 Trash ({trashCount})
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              </Button>
+              <Button href="/about" kind="tertiary" renderIcon={Dashboard}>
+                About & updates
+              </Button>
+            </div>
+          </Tile>
+        </Column>
+      </Grid>
+    </section>
   );
 }

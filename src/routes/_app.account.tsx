@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { KeyRound, UserCircle2 } from "@/components/ui/icons";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { wfilemanagerApi } from "@/lib/wfilemanager-api";
+import { Password } from "@carbon/icons-react";
+import { Button, CodeSnippet, InlineNotification, PasswordInput, Tile } from "@carbon/react";
 import {
   ADMIN_PASSWORD_POLICY_TEXT,
   administratorPasswordError,
 } from "@/lib/admin-password-policy";
+import { useNotifications } from "@/lib/notifications";
+import { wfilemanagerApi } from "@/lib/wfilemanager-api";
 
 export const Route = createFileRoute("/_app/account")({
   head: () => ({ meta: [{ title: "Administrator — wFileManager" }] }),
@@ -18,6 +15,7 @@ export const Route = createFileRoute("/_app/account")({
 });
 
 function Administrator() {
+  const { notify } = useNotifications();
   const [password, setPassword] = useState({ current: "", next: "", confirm: "" });
   const [saving, setSaving] = useState(false);
   const policyError = password.next ? administratorPasswordError(password.next) : null;
@@ -28,107 +26,96 @@ function Administrator() {
     try {
       await wfilemanagerApi.changePassword(password.current, password.next);
       setPassword({ current: "", next: "", confirm: "" });
-      toast.success("Administrator password changed");
+      notify({
+        kind: "success",
+        title: "Password changed",
+        subtitle: "The local administrator password was updated.",
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to change the password");
+      notify({
+        kind: "error",
+        title: "Unable to change password",
+        subtitle: error instanceof Error ? error.message : "The request did not complete.",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="wfm-page wfm-account-page">
+    <section className="wfm-page" aria-labelledby="administrator-title">
       <header className="wfm-page__header">
         <div>
-          <p className="wfm-eyebrow">Local administrator</p>
-          <h1>Administrator</h1>
-          <p>
-            wFileManager has one account with the fixed username <strong>admin</strong>.
+          <h1 id="administrator-title" className="wfm-page__heading">
+            Administrator
+          </h1>
+          <p className="wfm-page__description">
+            wFileManager has one local account with the fixed username <strong>admin</strong>.
           </p>
         </div>
-        <UserCircle2 className="h-5 w-5" />
       </header>
 
-      <Card className="max-w-3xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <KeyRound className="h-4 w-4" /> Change password
-          </CardTitle>
-          <CardDescription>
-            This password protects the local wFileManager administrator account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="current-password">Current password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                autoComplete="current-password"
-                value={password.current}
-                onChange={(event) => setPassword({ ...password, current: event.target.value })}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="new-password">New password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                autoComplete="new-password"
-                value={password.next}
-                onChange={(event) => setPassword({ ...password, next: event.target.value })}
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="confirm-password">Confirm</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                autoComplete="new-password"
-                value={password.confirm}
-                onChange={(event) => setPassword({ ...password, confirm: event.target.value })}
-              />
-            </div>
-          </div>
-          <p
-            className={
-              policyError || mismatch ? "text-xs text-destructive" : "text-xs text-muted-foreground"
+      <Tile className="wfm-panel-tile wfm-account-form">
+        <h2 className="wfm-section-title">Change password</h2>
+        <div className="wfm-account-form__fields">
+          <PasswordInput
+            id="current-password"
+            labelText="Current password"
+            autoComplete="current-password"
+            value={password.current}
+            onChange={(event) => setPassword((current) => ({ ...current, current: event.target.value }))}
+          />
+          <PasswordInput
+            id="new-password"
+            labelText="New password"
+            autoComplete="new-password"
+            helperText={ADMIN_PASSWORD_POLICY_TEXT}
+            invalid={Boolean(policyError)}
+            invalidText={policyError || undefined}
+            value={password.next}
+            onChange={(event) => setPassword((current) => ({ ...current, next: event.target.value }))}
+          />
+          <PasswordInput
+            id="confirm-password"
+            labelText="Confirm password"
+            autoComplete="new-password"
+            invalid={Boolean(mismatch)}
+            invalidText={mismatch ? "Passwords do not match." : undefined}
+            value={password.confirm}
+            onChange={(event) => setPassword((current) => ({ ...current, confirm: event.target.value }))}
+          />
+        </div>
+        <div className="wfm-update-actions">
+          <Button
+            renderIcon={Password}
+            disabled={
+              saving ||
+              !password.current ||
+              !password.next ||
+              Boolean(policyError) ||
+              Boolean(mismatch) ||
+              !password.confirm
             }
+            onClick={() => void changePassword()}
           >
-            {policyError || (mismatch ? "Passwords do not match." : ADMIN_PASSWORD_POLICY_TEXT)}
-          </p>
-          <div className="flex justify-end">
-            <Button
-              disabled={
-                saving ||
-                !password.current ||
-                !password.next ||
-                Boolean(policyError) ||
-                Boolean(mismatch) ||
-                !password.confirm
-              }
-              onClick={() => void changePassword()}
-            >
-              {saving ? "Changing…" : "Change password"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            {saving ? "Changing…" : "Change password"}
+          </Button>
+        </div>
+      </Tile>
 
-      <Card className="mt-4 max-w-3xl">
-        <CardHeader>
-          <CardTitle className="text-base">Lost the password?</CardTitle>
-          <CardDescription>
-            Password recovery is intentionally available only from the server shell.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <code className="block rounded-md border bg-muted/30 p-3 text-sm">
-            sudo wfilemanager-reset-admin-password
-          </code>
-        </CardContent>
-      </Card>
-    </div>
+      <Tile className="wfm-panel-tile wfm-account-form wfm-space-top">
+        <h2 className="wfm-section-title">Lost the password?</h2>
+        <InlineNotification
+          kind="info"
+          lowContrast
+          hideCloseButton
+          title="Recovery is server-side only"
+          subtitle="Run the reset command from a trusted shell on the server."
+        />
+        <div className="wfm-space-top">
+          <CodeSnippet type="single">sudo wfilemanager-reset-admin-password</CodeSnippet>
+        </div>
+      </Tile>
+    </section>
   );
 }

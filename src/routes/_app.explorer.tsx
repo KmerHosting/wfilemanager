@@ -2,53 +2,43 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import {
+  Add,
   ArrowUp,
   Copy,
+  Document,
   Download,
-  File as FileIcon,
-  FilePlus2,
+  Edit,
   Folder,
-  FolderPlus,
-  MoveRight,
-  Pencil,
-  RefreshCw,
-  Save,
+  Move,
+  Renew,
+  TrashCan,
+  Upload,
+} from "@carbon/icons-react";
+import {
+  Button,
+  InlineLoading,
+  InlineNotification,
+  Modal,
+  ProgressBar,
   Search,
-  Trash2,
-  UploadCloud,
-} from "@/components/ui/icons";
-import { toast } from "sonner";
-import { localApi, type LocalFileEntry, type ProgressState } from "@/lib/local-api";
-import { formatBytes, formatDate } from "@/lib/format";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+  TextArea,
+  TextInput,
+} from "@carbon/react";
+import { formatBytes, formatDate } from "@/lib/format";
+import {
+  localApi,
+  type LocalFileEntry,
+  type OperationJob,
+  type ProgressState,
+} from "@/lib/local-api";
+import { useNotifications } from "@/lib/notifications";
 
 const searchSchema = z.object({
   path: z.string().optional(),
@@ -84,6 +74,7 @@ function parentPath(value: string) {
 function Explorer() {
   const { path = "/", q = "" } = Route.useSearch();
   const navigate = useNavigate({ from: "/explorer" });
+  const { notify } = useNotifications();
   const currentPath = normalizePath(path);
   const uploadInput = useRef<HTMLInputElement>(null);
 
@@ -153,6 +144,7 @@ function Explorer() {
       setPath(entry.path);
       return;
     }
+
     setPreviewEntry(entry);
     setPreviewLoading(true);
     setEditorContent("");
@@ -160,7 +152,11 @@ function Explorer() {
       const result = await localApi.read(entry.path);
       setEditorContent(result.content);
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "This file cannot be previewed as text");
+      notify({
+        kind: "error",
+        title: "Unable to open file",
+        subtitle: cause instanceof Error ? cause.message : "This file cannot be previewed as text.",
+      });
       setPreviewEntry(null);
     } finally {
       setPreviewLoading(false);
@@ -173,12 +169,20 @@ function Explorer() {
     try {
       if (createKind === "file") await localApi.createFile(currentPath, name);
       else await localApi.createDirectory(currentPath, name);
-      toast.success(createKind === "file" ? "File created" : "Folder created");
+      notify({
+        kind: "success",
+        title: createKind === "file" ? "File created" : "Folder created",
+        subtitle: name,
+      });
       setCreateKind(null);
       setCreateName("");
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Creation failed");
+      notify({
+        kind: "error",
+        title: "Creation failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to create the item.",
+      });
     }
   };
 
@@ -186,11 +190,15 @@ function Explorer() {
     if (!renameEntry || !renameName.trim()) return;
     try {
       await localApi.rename(renameEntry.path, renameName.trim());
-      toast.success("Renamed");
+      notify({ kind: "success", title: "Renamed", subtitle: renameName.trim() });
       setRenameEntry(null);
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Rename failed");
+      notify({
+        kind: "error",
+        title: "Rename failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to rename the item.",
+      });
     }
   };
 
@@ -198,24 +206,60 @@ function Explorer() {
     if (!deleteEntry) return;
     try {
       await localApi.trash.move(deleteEntry.path);
-      toast.success("Moved to trash");
+      notify({ kind: "success", title: "Moved to trash", subtitle: deleteEntry.name });
       setDeleteEntry(null);
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Delete failed");
+      notify({
+        kind: "error",
+        title: "Delete failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to move the item to trash.",
+      });
     }
   };
 
   const transferEntry = async () => {
     if (!transfer || !destination.trim()) return;
+    const action = transfer.kind === "copy" ? "Copy" : "Move";
+    const noticeId = notify({
+      kind: "info",
+      title: `${action} started`,
+      subtitle: transfer.entry.name,
+      timeout: 0,
+    });
+    const report = (job: OperationJob) => {
+      notify({
+        id: noticeId,
+        kind: "info",
+        title: `${action} in progress · ${Math.max(0, Math.min(100, job.progress))}%`,
+        subtitle: job.currentItem || transfer.entry.name,
+        timeout: 0,
+      });
+    };
+
     try {
-      if (transfer.kind === "copy") await localApi.copy(transfer.entry.path, destination.trim());
-      else await localApi.move(transfer.entry.path, destination.trim());
-      toast.success(transfer.kind === "copy" ? "Copied" : "Moved");
+      if (transfer.kind === "copy") {
+        await localApi.copy(transfer.entry.path, destination.trim(), report);
+      } else {
+        await localApi.move(transfer.entry.path, destination.trim(), report);
+      }
+      notify({
+        id: noticeId,
+        kind: "success",
+        title: `${action} completed`,
+        subtitle: transfer.entry.name,
+        timeout: 3500,
+      });
       setTransfer(null);
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "File operation failed");
+      notify({
+        id: noticeId,
+        kind: "error",
+        title: `${action} failed`,
+        subtitle: cause instanceof Error ? cause.message : "The operation did not complete.",
+        timeout: 0,
+      });
     }
   };
 
@@ -224,10 +268,18 @@ function Explorer() {
     setProgress({ loaded: 0, total: 0, percent: 0 });
     try {
       await localApi.upload(currentPath, files, setProgress);
-      toast.success(`${files.length} file(s) uploaded`);
+      notify({
+        kind: "success",
+        title: "Upload completed",
+        subtitle: `${files.length} file(s) uploaded.`,
+      });
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Upload failed");
+      notify({
+        kind: "error",
+        title: "Upload failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to upload the selected files.",
+      });
     } finally {
       window.setTimeout(() => setProgress(null), 800);
       if (uploadInput.current) uploadInput.current.value = "";
@@ -237,8 +289,13 @@ function Explorer() {
   const download = async (entry: LocalFileEntry) => {
     try {
       await localApi.download(entry.path, entry.name);
+      notify({ kind: "success", title: "Download started", subtitle: entry.name });
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Download failed");
+      notify({
+        kind: "error",
+        title: "Download failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to download this file.",
+      });
     }
   };
 
@@ -247,65 +304,73 @@ function Explorer() {
     setSaving(true);
     try {
       await localApi.save(previewEntry.path, editorContent, previewEntry.modifiedAt);
-      toast.success("File saved");
+      notify({ kind: "success", title: "File saved", subtitle: previewEntry.name });
       setPreviewEntry(null);
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Save failed");
+      notify({
+        kind: "error",
+        title: "Save failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to save this file.",
+      });
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="wfm-page">
+    <section className="wfm-page" aria-labelledby="explorer-title">
       <header className="wfm-page__header">
         <div>
-          <p className="wfm-eyebrow">Server files</p>
-          <h1>File Explorer</h1>
-          <p>Browse and manage files directly on this Linux server.</p>
+          <h1 id="explorer-title" className="wfm-page__heading">
+            File Explorer
+          </h1>
+          <p className="wfm-page__description">
+            Browse and manage files directly on this Linux server.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="icon" onClick={() => void load()} aria-label="Refresh">
-            <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+        <div className="wfm-page__actions">
+          <Button kind="ghost" size="sm" renderIcon={Renew} onClick={() => void load()}>
+            Refresh
           </Button>
           <Button
-            variant="outline"
+            kind="tertiary"
+            size="sm"
+            renderIcon={Folder}
             onClick={() => {
               setCreateKind("directory");
               setCreateName("");
             }}
           >
-            <FolderPlus className="mr-2 h-4 w-4" />
-            Folder
+            New folder
           </Button>
           <Button
-            variant="outline"
+            kind="tertiary"
+            size="sm"
+            renderIcon={Add}
             onClick={() => {
               setCreateKind("file");
               setCreateName("");
             }}
           >
-            <FilePlus2 className="mr-2 h-4 w-4" />
-            File
+            New file
           </Button>
-          <Button onClick={() => uploadInput.current?.click()}>
-            <UploadCloud className="mr-2 h-4 w-4" />
+          <Button size="sm" renderIcon={Upload} onClick={() => uploadInput.current?.click()}>
             Upload
           </Button>
           <input
             ref={uploadInput}
             type="file"
             multiple
-            className="hidden"
+            hidden
             onChange={(event) => void upload(event.target.files)}
           />
         </div>
       </header>
 
-      <div className="mb-4 flex flex-col gap-2 md:flex-row">
+      <div className="wfm-explorer-toolbar">
         <form
-          className="flex flex-1 gap-2"
+          className="wfm-path-controls"
           onSubmit={(event) => {
             event.preventDefault();
             setPath(pathInput);
@@ -313,244 +378,257 @@ function Explorer() {
         >
           <Button
             type="button"
-            variant="outline"
-            size="icon"
+            kind="ghost"
+            size="md"
+            renderIcon={ArrowUp}
             disabled={currentPath === "/"}
             onClick={() => setPath(parentPath(currentPath))}
           >
-            <ArrowUp className="h-4 w-4" />
+            Up
           </Button>
-          <Input
+          <TextInput
+            id="current-path"
+            labelText="Path"
             value={pathInput}
             onChange={(event) => setPathInput(event.target.value)}
-            className="font-mono"
+            onBlur={() => setPathInput(normalizePath(pathInput))}
           />
+          <Button type="submit" kind="secondary" size="md">
+            Go
+          </Button>
         </form>
-        <div className="relative md:w-80">
-          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search this folder"
-            className="pl-9"
-          />
-        </div>
+        <Search
+          id="folder-search"
+          labelText="Search this folder"
+          placeholder="Search this folder"
+          value={q}
+          onChange={(event) => setSearch(event.target.value)}
+        />
       </div>
 
-      {progress && (
-        <div className="mb-4 rounded-md border p-3">
-          <div className="mb-2 flex justify-between text-xs text-muted-foreground">
-            <span>{progress.detail || "Uploading"}</span>
-            <span>{progress.percent}%</span>
-          </div>
-          <Progress value={progress.percent} />
+      {progress ? (
+        <div className="wfm-progress-block">
+          <ProgressBar
+            label={progress.detail || "Uploading"}
+            value={progress.percent}
+            max={100}
+            helperText={`${progress.percent}%`}
+          />
         </div>
-      )}
+      ) : null}
 
-      {error && (
-        <div className="mb-4 rounded-md border border-destructive/30 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {error ? (
+        <InlineNotification
+          kind="error"
+          lowContrast
+          hideCloseButton
+          title="Unable to load this directory"
+          subtitle={error}
+        />
+      ) : null}
 
-      <div className="overflow-hidden rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead className="w-28">Size</TableHead>
-              <TableHead className="w-44">Modified</TableHead>
-              <TableHead className="w-80 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+      <div className="wfm-table-wrap">
+        <TableContainer
+          title={currentPath}
+          description={`${visibleEntries.length} visible item(s)`}
+        >
+          <Table size="lg" useZebraStyles={false}>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
-                  Loading…
-                </TableCell>
+                <TableHeader>Name</TableHeader>
+                <TableHeader>Size</TableHeader>
+                <TableHeader>Modified</TableHeader>
+                <TableHeader>Actions</TableHeader>
               </TableRow>
-            ) : visibleEntries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
-                  This folder is empty.
-                </TableCell>
-              </TableRow>
-            ) : (
-              visibleEntries.map((entry) => (
-                <TableRow key={entry.path}>
-                  <TableCell>
-                    <button
-                      className="flex max-w-full items-center gap-2 text-left hover:underline"
-                      onClick={() => void openEntry(entry)}
-                    >
-                      {entry.kind === "directory" ? (
-                        <Folder className="h-4 w-4 shrink-0" />
-                      ) : (
-                        <FileIcon className="h-4 w-4 shrink-0" />
-                      )}
-                      <span className="truncate">{entry.name}</span>
-                    </button>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {entry.kind === "file" ? formatBytes(entry.size) : "—"}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatDate(entry.modifiedAt)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      {entry.kind === "file" && (
-                        <Button size="sm" variant="ghost" onClick={() => void download(entry)}>
-                          <Download className="mr-1 h-3.5 w-3.5" />
-                          Download
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setRenameEntry(entry);
-                          setRenameName(entry.name);
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setTransfer({ kind: "copy", entry });
-                          setDestination(currentPath);
-                        }}
-                      >
-                        <Copy className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setTransfer({ kind: "move", entry });
-                          setDestination(currentPath);
-                        }}
-                      >
-                        <MoveRight className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => setDeleteEntry(entry)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <InlineLoading description="Loading directory…" />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : visibleEntries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4}>This folder is empty.</TableCell>
+                </TableRow>
+              ) : (
+                visibleEntries.map((entry) => (
+                  <TableRow key={entry.path}>
+                    <TableCell>
+                      <Button
+                        kind="ghost"
+                        size="sm"
+                        renderIcon={entry.kind === "directory" ? Folder : Document}
+                        onClick={() => void openEntry(entry)}
+                      >
+                        {entry.name}
+                      </Button>
+                    </TableCell>
+                    <TableCell>{entry.kind === "file" ? formatBytes(entry.size) : "—"}</TableCell>
+                    <TableCell>{formatDate(entry.modifiedAt)}</TableCell>
+                    <TableCell>
+                      <div className="wfm-table-actions">
+                        {entry.kind === "file" ? (
+                          <Button
+                            kind="ghost"
+                            size="sm"
+                            renderIcon={Download}
+                            onClick={() => void download(entry)}
+                          >
+                            Download
+                          </Button>
+                        ) : null}
+                        <Button
+                          kind="ghost"
+                          size="sm"
+                          renderIcon={Edit}
+                          onClick={() => {
+                            setRenameEntry(entry);
+                            setRenameName(entry.name);
+                          }}
+                        >
+                          Rename
+                        </Button>
+                        <Button
+                          kind="ghost"
+                          size="sm"
+                          renderIcon={Copy}
+                          onClick={() => {
+                            setTransfer({ kind: "copy", entry });
+                            setDestination(currentPath);
+                          }}
+                        >
+                          Copy
+                        </Button>
+                        <Button
+                          kind="ghost"
+                          size="sm"
+                          renderIcon={Move}
+                          onClick={() => {
+                            setTransfer({ kind: "move", entry });
+                            setDestination(currentPath);
+                          }}
+                        >
+                          Move
+                        </Button>
+                        <Button
+                          kind="danger--ghost"
+                          size="sm"
+                          renderIcon={TrashCan}
+                          onClick={() => setDeleteEntry(entry)}
+                        >
+                          Trash
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
 
-      <Dialog open={Boolean(createKind)} onOpenChange={(open) => !open && setCreateKind(null)}>
-        <DialogContent size="sm">
-          <DialogHeader>
-            <DialogTitle>Create {createKind === "file" ? "file" : "folder"}</DialogTitle>
-          </DialogHeader>
-          <Input
-            autoFocus
-            value={createName}
-            onChange={(event) => setCreateName(event.target.value)}
-            placeholder="Name"
-          />
-          <DialogFooter>
-            <Button onClick={() => void create()} disabled={!createName.trim()}>
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        open={Boolean(createKind)}
+        size="sm"
+        modalHeading={`Create ${createKind === "file" ? "file" : "folder"}`}
+        primaryButtonText="Create"
+        secondaryButtonText="Cancel"
+        primaryButtonDisabled={!createName.trim()}
+        selectorPrimaryFocus="#create-name"
+        onRequestClose={() => setCreateKind(null)}
+        onRequestSubmit={() => void create()}
+      >
+        <TextInput
+          id="create-name"
+          labelText="Name"
+          value={createName}
+          onChange={(event) => setCreateName(event.target.value)}
+        />
+      </Modal>
 
-      <Dialog open={Boolean(renameEntry)} onOpenChange={(open) => !open && setRenameEntry(null)}>
-        <DialogContent size="sm">
-          <DialogHeader>
-            <DialogTitle>Rename</DialogTitle>
-          </DialogHeader>
-          <Input
-            autoFocus
-            value={renameName}
-            onChange={(event) => setRenameName(event.target.value)}
-          />
-          <DialogFooter>
-            <Button onClick={() => void rename()} disabled={!renameName.trim()}>
-              Rename
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Modal
+        open={Boolean(renameEntry)}
+        size="sm"
+        modalHeading="Rename item"
+        primaryButtonText="Rename"
+        secondaryButtonText="Cancel"
+        primaryButtonDisabled={!renameName.trim()}
+        selectorPrimaryFocus="#rename-name"
+        onRequestClose={() => setRenameEntry(null)}
+        onRequestSubmit={() => void rename()}
+      >
+        <TextInput
+          id="rename-name"
+          labelText="New name"
+          value={renameName}
+          onChange={(event) => setRenameName(event.target.value)}
+        />
+      </Modal>
 
-      <Dialog open={Boolean(transfer)} onOpenChange={(open) => !open && setTransfer(null)}>
-        <DialogContent size="sm">
-          <DialogHeader>
-            <DialogTitle>{transfer?.kind === "copy" ? "Copy" : "Move"}</DialogTitle>
-            <DialogDescription>Enter the destination directory.</DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
+      <Modal
+        open={Boolean(transfer)}
+        size="sm"
+        modalHeading={transfer?.kind === "copy" ? "Copy item" : "Move item"}
+        primaryButtonText={transfer?.kind === "copy" ? "Copy" : "Move"}
+        secondaryButtonText="Cancel"
+        primaryButtonDisabled={!destination.trim()}
+        selectorPrimaryFocus="#destination-path"
+        onRequestClose={() => setTransfer(null)}
+        onRequestSubmit={() => void transferEntry()}
+      >
+        <div className="wfm-modal-stack">
+          <p className="wfm-form-helper">Enter the destination directory.</p>
+          <TextInput
+            id="destination-path"
+            labelText="Destination"
             value={destination}
             onChange={(event) => setDestination(event.target.value)}
-            className="font-mono"
           />
-          <DialogFooter>
-            <Button onClick={() => void transferEntry()} disabled={!destination.trim()}>
-              {transfer?.kind === "copy" ? "Copy" : "Move"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </Modal>
 
-      <Dialog open={Boolean(previewEntry)} onOpenChange={(open) => !open && setPreviewEntry(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{previewEntry?.name}</DialogTitle>
-            <DialogDescription>
-              Simple text editor. Binary or oversized files are not opened here.
-            </DialogDescription>
-          </DialogHeader>
-          {previewLoading ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">Loading…</div>
-          ) : (
-            <textarea
-              className="min-h-[55vh] w-full resize-y rounded-md border bg-background p-3 font-mono text-sm outline-none"
-              value={editorContent}
-              onChange={(event) => setEditorContent(event.target.value)}
-            />
-          )}
-          <DialogFooter>
-            <Button onClick={() => void save()} disabled={saving || previewLoading}>
-              <Save className="mr-2 h-4 w-4" />
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
-        open={Boolean(deleteEntry)}
-        onOpenChange={(open) => !open && setDeleteEntry(null)}
+      <Modal
+        open={Boolean(previewEntry)}
+        size="lg"
+        hasScrollingContent
+        modalHeading={previewEntry?.name || "File editor"}
+        modalLabel={previewEntry?.path}
+        primaryButtonText={saving ? "Saving…" : "Save"}
+        secondaryButtonText="Close"
+        primaryButtonDisabled={saving || previewLoading}
+        onRequestClose={() => setPreviewEntry(null)}
+        onRequestSubmit={() => void save()}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Move to trash?</AlertDialogTitle>
-            <AlertDialogDescription>{deleteEntry?.path}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void remove()}>Move to trash</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {previewLoading ? (
+          <InlineLoading description="Loading file…" />
+        ) : (
+          <TextArea
+            id="file-editor"
+            className="wfm-editor-textarea"
+            labelText="File contents"
+            rows={18}
+            value={editorContent}
+            onChange={(event) => setEditorContent(event.target.value)}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteEntry)}
+        danger
+        size="sm"
+        modalHeading="Move this item to trash?"
+        modalLabel={deleteEntry?.path}
+        primaryButtonText="Move to trash"
+        secondaryButtonText="Cancel"
+        onRequestClose={() => setDeleteEntry(null)}
+        onRequestSubmit={() => void remove()}
+      >
+        The item can be restored later from Trash until it is permanently deleted.
+      </Modal>
+    </section>
   );
 }

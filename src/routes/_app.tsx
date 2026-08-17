@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { Content, HeaderContainer, Loading } from "@carbon/react";
 import { useEffect } from "react";
 import { AppSidebar } from "@/components/app-shell/sidebar";
 import { ConnectionBanner, Topbar } from "@/components/app-shell/topbar";
@@ -19,27 +20,24 @@ function AppLayout() {
   }, [auth.loading, auth.user, auth.configured, navigate]);
 
   if (auth.loading || !auth.user) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">
-        Loading wFileManager…
-      </div>
-    );
+    return <Loading description="Loading wFileManager" withOverlay />;
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <div className="hidden lg:flex">
-        <AppSidebar />
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
-        <div className="flex min-w-0 flex-1 flex-col" style={{ paddingTop: "3rem" }}>
-          <ConnectionBanner />
-          <main className="flex min-w-0 flex-1 flex-col" style={{ paddingTop: "1rem" }}>
+    <HeaderContainer
+      render={({ isSideNavExpanded, onClickSideNavExpand }) => (
+        <>
+          <Topbar expanded={isSideNavExpanded} onToggle={onClickSideNavExpand} />
+          <AppSidebar
+            expanded={isSideNavExpanded}
+            onOverlayClick={isSideNavExpanded ? onClickSideNavExpand : undefined}
+          />
+          <Content id="main-content" className="wfm-app-content">
+            <ConnectionBanner />
             <Outlet />
-          </main>
-        </div>
-      </div>
-    </div>
+          </Content>
+        </>
+      )}
+    />
   );
 }

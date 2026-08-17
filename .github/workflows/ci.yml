@@ -29,6 +29,10 @@ jobs:
           node-version: 24
       - run: mkdir -p "$CI_LOG_DIR"
       - run: bun install --frozen-lockfile
+      - name: Carbon conformance
+        id: carbon
+        continue-on-error: true
+        run: bun run audit:carbon >"$CI_LOG_DIR/carbon.log" 2>&1
       - name: Lint
         id: lint
         continue-on-error: true
@@ -63,11 +67,13 @@ jobs:
       - name: Enforce results
         if: always()
         run: |
+          cat "$CI_LOG_DIR/carbon.log" || true
           cat "$CI_LOG_DIR/lint.log" || true
           cat "$CI_LOG_DIR/build.log" || true
           cat "$CI_LOG_DIR/typecheck.log" || true
           cat "$CI_LOG_DIR/tests.log" || true
           cat "$CI_LOG_DIR/shell.log" || true
+          [[ "${{ steps.carbon.outcome }}" == "success" ]]
           [[ "${{ steps.lint.outcome }}" == "success" ]]
           [[ "${{ steps.build.outcome }}" == "success" ]]
           [[ "${{ steps.typecheck.outcome }}" == "success" ]]

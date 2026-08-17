@@ -12,37 +12,49 @@ test("overview IPv4 detection never depends solely on libuv network interfaces",
   expect(runtime).toContain("ipv4,");
 });
 
-test("application content has an explicit fixed-header offset", async () => {
+test("application shell delegates navigation and fixed-header behavior to Carbon", async () => {
   const layout = await read("src/routes/_app.tsx");
   const topbar = await read("src/components/app-shell/topbar.tsx");
-  expect(layout).toContain('style={{ paddingTop: "3rem" }}');
-  expect(layout).toContain('style={{ paddingTop: "1rem" }}');
-  expect(topbar).toContain("style={{ marginTop: 0 }}");
+  const sidebar = await read("src/components/app-shell/sidebar.tsx");
+  const styles = await read("src/styles.scss");
+
+  expect(layout).toContain("HeaderContainer");
+  expect(layout).toContain('<Content id="main-content" className="wfm-app-content">');
+  expect(topbar).toContain("SkipToContent");
+  expect(sidebar).toContain("isRail");
+  expect(styles).toContain("min-block-size: calc(100dvh - 3rem)");
+  expect(styles).toContain("margin-inline-start: 3rem");
 });
 
-test("Carbon dialog receives direct ModalHeader and ModalFooter children", async () => {
-  const dialog = await read("src/components/ui/dialog.tsx");
-  expect(dialog).toContain("<ModalHeader");
-  expect(dialog).toContain("<ModalFooter");
-  expect(dialog).toContain("onClose={() => context.onOpenChange?.(false)}");
-  expect(dialog).toContain("header.props.children");
-  expect(dialog).toContain("footer.props.children");
+test("visible dialogs use Carbon Modal directly instead of a parallel dialog system", async () => {
+  const explorer = await read("src/routes/_app.explorer.tsx");
+  const trash = await read("src/routes/_app.trash.tsx");
+  const carbonGuide = await read("docs/CARBON.md");
+
+  expect(explorer).toContain("Modal");
+  expect(trash).toContain("Modal");
+  expect(explorer).not.toContain("@/components/ui/dialog");
+  expect(trash).not.toContain("@/components/ui/dialog");
+  expect(carbonGuide).toContain("Carbon `HeaderContainer`");
 });
 
-test("long file operations keep a visible toast until success or failure", async () => {
+test("long file operations report progress to Carbon-owned frontend feedback", async () => {
   const api = await read("src/lib/local-api.ts");
-  expect(api).toContain("withOperationToast");
-  expect(api).toContain("duration: Infinity");
-  expect(api).toContain("toast.success(`${label} completed`");
-  expect(api).toContain("toast.error(errorMessage(error, `${label} failed`)");
-  expect(api).toContain('"Move to Trash started…", "Moved to Trash"');
-  expect(api).toContain('"Saving file…", "File saved"');
-  expect(api).toContain("Upload completed");
+  const explorer = await read("src/routes/_app.explorer.tsx");
+  const notifications = await read("src/lib/notifications.tsx");
+
+  expect(api).toContain("OperationProgressCallback");
+  expect(api).toContain("onProgress?.(current.job)");
+  expect(api).not.toContain('from "sonner"');
+  expect(explorer).toContain("timeout: 0");
+  expect(explorer).toContain("localApi.copy");
+  expect(explorer).toContain("localApi.move");
+  expect(notifications).toContain("ToastNotification");
 });
 
 test("About shows GitHub as installation metadata", async () => {
   const about = await read("src/routes/_app.about.tsx");
-  expect(about).toContain('<span className="text-muted-foreground">GitHub</span>');
-  expect(about).toContain("KmerHosting/wfilemanager");
-  expect(about).not.toContain('aria-label="Open wFileManager on GitHub"');
+  expect(about).toContain("<dt>Source</dt>");
+  expect(about).toContain("https://github.com/KmerHosting/wfilemanager");
+  expect(about).toContain("GitHub");
 });
