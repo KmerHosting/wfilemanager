@@ -49,17 +49,19 @@ export interface ProgressState {
   detail?: string;
 }
 
+export type OperationJobStatus =
+  | "queued"
+  | "running"
+  | "cancelling"
+  | "cancelled"
+  | "completed"
+  | "failed"
+  | "interrupted";
+
 export interface OperationJob {
   id: string;
   operation: "copy" | "move" | "delete";
-  status:
-    | "queued"
-    | "running"
-    | "cancelling"
-    | "cancelled"
-    | "completed"
-    | "failed"
-    | "interrupted";
+  status: OperationJobStatus;
   progress: number;
   processedBytes: number;
   totalBytes: number;
