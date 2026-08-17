@@ -39,9 +39,18 @@ export function Topbar() {
       if (themeOpen && !themePopoverRef.current?.contains(target)) setThemeOpen(false);
       if (accountOpen && !accountPopoverRef.current?.contains(target)) setAccountOpen(false);
     };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setThemeOpen(false);
+      setAccountOpen(false);
+    };
 
     window.addEventListener("pointerdown", closeOnOutsidePointer, true);
-    return () => window.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => {
+      window.removeEventListener("pointerdown", closeOnOutsidePointer, true);
+      window.removeEventListener("keydown", closeOnEscape, true);
+    };
   }, [themeOpen, accountOpen]);
 
   return (
@@ -201,7 +210,10 @@ export function ConnectionBanner() {
 
   if (state === "connected") return null;
   return (
-    <div className={`wfm-connection-banner wfm-connection-banner--${state}`}>
+    <div
+      className={`wfm-connection-banner wfm-connection-banner--${state}`}
+      style={{ marginTop: 0 }}
+    >
       <span className="wfm-connection-banner__dot" />
       <span>{state === "checking" ? "Checking local service…" : "Local service unavailable."}</span>
     </div>
