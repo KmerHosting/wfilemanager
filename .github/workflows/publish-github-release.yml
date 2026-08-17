@@ -84,12 +84,23 @@ jobs:
         run: |
           set -Eeuo pipefail
           ARCHIVE="wfilemanager-$VERSION.tar.gz"
-          ROOT="wFileManager-$VERSION"
-          mkdir -p "$ROOT"
-          cp -a .output "$ROOT/.output"
-          cp package.json "$ROOT/package.json"
-          cp -a deploy "$ROOT/deploy"
-          tar -czf "$ARCHIVE" "$ROOT"
+
+          # Keep .output at archive depth 1. The production updater intentionally
+          # detects .output/server/index.mjs within maxdepth 3 after extraction.
+          tar -czf "$ARCHIVE" .output package.json deploy
+
+          # Regression guard: validate the archive with the same discovery rule
+          # used by deploy/update.sh before publishing anything to users.
+          CHECK_ROOT="$(mktemp -d)"
+          trap 'rm -rf "$CHECK_ROOT"' EXIT
+          tar -xzf "$ARCHIVE" -C "$CHECK_ROOT"
+          PROJECT_DIR="$(find "$CHECK_ROOT" -maxdepth 3 -type f -path '*/.output/server/index.mjs' -printf '%h\n' | sed 's#/.output/server$##' | head -n1)"
+          test -n "$PROJECT_DIR"
+          test -f "$PROJECT_DIR/.output/server/index.mjs"
+          test -f "$PROJECT_DIR/package.json"
+          test -f "$PROJECT_DIR/deploy/wfilemanager-reset-admin-password"
+          test -f "$PROJECT_DIR/deploy/uninstall.sh"
+
           SHA256="$(sha256sum "$ARCHIVE" | awk '{print $1}')"
           SIZE="$(stat -c%s "$ARCHIVE")"
           printf '%s  %s\n' "$SHA256" "$ARCHIVE" > SHA256SUMS
@@ -112,6 +123,7 @@ jobs:
           - Local SQLite data only.
           - No server-side Bun install or application compilation.
           - Verified atomic updates with rollback.
+          - Fixes prebuilt archive discovery during fresh installation.
 
           SHA-256: \`$SHA256\`
           Size: \`$SIZE bytes\`

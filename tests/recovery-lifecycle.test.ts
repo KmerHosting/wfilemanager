@@ -35,13 +35,18 @@ test("updater only verifies extracts switches restarts and health checks prebuil
   expect(updater).not.toContain("python3");
 });
 
-test("GitHub release workflow builds once without obsolete native toolchain", async () => {
+test("GitHub release workflow builds once and publishes an updater-compatible archive", async () => {
   const workflow = await read(".github/workflows/publish-github-release.yml");
 
   expect(workflow).toContain("Build production runtime");
   expect(workflow).toContain("bun run build");
-  expect(workflow).toContain('cp -a .output "$ROOT/.output"');
+  expect(workflow).toContain('tar -czf "$ARCHIVE" .output package.json deploy');
+  expect(workflow).toContain('find "$CHECK_ROOT" -maxdepth 3');
+  expect(workflow).toContain('test -f "$PROJECT_DIR/.output/server/index.mjs"');
+  expect(workflow).toContain('test -f "$PROJECT_DIR/package.json"');
+  expect(workflow).toContain('test -f "$PROJECT_DIR/deploy/wfilemanager-reset-admin-password"');
   expect(workflow).toContain("Prebuilt Linux x64 runtime");
+  expect(workflow).not.toContain('cp -a .output "$ROOT/.output"');
   expect(workflow).not.toContain("git archive --format=tar.gz");
   expect(workflow).not.toContain("Install native build tools");
   expect(workflow).not.toContain("build-essential");
