@@ -18,6 +18,7 @@ export interface WFileManagerInstance {
 
 export interface SetupPayload {
   password: string;
+  setupCode: string;
 }
 
 export interface InstanceStatusResponse {
