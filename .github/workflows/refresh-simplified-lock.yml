@@ -2,14 +2,14 @@ name: Refresh simplified lockfile
 
 on:
   push:
-    branches: [release/0.11-simplified]
+    branches:
+      - release/0.11-simplified
 
 permissions:
   contents: write
 
 jobs:
   lockfile:
-    if: ${{ !contains(github.event.head_commit.message, 'chore: refresh bun lock') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
