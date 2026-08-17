@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Password } from "@carbon/icons-react";
-import { Button, CodeSnippet, InlineNotification, PasswordInput, Tile } from "@carbon/react";
+import {
+  Button,
+  CodeSnippet,
+  InlineNotification,
+  Layer,
+  PasswordInput,
+  Tile,
+} from "@carbon/react";
 import {
   ADMIN_PASSWORD_POLICY_TEXT,
   administratorPasswordError,
@@ -57,34 +64,42 @@ function Administrator() {
 
       <Tile className="wfm-panel-tile wfm-account-form">
         <h2 className="wfm-section-title">Change password</h2>
-        <div className="wfm-account-form__fields">
-          <PasswordInput
-            id="current-password"
-            labelText="Current password"
-            autoComplete="current-password"
-            value={password.current}
-            onChange={(event) => setPassword((current) => ({ ...current, current: event.target.value }))}
-          />
-          <PasswordInput
-            id="new-password"
-            labelText="New password"
-            autoComplete="new-password"
-            helperText={ADMIN_PASSWORD_POLICY_TEXT}
-            invalid={Boolean(policyError)}
-            invalidText={policyError || undefined}
-            value={password.next}
-            onChange={(event) => setPassword((current) => ({ ...current, next: event.target.value }))}
-          />
-          <PasswordInput
-            id="confirm-password"
-            labelText="Confirm password"
-            autoComplete="new-password"
-            invalid={Boolean(mismatch)}
-            invalidText={mismatch ? "Passwords do not match." : undefined}
-            value={password.confirm}
-            onChange={(event) => setPassword((current) => ({ ...current, confirm: event.target.value }))}
-          />
-        </div>
+        <Layer>
+          <div className="wfm-account-form__fields">
+            <PasswordInput
+              id="current-password"
+              labelText="Current password"
+              autoComplete="current-password"
+              value={password.current}
+              onChange={(event) =>
+                setPassword((current) => ({ ...current, current: event.target.value }))
+              }
+            />
+            <PasswordInput
+              id="new-password"
+              labelText="New password"
+              autoComplete="new-password"
+              helperText={ADMIN_PASSWORD_POLICY_TEXT}
+              invalid={Boolean(policyError)}
+              invalidText={policyError || undefined}
+              value={password.next}
+              onChange={(event) =>
+                setPassword((current) => ({ ...current, next: event.target.value }))
+              }
+            />
+            <PasswordInput
+              id="confirm-password"
+              labelText="Confirm password"
+              autoComplete="new-password"
+              invalid={Boolean(mismatch)}
+              invalidText={mismatch ? "Passwords do not match." : undefined}
+              value={password.confirm}
+              onChange={(event) =>
+                setPassword((current) => ({ ...current, confirm: event.target.value }))
+              }
+            />
+          </div>
+        </Layer>
         <div className="wfm-update-actions">
           <Button
             renderIcon={Password}
