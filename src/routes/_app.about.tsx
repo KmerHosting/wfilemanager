@@ -1,15 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, Renew, Reset } from "@carbon/icons-react";
-import {
-  Button,
-  Column,
-  Grid,
-  InlineLoading,
-  InlineNotification,
-  Tag,
-  Tile,
-} from "@carbon/react";
+import { Download, LogoGithub, Renew, Reset } from "@carbon/icons-react";
+import { Button, Column, Grid, InlineLoading, InlineNotification, Tag, Tile } from "@carbon/react";
 import { formatBytes } from "@/lib/format";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
 import { useNotifications } from "@/lib/notifications";
@@ -98,7 +90,10 @@ function About() {
     notify({
       id: noticeId,
       kind: "warning",
-      title: action === "update" ? "Update is taking longer than expected" : "Rollback is taking longer than expected",
+      title:
+        action === "update"
+          ? "Update is taking longer than expected"
+          : "Rollback is taking longer than expected",
       subtitle: "Check the updater service from the server shell.",
       timeout: 0,
     });
@@ -159,7 +154,8 @@ function About() {
             About & updates
           </h1>
           <p className="wfm-page__description">
-            Local installation details and verified prebuilt updates with atomic activation and rollback.
+            Local installation details and verified prebuilt updates with atomic activation and
+            rollback.
           </p>
         </div>
         <Button
@@ -193,6 +189,21 @@ function About() {
               <div className="wfm-definition-list__row">
                 <dt>Interface</dt>
                 <dd>IBM Carbon Design System</dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>Source</dt>
+                <dd>
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    renderIcon={LogoGithub}
+                    href="https://github.com/KmerHosting/wfilemanager"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    GitHub
+                  </Button>
+                </dd>
               </div>
               <div className="wfm-definition-list__row">
                 <dt>License</dt>

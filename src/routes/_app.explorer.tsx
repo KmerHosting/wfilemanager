@@ -11,7 +11,6 @@ import {
   Folder,
   Move,
   Renew,
-  Save,
   TrashCan,
   Upload,
 } from "@carbon/icons-react";
@@ -33,7 +32,12 @@ import {
   TextInput,
 } from "@carbon/react";
 import { formatBytes, formatDate } from "@/lib/format";
-import { localApi, type LocalFileEntry, type ProgressState } from "@/lib/local-api";
+import {
+  localApi,
+  type LocalFileEntry,
+  type OperationJob,
+  type ProgressState,
+} from "@/lib/local-api";
 import { useNotifications } from "@/lib/notifications";
 
 const searchSchema = z.object({
@@ -216,21 +220,45 @@ function Explorer() {
 
   const transferEntry = async () => {
     if (!transfer || !destination.trim()) return;
-    try {
-      if (transfer.kind === "copy") await localApi.copy(transfer.entry.path, destination.trim());
-      else await localApi.move(transfer.entry.path, destination.trim());
+    const action = transfer.kind === "copy" ? "Copy" : "Move";
+    const noticeId = notify({
+      kind: "info",
+      title: `${action} started`,
+      subtitle: transfer.entry.name,
+      timeout: 0,
+    });
+    const report = (job: OperationJob) => {
       notify({
+        id: noticeId,
+        kind: "info",
+        title: `${action} in progress · ${Math.max(0, Math.min(100, job.progress))}%`,
+        subtitle: job.currentItem || transfer.entry.name,
+        timeout: 0,
+      });
+    };
+
+    try {
+      if (transfer.kind === "copy") {
+        await localApi.copy(transfer.entry.path, destination.trim(), report);
+      } else {
+        await localApi.move(transfer.entry.path, destination.trim(), report);
+      }
+      notify({
+        id: noticeId,
         kind: "success",
-        title: transfer.kind === "copy" ? "Copied" : "Moved",
+        title: `${action} completed`,
         subtitle: transfer.entry.name,
+        timeout: 3500,
       });
       setTransfer(null);
       await load();
     } catch (cause) {
       notify({
+        id: noticeId,
         kind: "error",
-        title: "File operation failed",
+        title: `${action} failed`,
         subtitle: cause instanceof Error ? cause.message : "The operation did not complete.",
+        timeout: 0,
       });
     }
   };
@@ -261,6 +289,7 @@ function Explorer() {
   const download = async (entry: LocalFileEntry) => {
     try {
       await localApi.download(entry.path, entry.name);
+      notify({ kind: "success", title: "Download started", subtitle: entry.name });
     } catch (cause) {
       notify({
         kind: "error",
@@ -399,7 +428,10 @@ function Explorer() {
       ) : null}
 
       <div className="wfm-table-wrap">
-        <TableContainer title={currentPath} description={`${visibleEntries.length} visible item(s)`}>
+        <TableContainer
+          title={currentPath}
+          description={`${visibleEntries.length} visible item(s)`}
+        >
           <Table size="lg" useZebraStyles={false}>
             <TableHead>
               <TableRow>

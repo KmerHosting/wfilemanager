@@ -3,7 +3,13 @@ import { extname, join } from "node:path";
 
 const root = new URL("../", import.meta.url);
 const uiRoots = ["src/routes", "src/components/app-shell", "src/components/auth"];
-const explicitFiles = ["src/carbon.scss", "src/styles.scss", "src/lib/notifications.tsx", "src/lib/theme.tsx"];
+const explicitFiles = [
+  "src/carbon.scss",
+  "src/styles.scss",
+  "src/lib/local-api.ts",
+  "src/lib/notifications.tsx",
+  "src/lib/theme.tsx",
+];
 const extensions = new Set([".ts", ".tsx", ".scss", ".css"]);
 const violations = [];
 
@@ -18,7 +24,12 @@ async function walk(path) {
   return files;
 }
 
-const files = [...new Set([...(await Promise.all(uiRoots.map((path) => walk(`${path}/`)))).flat(), ...explicitFiles])];
+const files = [
+  ...new Set([
+    ...(await Promise.all(uiRoots.map((path) => walk(`${path}/`)))).flat(),
+    ...explicitFiles,
+  ]),
+];
 
 for (const file of files) {
   const content = await readFile(new URL(file, root), "utf8");
@@ -48,12 +59,14 @@ if (/#[0-9a-fA-F]{3,8}\b/.test(styles)) {
 }
 
 const carbon = await readFile(new URL("src/carbon.scss", root), "utf8");
-for (const required of ["@use \"@carbon/react\"", "themes.$white", "themes.$g100", "theme.theme"]) {
+for (const required of ['@use "@carbon/react"', "themes.$white", "themes.$g100", "theme.theme"]) {
   if (!carbon.includes(required)) violations.push(`src/carbon.scss: missing ${required}`);
 }
 
 const routeRoot = await readFile(new URL("src/routes/__root.tsx", root), "utf8");
-if (!routeRoot.includes("NotificationProvider")) violations.push("root route: Carbon notification provider not mounted");
+if (!routeRoot.includes("NotificationProvider")) {
+  violations.push("root route: Carbon notification provider not mounted");
+}
 if (routeRoot.includes("fonts.googleapis.com") || routeRoot.includes("fonts.gstatic.com")) {
   violations.push("root route: external Google font dependency detected");
 }
@@ -68,6 +81,11 @@ if (!sidebar.includes("isRail") || !sidebar.includes("SideNav")) {
   violations.push("side navigation: Carbon rail SideNav not used");
 }
 
+const localApi = await readFile(new URL("src/lib/local-api.ts", root), "utf8");
+if (localApi.includes("sonner") || localApi.includes("toast.")) {
+  violations.push("local API: visual feedback must be owned by Carbon frontend notifications");
+}
+
 const visibleRoutes = [
   "src/routes/login.tsx",
   "src/routes/setup.tsx",
@@ -79,11 +97,15 @@ const visibleRoutes = [
 ];
 for (const file of visibleRoutes) {
   const content = await readFile(new URL(file, root), "utf8");
-  if (!content.includes("@carbon/react")) violations.push(`${file}: no @carbon/react component import`);
+  if (!content.includes("@carbon/react")) {
+    violations.push(`${file}: no @carbon/react component import`);
+  }
 }
 
 if (violations.length) {
-  console.error("Carbon conformance audit failed:\n" + violations.map((item) => `- ${item}`).join("\n"));
+  console.error(
+    "Carbon conformance audit failed:\n" + violations.map((item) => `- ${item}`).join("\n"),
+  );
   process.exit(1);
 }
 

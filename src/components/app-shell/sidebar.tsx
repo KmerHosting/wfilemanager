@@ -10,13 +10,13 @@ import {
   UserAvatar,
 } from "@carbon/icons-react";
 import { SideNav, SideNavDivider, SideNavItems, SideNavLink } from "@carbon/react";
-import type { ElementType } from "react";
+import type { ComponentType } from "react";
 
 type Item = {
   to?: string;
   href?: string;
   label: string;
-  icon: ElementType;
+  icon: ComponentType;
   newTab?: boolean;
 };
 
@@ -49,7 +49,10 @@ const RESOURCE_ITEMS: Item[] = [
 
 function NavLinks({ items, pathname }: { items: Item[]; pathname: string }) {
   const isActive = (to?: string) =>
-    Boolean(to && (to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`)));
+    Boolean(
+      to &&
+        (to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`)),
+    );
 
   return items.map((item) => {
     const href = item.to || item.href || "#";
