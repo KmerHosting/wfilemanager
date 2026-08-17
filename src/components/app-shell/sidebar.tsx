@@ -41,7 +41,7 @@ const NAV: { label: string; items: Item[] }[] = [
     label: "Resources",
     items: [
       {
-        href: "https://wfilemanager.kmerhosting.com/docs",
+        href: "https://kmerhosting.com/docs",
         label: "Documentation",
         icon: Book,
         newTab: true,
