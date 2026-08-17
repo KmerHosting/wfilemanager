@@ -7,14 +7,10 @@ import {
   changePassword,
   instanceInfo,
   isConfigured,
-  listSessions,
   login,
   logout,
-  profile,
-  revokeSessions,
   sessionUser,
   setup,
-  updateProfile,
   userResponse,
 } from "@/lib/server/admin-store";
 import {
@@ -97,21 +93,14 @@ export const Route = createFileRoute("/api/sqlite")({
           const url = new URL(request.url);
           const scope = url.searchParams.get("scope") || "auth";
           const action = url.searchParams.get("action") || "status";
-
           if (scope === "auth" && action === "status") {
-            return json({
-              configured: isConfigured(),
-              instance: isConfigured() ? instanceInfo() : undefined,
-            });
+            const configured = isConfigured();
+            return json({ configured, instance: configured ? instanceInfo() : undefined });
           }
-
-          const sessionToken = token(request);
-          const user = sessionUser(sessionToken);
-          if (scope === "auth" && action === "me")
+          if (scope === "auth" && action === "me") {
+            const user = sessionUser(token(request));
             return json({ user: userResponse(user), instance: instanceInfo() });
-          if (scope === "account" && action === "profile") return json(profile(user));
-          if (scope === "account" && action === "sessions")
-            return json(listSessions(user, sessionToken, request));
+          }
           return json({ error: "Unsupported single-admin API action." }, 404);
         } catch (error) {
           return errorResponse(error);
@@ -133,7 +122,7 @@ export const Route = createFileRoute("/api/sqlite")({
           if (scope === "auth" && action === "login") {
             assertLoginAllowed(request, "admin");
             try {
-              const result = login({ ...payload, login: payload.login || "admin" }, request);
+              const result = login(payload);
               recordLoginSuccess(request, "admin");
               return json(result);
             } catch (error) {
@@ -148,38 +137,6 @@ export const Route = createFileRoute("/api/sqlite")({
           if (scope === "auth" && action === "logout") return json(logout(sessionToken));
           if (scope === "account" && action === "password")
             return json(changePassword(user, payload, sessionToken));
-          return json({ error: "Unsupported single-admin API action." }, 404);
-        } catch (error) {
-          return errorResponse(error);
-        }
-      },
-
-      PATCH: async ({ request }) => {
-        try {
-          if (!sameOrigin(request)) return json({ error: "Cross-origin request rejected" }, 403);
-          const url = new URL(request.url);
-          const scope = url.searchParams.get("scope") || "auth";
-          const action = url.searchParams.get("action") || "";
-          const payload = await body(request);
-          const user = sessionUser(token(request));
-          if (scope === "account" && action === "profile") return json(updateProfile(user, payload));
-          return json({ error: "Unsupported single-admin API action." }, 404);
-        } catch (error) {
-          return errorResponse(error);
-        }
-      },
-
-      DELETE: async ({ request }) => {
-        try {
-          if (!sameOrigin(request)) return json({ error: "Cross-origin request rejected" }, 403);
-          const url = new URL(request.url);
-          const scope = url.searchParams.get("scope") || "auth";
-          const action = url.searchParams.get("action") || "";
-          const payload = await body(request);
-          const sessionToken = token(request);
-          const user = sessionUser(sessionToken);
-          if (scope === "account" && action === "sessions")
-            return json(revokeSessions(user, payload, sessionToken));
           return json({ error: "Unsupported single-admin API action." }, 404);
         } catch (error) {
           return errorResponse(error);
