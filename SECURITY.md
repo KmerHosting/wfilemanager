@@ -1,6 +1,7 @@
 # Security Policy
 
-wFileManager is a privileged Linux administration application. A successful exploit may expose files, credentials, terminal access or the complete server.
+wFileManager is a privileged Linux file-management application. The production service runs as
+`root`, so compromise of the application or administrator account may compromise the server.
 
 ## Supported versions
 
@@ -29,87 +30,102 @@ Suggested subject:
 SECURITY: short description
 ```
 
-Include the affected version, Ubuntu version, deployment type, impact, reproduction steps and sanitized logs. Do not send real passwords, tokens, private keys, customer files or production database exports.
-
-KmerHosting aims to acknowledge complete reports within 72 hours and coordinate remediation and disclosure. There is currently no formal paid bug-bounty program.
+Include the affected wFileManager version, Ubuntu version, impact, reproduction steps and sanitized
+logs. Never send real passwords, private keys, customer files or a production SQLite database.
 
 ## Important security areas
 
 Reports are especially relevant for:
 
-- authentication or permission bypass;
-- cross-user or cross-instance access;
-- command injection or unauthorized terminal access;
-- arbitrary file access, traversal or link attacks;
-- unsafe archive extraction;
-- session, password or recovery-token exposure;
+- administrator authentication bypass;
+- arbitrary filesystem access beyond the intended authenticated administrator boundary;
+- path traversal, symlink or race-condition attacks;
+- unsafe writes to `/proc`, `/sys`, `/dev` or `/run`;
+- session or password exposure;
 - update verification or rollback bypass;
-- persistent XSS in privileged pages;
-- unsafe access to `/proc`, `/sys`, `/dev` or `/run`;
-- weaknesses in authentication or application-state handling.
+- persistent XSS in authenticated pages;
+- CSRF or cross-origin request bypass;
+- unsafe handling of the local SQLite database.
 
-Expected administrator capabilities are not vulnerabilities by themselves. A report must show access beyond the user's intended permissions or a bypass of a security boundary.
+Expected filesystem access by the authenticated administrator is not a vulnerability by itself.
 
 ## Safe testing
 
-Test only systems and data you own or have explicit permission to test.
+Test only systems and data you own or have explicit permission to test. Do not interrupt production,
+perform destructive tests, cause resource exhaustion, deploy malware, use social engineering or
+publicly disclose an unpatched issue.
 
-Do not access other users' data, interrupt production, perform destructive tests, cause resource exhaustion, deploy malware, use social engineering or publicly disclose an unpatched issue. Stop testing if unexpected production access occurs.
+## Deployment
 
-## Deployment requirements
+wFileManager can run directly on port `1973` without a domain or reverse proxy. For regular Internet
+exposure, HTTPS is strongly recommended. You may provide it with Nginx, Caddy, Apache, Traefik,
+Cloudflare Tunnel, a load balancer or another trusted reverse proxy.
 
-Production installations must:
+Protect:
 
-- use a domain whose A record points to the server's public IPv4 address;
-- use HTTPS on the entire session;
-- keep port `1973` bound to localhost;
-- protect SSH, root access and `/etc/wfilemanager`;
-- restrict administrator accounts;
-- apply Ubuntu and wFileManager updates;
-- maintain independent server backups;
-- remove unused users and sessions.
+- SSH and root access;
+- `/etc/wfilemanager`;
+- `/var/lib/wfilemanager/wfilemanager.db`;
+- the administrator password;
+- server backups.
 
-The systemd service runs as `root` by design. Compromise of the application or an administrator account may compromise the entire server.
+Apply Ubuntu and wFileManager security updates promptly.
 
-## Authentication and application data
+## Authentication
 
-Administrator passwords require at least 12 alphanumeric characters, uppercase, lowercase and a number, with no identical consecutive characters. Validation must occur on the server.
+There is exactly one wFileManager account:
 
-There is no public password-reset page. Recovery is performed from a root shell:
+```text
+admin
+```
+
+There is no user-registration system, secondary user, role engine or browser password-recovery flow.
+Administrator passwords require at least 12 alphanumeric characters, uppercase, lowercase and a
+number, with no identical consecutive characters. Validation occurs on the server.
+
+Reset the administrator password from a root shell:
 
 ```bash
 sudo wfilemanager-reset-admin-password
 ```
 
-Recovery files must remain readable only by root. Password recovery revokes existing sessions.
+A shell password reset revokes all existing wFileManager sessions.
 
-wFileManager keeps application state under `/var/lib/wfilemanager`. The local store must retain WAL
-mode, foreign keys, parameterized queries and root-only file permissions. Files and other data on
-the server filesystem require a separate backup and recovery strategy.
+## Application data
+
+Application state is stored locally at:
+
+```text
+/var/lib/wfilemanager/wfilemanager.db
+```
+
+The SQLite file and `/etc/wfilemanager` must remain root-only. Files managed through File Explorer
+remain in their original filesystem locations and require an independent backup strategy.
 
 ## Filesystem and update protections
 
 Do not weaken:
 
 - path normalization and traversal rejection;
-- archive absolute-path, link and device-entry checks;
 - pseudo-filesystem write blocking;
-- authentication before local privileged operations;
-- command time and output limits;
+- authentication before privileged local operations;
+- safe handling of symlinks and destinations;
 - HTTPS release downloads;
-- SHA-256 and size verification;
-- versioned releases, health checks and rollback.
+- SHA-256 and archive-size verification;
+- versioned releases, atomic activation, health checks and rollback.
+
+Production clients install prebuilt releases and do not execute package-manager or application build
+steps during updates.
 
 ## Secrets
 
 Never commit or publish:
 
-- service-role keys;
-- root recovery tokens;
 - session tokens;
-- password hashes or salts;
+- administrator password hashes or salts;
 - `.env` files with secrets;
 - SQLite databases or production dumps;
 - SSH private keys or customer files.
 
-Rotate exposed secrets immediately. Removing a secret from the latest commit does not remove it from Git history, logs, caches or forks.
+Rotate exposed secrets immediately. Removing a secret from the latest commit does not remove it from
+Git history, logs, caches or forks.
