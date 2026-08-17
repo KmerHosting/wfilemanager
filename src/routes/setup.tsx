@@ -38,10 +38,7 @@ function Setup() {
     setSubmitting(true);
     setError(null);
     try {
-      await auth.setup({
-        displayName: "Administrator",
-        password,
-      });
+      await auth.setup({ password });
       toast.success("wFileManager is ready");
       nav({ to: "/explorer" });
     } catch (value) {
