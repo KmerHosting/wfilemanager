@@ -13,7 +13,7 @@ test("wFileManager has exactly one local administrator", async () => {
     read("src/routes/setup.tsx"),
   ]);
 
-  expect(auth).toContain("auth.login(pass, remember)");
+  expect(auth).toContain("wfilemanagerApi.login(password, remember)");
   expect(api).toContain('username: "admin"');
   expect(store).toContain("CREATE TABLE IF NOT EXISTS wfm_admin");
   expect(store).toContain("PRIMARY KEY CHECK (id = 1)");
