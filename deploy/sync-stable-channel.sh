@@ -8,6 +8,7 @@ BUCKET="${WFILEMANAGER_RELEASE_BUCKET:-releases.kmerhosting.com}"
 PREFIX="${WFILEMANAGER_RELEASE_PREFIX:-wfilemanager}"
 PUBLIC_BASE="$SUPABASE_URL/storage/v1/object/public/$BUCKET/$PREFIX"
 ASSET_DIR="${WFILEMANAGER_RELEASE_ASSET_DIR:-release-assets}"
+REPOSITORY="${GITHUB_REPOSITORY:-KmerHosting/wfilemanager}"
 
 command -v gh >/dev/null || { echo "gh is required" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
@@ -20,7 +21,7 @@ rm -rf "$ASSET_DIR"
 mkdir -p "$ASSET_DIR"
 
 gh release download "$TAG" \
-  --repo "${GITHUB_REPOSITORY:-toscani-tenekeu/wFileManager}" \
+  --repo "$REPOSITORY" \
   --pattern "wfilemanager-$VERSION.tar.gz" \
   --pattern "SHA256SUMS" \
   --dir "$ASSET_DIR"
@@ -39,14 +40,14 @@ trap 'rm -rf "$EXTRACT_DIR"' EXIT
 
 tar -xzf "$ARCHIVE" -C "$EXTRACT_DIR"
 PROJECT_ROOT="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 2 -type f -name package.json -printf '%h\n' | head -n1)"
-[[ -n "$PROJECT_ROOT" ]] || { echo "Unable to locate package.json in the canonical archive." >&2; exit 1; }
+[[ -n "$PROJECT_ROOT" ]] || { echo "Unable to locate package.json in the prebuilt runtime archive." >&2; exit 1; }
 
 for file in install.sh update.sh uninstall.sh wfilemanager.service 'wfilemanager-updater@.service'; do
   cp "$PROJECT_ROOT/deploy/$file" "$ASSET_DIR/$file"
 done
 
-PUBLISHED_AT="$(gh release view "$TAG" --repo "${GITHUB_REPOSITORY:-toscani-tenekeu/wFileManager}" --json publishedAt --jq '.publishedAt')"
-SOURCE_COMMIT="$(gh api "repos/${GITHUB_REPOSITORY:-toscani-tenekeu/wFileManager}/releases/tags/$TAG" --jq '.target_commitish')"
+PUBLISHED_AT="$(gh release view "$TAG" --repo "$REPOSITORY" --json publishedAt --jq '.publishedAt')"
+SOURCE_COMMIT="$(gh api "repos/$REPOSITORY/releases/tags/$TAG" --jq '.target_commitish')"
 
 sha() { sha256sum "$ASSET_DIR/$1" | awk '{print $1}'; }
 
@@ -59,7 +60,7 @@ jq -n \
   --argjson size "$SIZE" \
   --arg publishedAt "$PUBLISHED_AT" \
   --arg sourceCommit "$SOURCE_COMMIT" \
-  --arg githubUrl "https://github.com/toscani-tenekeu/wFileManager" \
+  --arg githubUrl "https://github.com/KmerHosting/wfilemanager" \
   --arg installUrl "$PUBLIC_BASE/install.sh" \
   --arg canonicalBaseUrl "https://releases.kmerhosting.com/wfilemanager" \
   --arg installer "$PUBLIC_BASE/install.sh" \
@@ -88,8 +89,8 @@ jq -n \
     installUrl: $installUrl,
     canonicalBaseUrl: $canonicalBaseUrl,
     notes: [
-      "Carbon Design System migration for the wFileManager application interface.",
-      "Verified stable release with automatic rollback after a failed health check."
+      "Single local administrator with SQLite-only application state.",
+      "Prebuilt verified stable release with automatic rollback after a failed health check."
     ],
     assets: {
       installer: $installer,
