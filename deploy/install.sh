@@ -6,6 +6,7 @@ PORT="${PORT:-1973}"
 APP_ROOT="/opt/wfilemanager"
 CONFIG_DIR="/etc/wfilemanager"
 ENV_FILE="$CONFIG_DIR/wfilemanager.env"
+SETUP_SECRET_FILE="$CONFIG_DIR/setup-secret.key"
 STATE_ROOT="/var/lib/wfilemanager"
 HEALTH_URL="http://127.0.0.1:$PORT/api/health"
 
@@ -44,6 +45,11 @@ INSTANCE_KEY="${WFILEMANAGER_INSTANCE_KEY:-$EXISTING_INSTANCE_KEY}"
 [[ -n "$INSTANCE_KEY" ]] || INSTANCE_KEY="wfm-$(openssl rand -hex 8)"
 
 umask 077
+if [[ ! -s "$SETUP_SECRET_FILE" ]]; then
+  openssl rand -hex 12 >"$SETUP_SECRET_FILE"
+fi
+chmod 600 "$SETUP_SECRET_FILE"
+
 cat >"$ENV_FILE" <<ENV
 PORT=$PORT
 HOST=0.0.0.0
@@ -52,6 +58,7 @@ VITE_WFILEMANAGER_DATABASE_MODE=sqlite
 VITE_WFILEMANAGER_INSTANCE_KEY=$INSTANCE_KEY
 WFILEMANAGER_INSTANCE_KEY=$INSTANCE_KEY
 WFILEMANAGER_SQLITE_PATH=$STATE_ROOT/wfilemanager.db
+WFILEMANAGER_SETUP_SECRET_FILE=$SETUP_SECRET_FILE
 WFILEMANAGER_ALLOW_PSEUDO_FS_WRITE=false
 WFILEMANAGER_TRASH_DIR=$STATE_ROOT/trash
 WFILEMANAGER_STATE_ROOT=$STATE_ROOT
@@ -154,7 +161,7 @@ echo "Account model: single administrator"
 echo "Database: $STATE_ROOT/wfilemanager.db"
 
 if [[ "$CONFIGURED" != "true" ]]; then
-  SETUP_CODE="$(cat /etc/wfilemanager/setup-secret.key 2>/dev/null || true)"
+  SETUP_CODE="$(cat "$SETUP_SECRET_FILE" 2>/dev/null || true)"
   echo
   echo "First-run setup code:"
   echo "  ${SETUP_CODE:-UNAVAILABLE - run sudo wfilemanager-doctor}"
