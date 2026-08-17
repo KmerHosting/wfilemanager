@@ -15,7 +15,7 @@ const allowedActions = {
   auth: new Set(["status", "me", "logout"]),
   login: new Set(["login"]),
   setup: new Set(["setup"]),
-  account: new Set(["profile", "password", "sessions"]),
+  account: new Set(["password"]),
 } as const;
 
 function json(body: unknown, status = 200, headers?: HeadersInit) {
@@ -84,7 +84,7 @@ function upstreamFor(scope: Scope, action: string) {
   return url;
 }
 
-async function sqliteSetupSecret() {
+async function setupSecret() {
   const secretFile =
     process.env.WFILEMANAGER_SETUP_SECRET_FILE || "/etc/wfilemanager/setup-secret.key";
   return (await readFile(secretFile, "utf8").catch(() => "")).trim();
@@ -100,7 +100,7 @@ async function requestBody(request: Request, scope: Scope) {
     throw Object.assign(new Error("The request body is too large"), { status: 413 });
   if (scope !== "setup") return bytes;
   const payload = JSON.parse(new TextDecoder().decode(bytes) || "{}") as Record<string, unknown>;
-  return JSON.stringify({ ...payload, setupSecret: await sqliteSetupSecret() });
+  return JSON.stringify({ ...payload, setupSecret: await setupSecret() });
 }
 
 async function proxy(request: Request) {
@@ -113,21 +113,16 @@ async function proxy(request: Request) {
     if (!["GET", "HEAD"].includes(request.method) && !sameOrigin(request))
       return json({ error: "Cross-origin request rejected" }, 403);
 
-    const upstreamUrl = upstreamFor(scopeValue, action);
     const headers = new Headers({ Accept: "application/json" });
     const sessionToken = cookieValue(request, COOKIE_NAME);
     if (sessionToken) headers.set("Authorization", `Bearer ${sessionToken}`);
-    for (const name of ["user-agent", "cf-connecting-ip", "x-forwarded-for", "x-real-ip"]) {
-      const value = request.headers.get(name);
-      if (value) headers.set(name, value);
-    }
     if (!["GET", "HEAD"].includes(request.method)) headers.set("Content-Type", "application/json");
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
     let upstream: Response;
     try {
-      upstream = await fetch(upstreamUrl, {
+      upstream = await fetch(upstreamFor(scopeValue, action), {
         method: request.method,
         headers,
         body: await requestBody(request, scopeValue),
@@ -153,7 +148,7 @@ async function proxy(request: Request) {
       responseHeaders.append("Set-Cookie", sessionCookie(request, payload.token, payload.expiresAt));
       delete payload.token;
     }
-    if (action === "logout" || upstream.status === 401 || payload.currentRevoked === true)
+    if (action === "logout" || upstream.status === 401)
       responseHeaders.append("Set-Cookie", clearCookie(request));
 
     return new Response(JSON.stringify(payload), {
@@ -171,8 +166,6 @@ export const Route = createFileRoute("/api/gateway")({
     handlers: {
       GET: ({ request }) => proxy(request),
       POST: ({ request }) => proxy(request),
-      PATCH: ({ request }) => proxy(request),
-      DELETE: ({ request }) => proxy(request),
     },
   },
 });
