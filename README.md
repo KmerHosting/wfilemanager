@@ -19,11 +19,11 @@ wFileManager gives one administrator direct browser access to the server filesys
 
 ### File Explorer
 
-![wFileManager File Explorer](https://cdn.jsdelivr.net/gh/KmerHosting/wfilemanager-website@main/assets/wfilemanager-file-explorer.webp)
+![wFileManager File Explorer](https://wfilemanager.kmerhosting.com/assets/wfilemanager-file-explorer.png)
 
 ### About & updates
 
-![wFileManager About and updates](https://cdn.jsdelivr.net/gh/KmerHosting/wfilemanager-website@main/assets/wfilemanager-about-updates.webp)
+![wFileManager About and updates](https://wfilemanager.kmerhosting.com/assets/wfilemanager-about-updates.png)
 
 ## Features
 
