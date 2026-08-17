@@ -33,10 +33,12 @@ function AppLayout() {
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <ConnectionBanner />
-        <main className="flex min-w-0 flex-1 flex-col">
-          <Outlet />
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col pt-12">
+          <ConnectionBanner />
+          <main className="flex min-w-0 flex-1 flex-col">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

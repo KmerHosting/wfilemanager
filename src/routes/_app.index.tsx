@@ -82,10 +82,8 @@ function Overview() {
               <strong>{summary?.architecture || "—"}</strong>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Readable locations</span>
-              <strong>
-                {summary ? `${summary.availableLocations}/${summary.totalCommonLocations}` : "—"}
-              </strong>
+              <span className="text-muted-foreground">Server IPv4</span>
+              <strong className="font-mono">{summary?.ipv4 || "—"}</strong>
             </div>
           </CardContent>
         </Card>

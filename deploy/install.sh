@@ -6,6 +6,7 @@ PORT="${PORT:-1973}"
 APP_ROOT="/opt/wfilemanager"
 CONFIG_DIR="/etc/wfilemanager"
 ENV_FILE="$CONFIG_DIR/wfilemanager.env"
+SETUP_SECRET_FILE="$CONFIG_DIR/setup-secret.key"
 STATE_ROOT="/var/lib/wfilemanager"
 HEALTH_URL="http://127.0.0.1:$PORT/api/health"
 
@@ -44,6 +45,11 @@ INSTANCE_KEY="${WFILEMANAGER_INSTANCE_KEY:-$EXISTING_INSTANCE_KEY}"
 [[ -n "$INSTANCE_KEY" ]] || INSTANCE_KEY="wfm-$(openssl rand -hex 8)"
 
 umask 077
+if [[ ! -s "$SETUP_SECRET_FILE" ]]; then
+  openssl rand -hex 12 >"$SETUP_SECRET_FILE"
+fi
+chmod 600 "$SETUP_SECRET_FILE"
+
 cat >"$ENV_FILE" <<ENV
 PORT=$PORT
 HOST=0.0.0.0
@@ -52,6 +58,7 @@ VITE_WFILEMANAGER_DATABASE_MODE=sqlite
 VITE_WFILEMANAGER_INSTANCE_KEY=$INSTANCE_KEY
 WFILEMANAGER_INSTANCE_KEY=$INSTANCE_KEY
 WFILEMANAGER_SQLITE_PATH=$STATE_ROOT/wfilemanager.db
+WFILEMANAGER_SETUP_SECRET_FILE=$SETUP_SECRET_FILE
 WFILEMANAGER_ALLOW_PSEUDO_FS_WRITE=false
 WFILEMANAGER_TRASH_DIR=$STATE_ROOT/trash
 WFILEMANAGER_STATE_ROOT=$STATE_ROOT
@@ -92,6 +99,10 @@ verify_asset "$UPDATER_SERVICE_URL" "$UPDATER_SERVICE_SHA" /etc/systemd/system/w
 verify_asset "$APP_SERVICE_URL" "$APP_SERVICE_SHA" /etc/systemd/system/wfilemanager.service
 chmod 750 /usr/local/lib/wfilemanager/update.sh
 
+# Remove obsolete service overrides left by pre-0.11 releases.
+rm -f /etc/systemd/system/wfilemanager.service.d/10-root-terminal.conf
+rmdir --ignore-fail-on-non-empty /etc/systemd/system/wfilemanager.service.d 2>/dev/null || true
+
 systemctl daemon-reload
 systemctl enable wfilemanager.service
 /usr/local/lib/wfilemanager/update.sh install
@@ -99,6 +110,9 @@ systemctl enable wfilemanager.service
 CURRENT_RELEASE="$(readlink -f "$APP_ROOT/current")"
 install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-reset-admin-password" /usr/local/sbin/wfilemanager-reset-admin-password
 install -m 700 "$CURRENT_RELEASE/deploy/uninstall.sh" /usr/local/sbin/wfilemanager-uninstall
+if [[ -f "$CURRENT_RELEASE/deploy/wfilemanager-doctor" ]]; then
+  install -m 700 "$CURRENT_RELEASE/deploy/wfilemanager-doctor" /usr/local/sbin/wfilemanager-doctor
+fi
 
 systemctl enable --now wfilemanager.service
 
@@ -115,19 +129,50 @@ if [[ "$READY" != "true" ]]; then
   exit 1
 fi
 
-SERVER_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+FIREWALL_STATUS="not managed by UFW"
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
+  if [[ "${WFILEMANAGER_OPEN_FIREWALL:-true}" == "true" ]]; then
+    ufw allow "$PORT/tcp" >/dev/null
+    FIREWALL_STATUS="UFW allows TCP $PORT"
+  else
+    FIREWALL_STATUS="UFW is active; automatic port opening was disabled"
+  fi
+fi
+
+SERVER_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1 || true)"
+[[ -n "$SERVER_IP" ]] || SERVER_IP="$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -m1 -E '^[0-9]+(\.[0-9]+){3}$' || true)"
 OPEN_HOST="${SERVER_IP:-SERVER_IP}"
-OPEN_PATH="setup"
-[[ -n "$EXISTING_INSTANCE_KEY" ]] && OPEN_PATH="login"
+
+AUTH_STATUS="$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/api/gateway?scope=auth&action=status" 2>/dev/null || printf '{}')"
+CONFIGURED="$(jq -r '.configured // false' <<<"$AUTH_STATUS" 2>/dev/null || echo false)"
+if [[ "$CONFIGURED" == "true" ]]; then
+  OPEN_PATH="login"
+else
+  OPEN_PATH="setup"
+fi
 
 echo
 echo "wFileManager installed successfully."
+echo "Application status: HEALTHY (local health check passed)"
+echo "Listening: 0.0.0.0:$PORT"
+echo "Firewall: $FIREWALL_STATUS"
 echo "Open: http://$OPEN_HOST:$PORT/$OPEN_PATH"
 echo "Account model: single administrator"
 echo "Database: $STATE_ROOT/wfilemanager.db"
+
+if [[ "$CONFIGURED" != "true" ]]; then
+  SETUP_CODE="$(cat "$SETUP_SECRET_FILE" 2>/dev/null || true)"
+  echo
+  echo "First-run setup code:"
+  echo "  ${SETUP_CODE:-UNAVAILABLE - run sudo wfilemanager-doctor}"
+  echo "Enter this code on the /setup page before choosing the admin password."
+fi
+
 echo
-echo "A domain, Nginx and HTTPS are optional and are no longer installed automatically."
-echo "If this port is exposed to the Internet, place wFileManager behind HTTPS before regular use."
+echo "A domain, Nginx and HTTPS are optional and are not installed automatically."
+echo "If the browser times out while the application is HEALTHY, allow TCP $PORT in your VPS provider firewall/security group."
+echo "Run diagnostics at any time with:"
+echo "  sudo wfilemanager-doctor"
 echo
 echo "Reset the administrator password with:"
 echo "  sudo wfilemanager-reset-admin-password"

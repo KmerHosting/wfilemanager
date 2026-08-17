@@ -20,6 +20,7 @@ export const Route = createFileRoute("/setup")({
 function Setup() {
   const nav = useNavigate();
   const auth = useAuth();
+  const [setupCode, setSetupCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -32,13 +33,13 @@ function Setup() {
 
   const policyError = password ? administratorPasswordError(password) : null;
   const confirmationError = confirm && password !== confirm ? "Passwords do not match." : null;
-  const valid = Boolean(password && !policyError && password === confirm);
+  const valid = Boolean(setupCode.trim() && password && !policyError && password === confirm);
 
   const completeSetup = async () => {
     setSubmitting(true);
     setError(null);
     try {
-      await auth.setup({ password });
+      await auth.setup({ password, setupCode: setupCode.trim() });
       toast.success("wFileManager is ready");
       nav({ to: "/explorer" });
     } catch (value) {
@@ -64,10 +65,25 @@ function Setup() {
           Administrator username: <strong>admin</strong>
         </div>
         <div className="grid gap-1.5">
+          <Label htmlFor="setup-code">Setup code</Label>
+          <Input
+            id="setup-code"
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            value={setupCode}
+            onChange={(event) => setSetupCode(event.target.value)}
+            placeholder="Code shown by the installer"
+            className="font-mono"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use the one-time setup code printed in the server terminal after installation.
+          </p>
+        </div>
+        <div className="grid gap-1.5">
           <Label htmlFor="setup-password">Password</Label>
           <Input
             id="setup-password"
-            autoFocus
             type="password"
             autoComplete="new-password"
             value={password}

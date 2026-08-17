@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
@@ -84,13 +83,7 @@ function upstreamFor(scope: Scope, action: string) {
   return url;
 }
 
-async function setupSecret() {
-  const secretFile =
-    process.env.WFILEMANAGER_SETUP_SECRET_FILE || "/etc/wfilemanager/setup-secret.key";
-  return (await readFile(secretFile, "utf8").catch(() => "")).trim();
-}
-
-async function requestBody(request: Request, scope: Scope) {
+async function requestBody(request: Request) {
   if (["GET", "HEAD"].includes(request.method)) return undefined;
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > MAX_JSON_BODY_BYTES)
@@ -98,9 +91,7 @@ async function requestBody(request: Request, scope: Scope) {
   const bytes = new Uint8Array(await request.arrayBuffer());
   if (bytes.byteLength > MAX_JSON_BODY_BYTES)
     throw Object.assign(new Error("The request body is too large"), { status: 413 });
-  if (scope !== "setup") return bytes;
-  const payload = JSON.parse(new TextDecoder().decode(bytes) || "{}") as Record<string, unknown>;
-  return JSON.stringify({ ...payload, setupSecret: await setupSecret() });
+  return bytes;
 }
 
 async function proxy(request: Request) {
@@ -125,7 +116,7 @@ async function proxy(request: Request) {
       upstream = await fetch(upstreamFor(scopeValue, action), {
         method: request.method,
         headers,
-        body: await requestBody(request, scopeValue),
+        body: await requestBody(request),
         redirect: "manual",
         signal: controller.signal,
       });

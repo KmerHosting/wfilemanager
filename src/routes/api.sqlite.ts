@@ -70,10 +70,10 @@ function secureEqual(left: string, right: string) {
 
 async function assertSetupSecret(payload: Record<string, unknown>) {
   const expected = (await readFile(SETUP_SECRET_FILE, "utf8").catch(() => "")).trim();
-  const supplied = String(payload.setupSecret || "").trim();
+  const supplied = String(payload.setupCode || "").trim();
   if (!expected || !supplied || !secureEqual(expected, supplied))
-    throw new SqliteAuthError(403, "The local installation setup secret is invalid.");
-  delete payload.setupSecret;
+    throw new SqliteAuthError(403, "The setup code is invalid. Use the code shown by the installer.");
+  delete payload.setupCode;
 }
 
 function errorResponse(error: unknown) {

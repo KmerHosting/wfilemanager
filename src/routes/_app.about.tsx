@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Download, RefreshCw, RotateCcw } from "@/components/ui/icons";
+import { Download, Github, RefreshCw, RotateCcw } from "@/components/ui/icons";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
 import { formatBytes } from "@/lib/format";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ function About() {
   const [busy, setBusy] = useState(false);
 
   const check = async (notify = false) => {
+    const toastId = notify ? toast.loading("Checking for updates…") : undefined;
     try {
       const result = await localApi.updateInfo();
       setUpdate(result);
@@ -26,10 +27,13 @@ function About() {
           result.updateAvailable
             ? `Version ${result.latestVersion} is available`
             : "Already up to date",
+          { id: toastId },
         );
     } catch (error) {
       if (notify)
-        toast.error(error instanceof Error ? error.message : "Unable to check for updates");
+        toast.error(error instanceof Error ? error.message : "Unable to check for updates", {
+          id: toastId,
+        });
     }
   };
 
@@ -37,26 +41,64 @@ function About() {
     void check(false);
   }, []);
 
+  const waitForUpdate = async (toastId: string | number, action: "update" | "rollback") => {
+    const deadline = Date.now() + 5 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+      try {
+        const result = await localApi.updateStatus();
+        setUpdate(result);
+        if (result.state.status === "completed") {
+          toast.success(action === "update" ? "Update completed" : "Rollback completed", {
+            id: toastId,
+          });
+          window.setTimeout(() => window.location.reload(), 700);
+          return;
+        }
+        if (result.state.status === "failed") {
+          toast.error(result.state.error || result.state.message || `${action} failed`, {
+            id: toastId,
+          });
+          setBusy(false);
+          return;
+        }
+        toast.loading(result.state.message || `${action} in progress…`, { id: toastId });
+      } catch {
+        // The service may be briefly unavailable while systemd restarts it.
+      }
+    }
+    toast.error(`${action === "update" ? "Update" : "Rollback"} is taking longer than expected`, {
+      id: toastId,
+    });
+    setBusy(false);
+  };
+
   const install = async () => {
     setBusy(true);
+    const toastId = toast.loading("Starting update…");
     try {
       await localApi.installUpdate();
-      toast.success("Update started");
-      window.setTimeout(() => window.location.reload(), 4000);
+      toast.loading("Update in progress…", { id: toastId });
+      await waitForUpdate(toastId, "update");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to start the update");
+      toast.error(error instanceof Error ? error.message : "Unable to start the update", {
+        id: toastId,
+      });
       setBusy(false);
     }
   };
 
   const rollback = async () => {
     setBusy(true);
+    const toastId = toast.loading("Starting rollback…");
     try {
       await localApi.rollbackUpdate();
-      toast.success("Rollback started");
-      window.setTimeout(() => window.location.reload(), 4000);
+      toast.loading("Rollback in progress…", { id: toastId });
+      await waitForUpdate(toastId, "rollback");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to start rollback");
+      toast.error(error instanceof Error ? error.message : "Unable to start rollback", {
+        id: toastId,
+      });
       setBusy(false);
     }
   };
@@ -69,6 +111,16 @@ function About() {
           <h1>About & updates</h1>
           <p>wFileManager is a local, single-administrator file manager for Linux servers.</p>
         </div>
+        <Button asChild size="icon" variant="outline" aria-label="Open wFileManager on GitHub">
+          <a
+            href="https://github.com/KmerHosting/wfilemanager"
+            target="_blank"
+            rel="noreferrer"
+            title="GitHub repository"
+          >
+            <Github className="h-4 w-4" />
+          </a>
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

@@ -26,11 +26,16 @@ systemctl disable --now wfilemanager-updater@rollback.service 2>/dev/null || tru
 
 rm -f \
   /etc/systemd/system/wfilemanager.service \
-  /etc/systemd/system/wfilemanager-updater@.service
+  /etc/systemd/system/wfilemanager-updater@.service \
+  /etc/systemd/system/wfilemanager.service.d/10-root-terminal.conf
+rmdir --ignore-fail-on-non-empty /etc/systemd/system/wfilemanager.service.d 2>/dev/null || true
 systemctl daemon-reload
 systemctl reset-failed 2>/dev/null || true
 
 rm -rf /opt/wfilemanager /etc/wfilemanager /var/lib/wfilemanager /usr/local/lib/wfilemanager
-rm -f /usr/local/sbin/wfilemanager-reset-admin-password /usr/local/sbin/wfilemanager-uninstall
+rm -f \
+  /usr/local/sbin/wfilemanager-reset-admin-password \
+  /usr/local/sbin/wfilemanager-doctor \
+  /usr/local/sbin/wfilemanager-uninstall
 
 echo "wFileManager was removed."

@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 export interface LocalFileEntry {
   name: string;
   path: string;
@@ -66,6 +68,7 @@ export interface OperationJob {
 
 export interface FileManagerOverview {
   hostname: string;
+  ipv4: string | null;
   platform: string;
   release: string;
   architecture: string;
@@ -162,6 +165,15 @@ async function post<T>(action: string, body: Record<string, unknown>) {
   );
 }
 
+async function withPendingToast<T>(message: string, operation: () => Promise<T>) {
+  const toastId = toast.loading(message);
+  try {
+    return await operation();
+  } finally {
+    toast.dismiss(toastId);
+  }
+}
+
 function uploadSingleFile(
   directory: string,
   file: File,
@@ -214,36 +226,59 @@ async function uploadFiles(
 ) {
   const values = Array.from(files);
   const total = values.reduce((sum, file) => sum + file.size, 0);
+  const toastId = toast.loading(`Upload started · ${values.length} file(s)`);
   let completed = 0;
   const uploaded: LocalFileEntry[] = [];
-  onProgress?.({ loaded: 0, total, percent: 0 });
-  for (const file of values) {
-    const entry = await uploadSingleFile(directory, file, completed, total, onProgress);
-    completed += file.size;
-    uploaded.push(entry);
+  const report = (progress: ProgressState) => {
+    onProgress?.(progress);
+    toast.loading(
+      progress.detail
+        ? `Uploading ${progress.detail} · ${progress.percent}%`
+        : `Uploading · ${progress.percent}%`,
+      { id: toastId },
+    );
+  };
+  try {
+    report({ loaded: 0, total, percent: 0 });
+    for (const file of values) {
+      const entry = await uploadSingleFile(directory, file, completed, total, report);
+      completed += file.size;
+      uploaded.push(entry);
+    }
+    report({ loaded: total, total, percent: 100 });
+    return { uploaded };
+  } finally {
+    toast.dismiss(toastId);
   }
-  onProgress?.({ loaded: total, total, percent: 100 });
-  return { uploaded };
 }
 
 async function runJob(operation: "copy" | "move", source: string, destination: string) {
-  const started = await post<{ job: OperationJob }>("job-start", {
-    operation,
-    source,
-    destination,
-  });
-  const deadline = Date.now() + 24 * 60 * 60 * 1000;
-  let delay = 400;
-  while (Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    delay = Math.min(1500, Math.round(delay * 1.25));
-    const current = await get<{ job: OperationJob }>("job", { id: started.job.id });
-    if (current.job.status === "completed") return current.job;
-    if (["failed", "cancelled", "interrupted"].includes(current.job.status)) {
-      throw new Error(current.job.error || `${operation} ${current.job.status}`);
+  const label = operation === "copy" ? "Copy" : "Move";
+  const toastId = toast.loading(`${label} started…`);
+  try {
+    const started = await post<{ job: OperationJob }>("job-start", {
+      operation,
+      source,
+      destination,
+    });
+    const deadline = Date.now() + 24 * 60 * 60 * 1000;
+    let delay = 400;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay = Math.min(1500, Math.round(delay * 1.25));
+      const current = await get<{ job: OperationJob }>("job", { id: started.job.id });
+      toast.loading(`${label} in progress · ${Math.max(0, Math.min(100, current.job.progress))}%`, {
+        id: toastId,
+      });
+      if (current.job.status === "completed") return current.job;
+      if (["failed", "cancelled", "interrupted"].includes(current.job.status)) {
+        throw new Error(current.job.error || `${operation} ${current.job.status}`);
+      }
     }
+    throw new Error(`${operation} did not complete within 24 hours`);
+  } finally {
+    toast.dismiss(toastId);
   }
-  throw new Error(`${operation} did not complete within 24 hours`);
 }
 
 function startBrowserDownload(path: string, filename: string) {
@@ -256,6 +291,7 @@ function startBrowserDownload(path: string, filename: string) {
   document.body.appendChild(link);
   link.click();
   link.remove();
+  toast.success(`Download started · ${filename}`);
   return Promise.resolve({ downloaded: path, started: true });
 }
 
@@ -279,7 +315,9 @@ export const localApi = {
   createDirectory: (path: string, name: string) =>
     post<LocalFileEntry>("create-directory", { path, name }),
   save: (path: string, content: string, expectedModifiedAt?: string) =>
-    post<LocalFileEntry>("save", { path, content, expectedModifiedAt }),
+    withPendingToast("Saving file…", () =>
+      post<LocalFileEntry>("save", { path, content, expectedModifiedAt }),
+    ),
   rename: (path: string, name: string) =>
     post<{ source: string; destination: string }>("rename", { path, name }),
   copy: (source: string, destination: string) => runJob("copy", source, destination),
@@ -288,10 +326,22 @@ export const localApi = {
   download: startBrowserDownload,
   trash: {
     list: () => get<TrashResult>("trash-list"),
-    move: (path: string) => post<{ item: TrashItem }>("trash-move", { path }),
-    restore: (id: string) => post<{ restored: string }>("trash-restore", { id }),
-    delete: (id: string) => post<{ deleted: string }>("trash-delete", { id }),
-    empty: () => post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {}),
+    move: (path: string) =>
+      withPendingToast("Move to Trash started…", () =>
+        post<{ item: TrashItem }>("trash-move", { path }),
+      ),
+    restore: (id: string) =>
+      withPendingToast("Restore started…", () =>
+        post<{ restored: string }>("trash-restore", { id }),
+      ),
+    delete: (id: string) =>
+      withPendingToast("Permanent deletion started…", () =>
+        post<{ deleted: string }>("trash-delete", { id }),
+      ),
+    empty: () =>
+      withPendingToast("Empty Trash started…", () =>
+        post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {}),
+      ),
   },
   overview: () => get<FileManagerOverview>("overview"),
   updateInfo: () => get<UpdateInfo>("update-info"),

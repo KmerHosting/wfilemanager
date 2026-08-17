@@ -18,17 +18,33 @@ test("wFileManager has exactly one local administrator", async () => {
 
   expect(auth).toContain("wfilemanagerApi.login(password, remember)");
   expect(api).toContain('username: "admin"');
+  expect(api).toContain("setupCode: string");
   expect(store).toContain("CREATE TABLE IF NOT EXISTS wfm_admin");
   expect(store).toContain("PRIMARY KEY CHECK (id = 1)");
   expect(store).toContain("DROP TABLE IF EXISTS wfm_users");
   expect(store).toContain("DROP TABLE IF EXISTS wfm_roles");
   expect(login).toContain("Account: <strong>admin</strong>");
   expect(setup).toContain("Administrator username: <strong>admin</strong>");
+  expect(setup).toContain("Setup code");
 
   const combined = `${auth}\n${api}\n${store}`;
   expect(combined).not.toContain("dashboard.kmerhosting.com");
   expect(combined).not.toContain("dashboard-sso");
   expect(combined).not.toContain("dashboard_product_identities");
+});
+
+test("first-run setup code must come from the browser, not a gateway bypass", async () => {
+  const [gateway, sqlite, installer] = await Promise.all([
+    read("src/routes/api.gateway.ts"),
+    read("src/routes/api.sqlite.ts"),
+    read("deploy/install.sh"),
+  ]);
+
+  expect(gateway).not.toContain("setupSecret: await setupSecret()");
+  expect(sqlite).toContain('String(payload.setupCode || "")');
+  expect(sqlite).toContain("The setup code is invalid");
+  expect(installer).toContain("openssl rand -hex 12");
+  expect(installer).toContain("First-run setup code:");
 });
 
 test("removed administration products cannot reappear as routes", async () => {
