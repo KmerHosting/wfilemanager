@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { sameOrigin } from "@/lib/server/request-security";
 
 const COOKIE_NAME = "wfm_session";
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -57,22 +58,6 @@ function sessionCookie(request: Request, token: string, expiresAt?: unknown) {
 
 function clearCookie(request: Request) {
   return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secureRequest(request) ? "; Secure" : ""}`;
-}
-
-function sameOrigin(request: Request) {
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite === "cross-site") return false;
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    const publicBaseUrl = process.env.WFILEMANAGER_PUBLIC_BASE_URL?.trim();
-    const expectedOrigin = publicBaseUrl
-      ? new URL(publicBaseUrl).origin
-      : new URL(request.url).origin;
-    return new URL(origin).origin === expectedOrigin;
-  } catch {
-    return false;
-  }
 }
 
 function validScope(value: string): value is Scope {

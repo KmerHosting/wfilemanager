@@ -38,6 +38,7 @@ import {
 } from "@/lib/server/login-rate-limit";
 import { pathRulesForUser } from "@/lib/server/sqlite-path-policy";
 import { createSqliteUserWithPaths, updateSqliteUser } from "@/lib/server/sqlite-user-admin";
+import { sameOrigin } from "@/lib/server/request-security";
 
 const MAX_BODY_BYTES = Math.max(
   16 * 1024,
@@ -56,21 +57,6 @@ function json(body: unknown, status = 200) {
 function token(request: Request) {
   const value = request.headers.get("authorization") || "";
   return value.startsWith("Bearer ") ? value.slice(7).trim() : "";
-}
-
-function sameOrigin(request: Request) {
-  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    const publicBaseUrl = process.env.WFILEMANAGER_PUBLIC_BASE_URL?.trim();
-    const expectedOrigin = publicBaseUrl
-      ? new URL(publicBaseUrl).origin
-      : new URL(request.url).origin;
-    return new URL(origin).origin === expectedOrigin;
-  } catch {
-    return false;
-  }
 }
 
 async function body(request: Request) {

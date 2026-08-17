@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { sameOrigin } from "@/lib/server/request-security";
 
 function json(body: unknown, status = 200) {
   return Response.json(body, {
@@ -51,21 +52,6 @@ async function downloadRuntime() {
 async function hashRuntime() {
   return import("@/lib/server/file-hash-runtime");
 }
-function sameOrigin(request: Request) {
-  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    const publicBaseUrl = process.env.WFILEMANAGER_PUBLIC_BASE_URL?.trim();
-    const expectedOrigin = publicBaseUrl
-      ? new URL(publicBaseUrl).origin
-      : new URL(request.url).origin;
-    return new URL(origin).origin === expectedOrigin;
-  } catch {
-    return false;
-  }
-}
-
 async function handleError(error: unknown) {
   const { LocalApiError } = await runtime();
   if (error instanceof LocalApiError) return json({ error: error.message }, error.status);
