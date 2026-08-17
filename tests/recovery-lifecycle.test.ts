@@ -35,7 +35,7 @@ test("updater only verifies extracts switches restarts and health checks prebuil
   expect(updater).not.toContain("python3");
 });
 
-test("GitHub release workflow builds once and publishes a prebuilt runtime", async () => {
+test("GitHub release workflow builds once without obsolete native toolchain", async () => {
   const workflow = await read(".github/workflows/publish-github-release.yml");
 
   expect(workflow).toContain("Build production runtime");
@@ -43,6 +43,17 @@ test("GitHub release workflow builds once and publishes a prebuilt runtime", asy
   expect(workflow).toContain('cp -a .output "$ROOT/.output"');
   expect(workflow).toContain("Prebuilt Linux x64 runtime");
   expect(workflow).not.toContain("git archive --format=tar.gz");
+  expect(workflow).not.toContain("Install native build tools");
+  expect(workflow).not.toContain("build-essential");
+  expect(workflow).not.toContain("python3");
+});
+
+test("stable release sync uses the KmerHosting repository and current product notes", async () => {
+  const sync = await read("deploy/sync-stable-channel.sh");
+
+  expect(sync).toContain("KmerHosting/wfilemanager");
+  expect(sync).not.toContain("toscani-tenekeu/wFileManager");
+  expect(sync).not.toContain("Carbon Design System migration");
 });
 
 test("administrator recovery is one shell command with no username selection", async () => {

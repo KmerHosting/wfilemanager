@@ -96,7 +96,9 @@ function Explorer() {
   const [renameEntry, setRenameEntry] = useState<LocalFileEntry | null>(null);
   const [renameName, setRenameName] = useState("");
   const [deleteEntry, setDeleteEntry] = useState<LocalFileEntry | null>(null);
-  const [transfer, setTransfer] = useState<{ kind: TransferKind; entry: LocalFileEntry } | null>(null);
+  const [transfer, setTransfer] = useState<{ kind: TransferKind; entry: LocalFileEntry } | null>(
+    null,
+  );
   const [destination, setDestination] = useState(currentPath);
   const [previewEntry, setPreviewEntry] = useState<LocalFileEntry | null>(null);
   const [editorContent, setEditorContent] = useState("");
@@ -267,16 +269,37 @@ function Explorer() {
           <Button variant="outline" size="icon" onClick={() => void load()} aria-label="Refresh">
             <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           </Button>
-          <Button variant="outline" onClick={() => { setCreateKind("directory"); setCreateName(""); }}>
-            <FolderPlus className="mr-2 h-4 w-4" />Folder
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCreateKind("directory");
+              setCreateName("");
+            }}
+          >
+            <FolderPlus className="mr-2 h-4 w-4" />
+            Folder
           </Button>
-          <Button variant="outline" onClick={() => { setCreateKind("file"); setCreateName(""); }}>
-            <FilePlus2 className="mr-2 h-4 w-4" />File
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCreateKind("file");
+              setCreateName("");
+            }}
+          >
+            <FilePlus2 className="mr-2 h-4 w-4" />
+            File
           </Button>
           <Button onClick={() => uploadInput.current?.click()}>
-            <UploadCloud className="mr-2 h-4 w-4" />Upload
+            <UploadCloud className="mr-2 h-4 w-4" />
+            Upload
           </Button>
-          <input ref={uploadInput} type="file" multiple className="hidden" onChange={(event) => void upload(event.target.files)} />
+          <input
+            ref={uploadInput}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => void upload(event.target.files)}
+          />
         </div>
       </header>
 
@@ -288,14 +311,29 @@ function Explorer() {
             setPath(pathInput);
           }}
         >
-          <Button type="button" variant="outline" size="icon" disabled={currentPath === "/"} onClick={() => setPath(parentPath(currentPath))}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            disabled={currentPath === "/"}
+            onClick={() => setPath(parentPath(currentPath))}
+          >
             <ArrowUp className="h-4 w-4" />
           </Button>
-          <Input value={pathInput} onChange={(event) => setPathInput(event.target.value)} className="font-mono" />
+          <Input
+            value={pathInput}
+            onChange={(event) => setPathInput(event.target.value)}
+            className="font-mono"
+          />
         </form>
         <div className="relative md:w-80">
           <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={(event) => setSearch(event.target.value)} placeholder="Search this folder" className="pl-9" />
+          <Input
+            value={q}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search this folder"
+            className="pl-9"
+          />
         </div>
       </div>
 
@@ -309,7 +347,11 @@ function Explorer() {
         </div>
       )}
 
-      {error && <div className="mb-4 rounded-md border border-destructive/30 p-3 text-sm text-destructive">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-md border border-destructive/30 p-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-md border">
         <Table>
@@ -323,29 +365,85 @@ function Explorer() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={4} className="py-12 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
+                  Loading…
+                </TableCell>
+              </TableRow>
             ) : visibleEntries.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="py-12 text-center text-muted-foreground">This folder is empty.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
+                  This folder is empty.
+                </TableCell>
+              </TableRow>
             ) : (
               visibleEntries.map((entry) => (
                 <TableRow key={entry.path}>
                   <TableCell>
-                    <button className="flex max-w-full items-center gap-2 text-left hover:underline" onClick={() => void openEntry(entry)}>
-                      {entry.kind === "directory" ? <Folder className="h-4 w-4 shrink-0" /> : <FileIcon className="h-4 w-4 shrink-0" />}
+                    <button
+                      className="flex max-w-full items-center gap-2 text-left hover:underline"
+                      onClick={() => void openEntry(entry)}
+                    >
+                      {entry.kind === "directory" ? (
+                        <Folder className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <FileIcon className="h-4 w-4 shrink-0" />
+                      )}
                       <span className="truncate">{entry.name}</span>
                     </button>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{entry.kind === "file" ? formatBytes(entry.size) : "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDate(entry.modifiedAt)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {entry.kind === "file" ? formatBytes(entry.size) : "—"}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(entry.modifiedAt)}
+                  </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
                       {entry.kind === "file" && (
-                        <Button size="sm" variant="ghost" onClick={() => void download(entry)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>
+                        <Button size="sm" variant="ghost" onClick={() => void download(entry)}>
+                          <Download className="mr-1 h-3.5 w-3.5" />
+                          Download
+                        </Button>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => { setRenameEntry(entry); setRenameName(entry.name); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setTransfer({ kind: "copy", entry }); setDestination(currentPath); }}><Copy className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setTransfer({ kind: "move", entry }); setDestination(currentPath); }}><MoveRight className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteEntry(entry)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setRenameEntry(entry);
+                          setRenameName(entry.name);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setTransfer({ kind: "copy", entry });
+                          setDestination(currentPath);
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setTransfer({ kind: "move", entry });
+                          setDestination(currentPath);
+                        }}
+                      >
+                        <MoveRight className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => setDeleteEntry(entry)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -357,17 +455,38 @@ function Explorer() {
 
       <Dialog open={Boolean(createKind)} onOpenChange={(open) => !open && setCreateKind(null)}>
         <DialogContent size="sm">
-          <DialogHeader><DialogTitle>Create {createKind === "file" ? "file" : "folder"}</DialogTitle></DialogHeader>
-          <Input autoFocus value={createName} onChange={(event) => setCreateName(event.target.value)} placeholder="Name" />
-          <DialogFooter><Button onClick={() => void create()} disabled={!createName.trim()}>Create</Button></DialogFooter>
+          <DialogHeader>
+            <DialogTitle>Create {createKind === "file" ? "file" : "folder"}</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={createName}
+            onChange={(event) => setCreateName(event.target.value)}
+            placeholder="Name"
+          />
+          <DialogFooter>
+            <Button onClick={() => void create()} disabled={!createName.trim()}>
+              Create
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(renameEntry)} onOpenChange={(open) => !open && setRenameEntry(null)}>
         <DialogContent size="sm">
-          <DialogHeader><DialogTitle>Rename</DialogTitle></DialogHeader>
-          <Input autoFocus value={renameName} onChange={(event) => setRenameName(event.target.value)} />
-          <DialogFooter><Button onClick={() => void rename()} disabled={!renameName.trim()}>Rename</Button></DialogFooter>
+          <DialogHeader>
+            <DialogTitle>Rename</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameName}
+            onChange={(event) => setRenameName(event.target.value)}
+          />
+          <DialogFooter>
+            <Button onClick={() => void rename()} disabled={!renameName.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -377,8 +496,17 @@ function Explorer() {
             <DialogTitle>{transfer?.kind === "copy" ? "Copy" : "Move"}</DialogTitle>
             <DialogDescription>Enter the destination directory.</DialogDescription>
           </DialogHeader>
-          <Input autoFocus value={destination} onChange={(event) => setDestination(event.target.value)} className="font-mono" />
-          <DialogFooter><Button onClick={() => void transferEntry()} disabled={!destination.trim()}>{transfer?.kind === "copy" ? "Copy" : "Move"}</Button></DialogFooter>
+          <Input
+            autoFocus
+            value={destination}
+            onChange={(event) => setDestination(event.target.value)}
+            className="font-mono"
+          />
+          <DialogFooter>
+            <Button onClick={() => void transferEntry()} disabled={!destination.trim()}>
+              {transfer?.kind === "copy" ? "Copy" : "Move"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -386,7 +514,9 @@ function Explorer() {
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{previewEntry?.name}</DialogTitle>
-            <DialogDescription>Simple text editor. Binary or oversized files are not opened here.</DialogDescription>
+            <DialogDescription>
+              Simple text editor. Binary or oversized files are not opened here.
+            </DialogDescription>
           </DialogHeader>
           {previewLoading ? (
             <div className="py-16 text-center text-sm text-muted-foreground">Loading…</div>
@@ -399,13 +529,17 @@ function Explorer() {
           )}
           <DialogFooter>
             <Button onClick={() => void save()} disabled={saving || previewLoading}>
-              <Save className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save"}
+              <Save className="mr-2 h-4 w-4" />
+              {saving ? "Saving…" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={Boolean(deleteEntry)} onOpenChange={(open) => !open && setDeleteEntry(null)}>
+      <AlertDialog
+        open={Boolean(deleteEntry)}
+        onOpenChange={(open) => !open && setDeleteEntry(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Move to trash?</AlertDialogTitle>

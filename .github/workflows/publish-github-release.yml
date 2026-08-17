@@ -66,10 +66,6 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install native build tools
-        if: steps.existing.outputs.exists != 'true'
-        run: sudo apt-get update && sudo apt-get install -y build-essential python3
-
       - name: Build production runtime
         if: steps.existing.outputs.exists != 'true'
         shell: bash

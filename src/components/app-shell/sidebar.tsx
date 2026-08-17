@@ -11,7 +11,6 @@ import {
   UserAvatar,
 } from "@carbon/icons-react";
 import { SideNav, SideNavDivider, SideNavItems, SideNavLink } from "@carbon/react";
-import { SERVER_INFO } from "@/lib/demo/data";
 import { localApi } from "@/lib/local-api";
 
 type Item = {
@@ -55,7 +54,7 @@ const NAV: { label: string; items: Item[] }[] = [
 
 export function AppSidebar({ className }: { className?: string }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const [version, setVersion] = useState(SERVER_INFO.wfmVersion);
+  const [version, setVersion] = useState("");
   const isActive = (to?: string) =>
     Boolean(
       to && (to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`)),
@@ -105,7 +104,7 @@ export function AppSidebar({ className }: { className?: string }) {
           </div>
         ))}
       </SideNavItems>
-      <div className="wfm-carbon-sidenav__version">v{version}</div>
+      {version && <div className="wfm-carbon-sidenav__version">v{version}</div>}
     </SideNav>
   );
 }

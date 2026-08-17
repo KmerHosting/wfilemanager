@@ -39,8 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setUser((await wfilemanagerApi.me()).user);
       } catch (error) {
-        const statusCode = (error as Error & { status?: number }).status;
-        if (statusCode !== 401) console.warn("Unable to restore the administrator session", error);
+        if ((error as Error & { status?: number }).status !== 401)
+          console.warn("Unable to restore the administrator session", error);
         setUser(null);
       }
     } catch {
@@ -61,13 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       configured,
       refresh,
       async login(password, remember) {
-        const result = await wfilemanagerApi.login("admin", password, remember);
+        const result = await wfilemanagerApi.login(password, remember);
         setUser(result.user);
         setConfigured(true);
       },
       async setup(payload) {
         await setupWFileManager(payload);
-        const result = await wfilemanagerApi.login("admin", payload.password, true);
+        const result = await wfilemanagerApi.login(payload.password, true);
         setUser(result.user);
         setConfigured(true);
       },
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await wfilemanagerApi.logout();
         } catch {
-          /* Invalid sessions are cleared by the gateway. */
+          /* The local cookie is cleared on invalid sessions. */
         }
         setUser(null);
       },

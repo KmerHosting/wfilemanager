@@ -50,7 +50,8 @@ export interface ProgressState {
 export interface OperationJob {
   id: string;
   operation: "copy" | "move" | "delete";
-  status: "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
+  status:
+    "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
   progress: number;
   processedBytes: number;
   totalBytes: number;
@@ -194,7 +195,8 @@ function uploadSingleFile(
       if (xhr.status < 200 || xhr.status >= 300) {
         reject(
           new Error(
-            (payload as { error?: string }).error || `Upload failed for ${file.name} (${xhr.status})`,
+            (payload as { error?: string }).error ||
+              `Upload failed for ${file.name} (${xhr.status})`,
           ),
         );
         return;
@@ -265,10 +267,14 @@ export const localApi = {
       ...(query ? { q: query } : {}),
     }),
   read: (path: string) =>
-    get<{ path: string; content: string; size: number; mime: string; modifiedAt: string; mode: string }>(
-      "read",
-      { path },
-    ),
+    get<{
+      path: string;
+      content: string;
+      size: number;
+      mime: string;
+      modifiedAt: string;
+      mode: string;
+    }>("read", { path }),
   createFile: (path: string, name: string) => post<LocalFileEntry>("create-file", { path, name }),
   createDirectory: (path: string, name: string) =>
     post<LocalFileEntry>("create-directory", { path, name }),
