@@ -52,14 +52,7 @@ export interface ProgressState {
 export interface OperationJob {
   id: string;
   operation: "copy" | "move" | "delete";
-  status:
-    | "queued"
-    | "running"
-    | "cancelling"
-    | "cancelled"
-    | "completed"
-    | "failed"
-    | "interrupted";
+  status: "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
   progress: number;
   processedBytes: number;
   totalBytes: number;
@@ -243,7 +236,9 @@ async function uploadFiles(
 ) {
   const values = Array.from(files);
   const total = values.reduce((sum, file) => sum + file.size, 0);
-  const toastId = toast.loading(`Upload started · ${values.length} file(s)`, { duration: Infinity });
+  const toastId = toast.loading(`Upload started · ${values.length} file(s)`, {
+    duration: Infinity,
+  });
   let completed = 0;
   const uploaded: LocalFileEntry[] = [];
   const report = (progress: ProgressState) => {
