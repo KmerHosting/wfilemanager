@@ -3,111 +3,56 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Info,
-  Github,
-  BookOpen,
-  Bug,
-  RefreshCw,
-  Download,
-  RotateCcw,
-  ShieldAlert,
-  Mail,
-} from "@/components/ui/icons";
+import { Download, RefreshCw, RotateCcw } from "@/components/ui/icons";
 import { SERVER_INFO } from "@/lib/demo/data";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
-import { formatBytes, formatRelative } from "@/lib/format";
+import { formatBytes } from "@/lib/format";
 import { toast } from "sonner";
-import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_app/about")({
   head: () => ({ meta: [{ title: "About & updates — wFileManager" }] }),
   component: About,
 });
 
-const ACTIVE_PHASES = new Set([
-  "checking",
-  "downloading",
-  "verifying",
-  "extracting",
-  "installing",
-  "building",
-  "switching",
-  "restarting",
-  "health-check",
-  "rolling-back",
-]);
-const SUPPORT_EMAIL = "support@kmerhosting.com";
 function About() {
-  const { user } = useAuth();
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
-  const [checking, setChecking] = useState(false);
-  const [starting, setStarting] = useState(false);
-  const active = Boolean(update && ACTIVE_PHASES.has(update.state.status));
+  const [busy, setBusy] = useState(false);
 
-  const checkUpdates = async (notify = true) => {
-    setChecking(true);
+  const check = async (notify = false) => {
     try {
       const result = await localApi.updateInfo();
       setUpdate(result);
-      if (notify)
-        toast.success(
-          result.updateAvailable
-            ? `Version ${result.latestVersion} is available`
-            : "Update check completed",
-        );
-    } catch (value) {
-      if (notify)
-        toast.error(value instanceof Error ? value.message : "Unable to check for updates");
-    } finally {
-      setChecking(false);
+      if (notify) toast.success(result.updateAvailable ? `Version ${result.latestVersion} is available` : "Already up to date");
+    } catch (error) {
+      if (notify) toast.error(error instanceof Error ? error.message : "Unable to check for updates");
     }
   };
 
   useEffect(() => {
-    void checkUpdates(false);
+    void check(false);
   }, []);
-  useEffect(() => {
-    if (!active) return;
-    const timer = window.setInterval(() => void checkUpdates(false), 1800);
-    return () => window.clearInterval(timer);
-  }, [active]);
 
   const install = async () => {
-    setStarting(true);
+    setBusy(true);
     try {
       await localApi.installUpdate();
-      toast.success("Update started. The application may reconnect while the service restarts.");
-      await checkUpdates(false);
-    } catch (value) {
-      toast.error(value instanceof Error ? value.message : "Unable to start the update");
-    } finally {
-      setStarting(false);
+      toast.success("Update started");
+      window.setTimeout(() => window.location.reload(), 4000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to start the update");
+      setBusy(false);
     }
   };
 
   const rollback = async () => {
-    setStarting(true);
+    setBusy(true);
     try {
       await localApi.rollbackUpdate();
-      toast.success("Rollback started.");
-      await checkUpdates(false);
-    } catch (value) {
-      toast.error(value instanceof Error ? value.message : "Unable to start rollback");
-    } finally {
-      setStarting(false);
+      toast.success("Rollback started");
+      window.setTimeout(() => window.location.reload(), 4000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to start rollback");
+      setBusy(false);
     }
   };
 
@@ -115,230 +60,62 @@ function About() {
     <div className="wfm-page wfm-about-page">
       <div className="wfm-page__header">
         <div>
-          <p className="wfm-eyebrow">Product information</p>
+          <p className="wfm-eyebrow">Application</p>
           <h1>About & updates</h1>
-          <p>Understand this installation, keep it current and get help when needed.</p>
+          <p>wFileManager is a local, single-administrator file manager for Linux servers.</p>
         </div>
-        <Info className="h-5 w-5" />
       </div>
 
-      <div className="wfm-about-grid">
-        <Card className="wfm-about-identity">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Application</CardTitle>
-            <CardDescription>
-              Web file manager for Linux servers, designed for controlled administration.
-            </CardDescription>
+            <CardTitle>Installation</CardTitle>
+            <CardDescription>No hosted database, licence key or multi-user service.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <dl className="wfm-about-details">
-              <dt className="text-muted-foreground">Version</dt>
-              <dd className="col-span-2 font-mono">
-                {update?.currentVersion || SERVER_INFO.wfmVersion}
-              </dd>
-              <dt className="text-muted-foreground">License</dt>
-              <dd className="col-span-2">MIT</dd>
-              <dt className="text-muted-foreground">Source</dt>
-              <dd className="col-span-2">Public on GitHub</dd>
-              <dt className="text-muted-foreground">OS</dt>
-              <dd className="col-span-2">Ubuntu 20.04+</dd>
-              <dt className="text-muted-foreground">Publisher</dt>
-              <dd className="col-span-2">KmerHosting LLC</dd>
-              <dt className="text-muted-foreground">Support</dt>
-              <dd className="col-span-2">
-                <a
-                  className="font-medium text-primary hover:underline"
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </dd>
-            </dl>
+          <CardContent className="grid gap-3 text-sm">
+            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Version</span><strong className="font-mono">{update?.currentVersion || SERVER_INFO.wfmVersion}</strong></div>
+            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Database</span><strong>Local SQLite</strong></div>
+            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Account model</span><strong>Single administrator</strong></div>
+            <div className="flex justify-between gap-4"><span className="text-muted-foreground">License</span><strong>MIT</strong></div>
           </CardContent>
         </Card>
 
-        <Card className="wfm-about-updates">
+        <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-base">Updates</CardTitle>
-                <CardDescription>
-                  Verified releases with automatic rollback after a failed health check.
-                </CardDescription>
+                <CardTitle>Updates</CardTitle>
+                <CardDescription>Verified prebuilt releases with atomic activation and rollback.</CardDescription>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void checkUpdates()}
-                disabled={checking || active}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${checking ? "animate-spin" : ""}`} /> Check
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => void check(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />Check
               </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="wfm-about-details">
-              <span className="text-muted-foreground">Installed</span>
-              <span className="col-span-2 font-mono">
-                {update?.currentVersion || SERVER_INFO.wfmVersion}
-              </span>
-              <span className="text-muted-foreground">Latest stable</span>
-              <span className="col-span-2 font-mono">{update?.latestVersion || "Not checked"}</span>
-              {update?.publishedAt && (
-                <>
-                  <span className="text-muted-foreground">Published</span>
-                  <span className="col-span-2">{formatRelative(update.publishedAt)}</span>
-                </>
-              )}
-              {update?.size != null && (
-                <>
-                  <span className="text-muted-foreground">Download size</span>
-                  <span className="col-span-2">{formatBytes(update.size)}</span>
-                </>
-              )}
-              {update?.checkedAt && (
-                <>
-                  <span className="text-muted-foreground">Last check</span>
-                  <span className="col-span-2">{formatRelative(update.checkedAt)}</span>
-                </>
-              )}
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between gap-4"><span className="text-muted-foreground">Latest</span><strong className="font-mono">{update?.latestVersion || "Not checked"}</strong></div>
+              {update?.size != null && <div className="flex justify-between gap-4"><span className="text-muted-foreground">Download</span><strong>{formatBytes(update.size)}</strong></div>}
             </div>
 
-            {(active ||
-              update?.state.status === "failed" ||
-              update?.state.status === "completed") && (
-              <div className="rounded-md border border-border p-3">
-                <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium capitalize">
-                    {update?.state.status.replace(/-/g, " ")}
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {update?.state.progress || 0}%
-                  </span>
-                </div>
-                <Progress value={update?.state.progress || 0} />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {update?.state.error || update?.state.message}
-                </p>
-              </div>
+            {update?.state.status === "failed" && (
+              <Alert variant="destructive"><AlertDescription>{update.state.error || update.state.message}</AlertDescription></Alert>
             )}
 
-            {update?.updateAvailable && !active && (
-              <Alert>
-                <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-                  <span>Version {update.latestVersion} is ready to install.</span>
-                  {user?.isAdmin ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button size="sm" disabled={starting}>
-                          <Download className="mr-2 h-4 w-4" /> Install update
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Install wFileManager {update.latestVersion}?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            The package will be downloaded, verified, built and activated. The
-                            service will restart briefly. If the health check fails, the updater
-                            automatically restores the previous release.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => void install()}>
-                            Install update
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      An administrator must install this update.
-                    </span>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {user?.isAdmin && update?.rollbackAvailable && !active && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm" variant="outline" disabled={starting}>
-                    <RotateCcw className="mr-2 h-4 w-4" /> Roll back
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Roll back to the previous release?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      The current release will be replaced by the previous verified release and the
-                      service will restart.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void rollback()}>
-                      Start rollback
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {update?.updateAvailable && (
+                <Button disabled={busy} onClick={() => void install()}>
+                  <Download className="mr-2 h-4 w-4" />Install {update.latestVersion}
+                </Button>
+              )}
+              {update?.rollbackAvailable && (
+                <Button variant="outline" disabled={busy} onClick={() => void rollback()}>
+                  <RotateCcw className="mr-2 h-4 w-4" />Rollback
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
-
-        <Card className="wfm-about-links">
-          <CardHeader>
-            <CardTitle className="text-base">Links</CardTitle>
-          </CardHeader>
-          <CardContent className="wfm-about-link-grid">
-            {[
-              {
-                icon: BookOpen,
-                label: "Documentation",
-                href: "https://wfilemanager.kmerhosting.com/docs",
-              },
-              {
-                icon: Github,
-                label: "Source code",
-                href: "https://github.com/toscani-tenekeu/wFileManager",
-              },
-              {
-                icon: Bug,
-                label: "Issue tracker",
-                href: "https://github.com/toscani-tenekeu/wFileManager/issues",
-              },
-              { icon: Mail, label: "Support", href: `mailto:${SUPPORT_EMAIL}` },
-            ].map((link) => {
-              const Icon = link.icon;
-              return (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target={link.href.startsWith("http") ? "_blank" : undefined}
-                  rel="noreferrer"
-                  className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
-                >
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  {link.label}
-                </a>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Alert className="wfm-about-safety border-amber-500/40 bg-amber-500/5">
-          <ShieldAlert className="h-4 w-4 text-amber-500" />
-          <AlertDescription className="space-y-1 text-sm">
-            <p className="font-medium text-foreground">Safety notice</p>
-            <p>
-              wFileManager can operate with elevated privileges. Verify paths and terminal commands
-              before confirmation.
-            </p>
-          </AlertDescription>
-        </Alert>
       </div>
     </div>
   );
