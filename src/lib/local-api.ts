@@ -1,5 +1,3 @@
-import { wfilemanagerApi } from "./wfilemanager-api";
-
 export interface LocalFileEntry {
   name: string;
   path: string;
@@ -52,8 +50,7 @@ export interface ProgressState {
 export interface OperationJob {
   id: string;
   operation: "copy" | "move" | "delete";
-  status:
-    "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
+  status: "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
   progress: number;
   processedBytes: number;
   totalBytes: number;
@@ -61,43 +58,9 @@ export interface OperationJob {
   totalItems: number;
   currentItem?: string;
   error?: string;
-  result?: Record<string, unknown>;
   source: string;
   destinationDirectory?: string;
-  createdAt: number;
-  updatedAt: number;
   cancellable: boolean;
-}
-
-export interface BackgroundUploadTask {
-  id: string;
-  type: "upload";
-  status: "running" | "cancelling" | "cancelled" | "completed" | "failed";
-  progress: number;
-  loaded: number;
-  total: number;
-  destination: string;
-  files: string[];
-  currentFile?: string;
-  error?: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface PtyOutput {
-  cursor: number;
-  data: string;
-  exited: boolean;
-  exitCode: number | null;
-  signal: number | null;
-}
-
-export interface TerminalIdentity {
-  linuxUsername: string;
-  home: string;
-  uid: number;
-  gid: number;
-  sudo: boolean;
 }
 
 export interface FileManagerOverview {
@@ -132,8 +95,6 @@ export type UpdatePhase =
   | "downloading"
   | "verifying"
   | "extracting"
-  | "installing"
-  | "building"
   | "switching"
   | "restarting"
   | "health-check"
@@ -150,7 +111,6 @@ export interface UpdateState {
   previousVersion?: string | null;
   startedAt?: string | null;
   updatedAt?: string | null;
-  completedAt?: string | null;
   error?: string | null;
 }
 
@@ -172,15 +132,12 @@ export interface UpdateInfo {
 
 async function parse<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok)
+  if (!response.ok) {
     throw new Error(
       (payload as { error?: string }).error || `Local API request failed (${response.status})`,
     );
+  }
   return payload as T;
-}
-
-function headers(json = true): HeadersInit {
-  return json ? { "Content-Type": "application/json" } : {};
 }
 
 async function get<T>(action: string, params: Record<string, string> = {}) {
@@ -188,7 +145,6 @@ async function get<T>(action: string, params: Record<string, string> = {}) {
   return parse<T>(
     await fetch(`/api/local?${query}`, {
       credentials: "same-origin",
-      headers: headers(false),
       cache: "no-store",
     }),
   );
@@ -199,232 +155,88 @@ async function post<T>(action: string, body: Record<string, unknown>) {
     await fetch(`/api/local?action=${encodeURIComponent(action)}`, {
       method: "POST",
       credentials: "same-origin",
-      headers: headers(true),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
   );
 }
 
-function abortError(message: string) {
-  return new DOMException(message, "AbortError");
-}
-
-function notifySilently(data: {
-  title: string;
-  message?: string;
-  tone?: "info" | "success" | "warning" | "error";
-  link?: string;
-  source?: string;
-}) {
-  void wfilemanagerApi.createNotification(data).catch(() => undefined);
-}
-
-type ManagedUploadTask = BackgroundUploadTask & { controller: AbortController };
-
-const backgroundUploads = new Map<string, ManagedUploadTask>();
-const backgroundUploadListeners = new Set<() => void>();
-
-function backgroundUploadId() {
-  return (
-    globalThis.crypto?.randomUUID?.() ||
-    `upload-${Date.now()}-${Math.random().toString(16).slice(2)}`
-  );
-}
-
-function publishBackgroundUploads() {
-  for (const listener of backgroundUploadListeners) listener();
-}
-
-function updateBackgroundUpload(id: string, patch: Partial<BackgroundUploadTask>) {
-  const task = backgroundUploads.get(id);
-  if (!task) return;
-  Object.assign(task, patch, { updatedAt: Date.now() });
-  publishBackgroundUploads();
-}
-
-export function backgroundUploadTasks() {
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-  for (const [id, task] of backgroundUploads)
-    if (task.updatedAt < cutoff && task.status !== "running" && task.status !== "cancelling")
-      backgroundUploads.delete(id);
-  return [...backgroundUploads.values()]
-    .map(({ controller: _controller, ...task }) => task)
-    .sort((left, right) => right.updatedAt - left.updatedAt);
-}
-
-export function subscribeBackgroundUploads(listener: () => void) {
-  backgroundUploadListeners.add(listener);
-  return () => {
-    backgroundUploadListeners.delete(listener);
-  };
-}
-
-export function cancelBackgroundUpload(id: string) {
-  const task = backgroundUploads.get(id);
-  if (!task || task.status !== "running") return;
-  updateBackgroundUpload(id, { status: "cancelling" });
-  task.controller.abort();
-}
-
 function uploadSingleFile(
-  path: string,
+  directory: string,
   file: File,
-  onProgress?: (loaded: number) => void,
-  signal?: AbortSignal,
+  completed: number,
+  total: number,
+  onProgress?: (progress: ProgressState) => void,
 ) {
   return new Promise<LocalFileEntry>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(abortError(`Upload cancelled for ${file.name}`));
-      return;
-    }
-    const query = new URLSearchParams({ action: "upload-raw", path, name: file.name });
+    const query = new URLSearchParams({ action: "upload-raw", path: directory, name: file.name });
     const xhr = new XMLHttpRequest();
-    const abort = () => xhr.abort();
-    const cleanup = () => signal?.removeEventListener("abort", abort);
     xhr.open("POST", `/api/local?${query}`);
     xhr.withCredentials = true;
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    xhr.upload.onprogress = (event) => onProgress?.(event.loaded);
-    xhr.onerror = () => {
-      cleanup();
-      reject(new Error(`Upload connection failed for ${file.name}`));
+    xhr.upload.onprogress = (event) => {
+      const loaded = Math.min(total, completed + event.loaded);
+      onProgress?.({
+        loaded,
+        total,
+        percent: total ? Math.round((loaded / total) * 100) : 100,
+        detail: file.name,
+      });
     };
-    xhr.onabort = () => {
-      cleanup();
-      reject(abortError(`Upload cancelled for ${file.name}`));
-    };
+    xhr.onerror = () => reject(new Error(`Upload connection failed for ${file.name}`));
     xhr.onload = () => {
-      cleanup();
       let payload: unknown = {};
       try {
         payload = JSON.parse(xhr.responseText || "{}");
       } catch {
-        /* Ignore malformed error payloads. */
+        /* handled below */
       }
       if (xhr.status < 200 || xhr.status >= 300) {
         reject(
           new Error(
-            (payload as { error?: string }).error ||
-              `Upload failed for ${file.name} (${xhr.status})`,
+            (payload as { error?: string }).error || `Upload failed for ${file.name} (${xhr.status})`,
           ),
         );
         return;
       }
-      onProgress?.(file.size);
       resolve(payload as LocalFileEntry);
     };
-    signal?.addEventListener("abort", abort, { once: true });
     xhr.send(file);
   });
 }
 
-async function uploadWithProgress(
-  path: string,
+async function uploadFiles(
+  directory: string,
   files: FileList | File[],
   onProgress?: (progress: ProgressState) => void,
-  signal?: AbortSignal,
 ) {
   const values = Array.from(files);
   const total = values.reduce((sum, file) => sum + file.size, 0);
-  const controller = new AbortController();
-  const taskId = backgroundUploadId();
-  const relayAbort = () => controller.abort();
-  signal?.addEventListener("abort", relayAbort, { once: true });
-  backgroundUploads.set(taskId, {
-    id: taskId,
-    type: "upload",
-    status: "running",
-    progress: 0,
-    loaded: 0,
-    total,
-    destination: path,
-    files: values.map((file) => file.name),
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    controller,
-  });
-  publishBackgroundUploads();
   let completed = 0;
   const uploaded: LocalFileEntry[] = [];
   onProgress?.({ loaded: 0, total, percent: 0 });
-
-  try {
-    for (const file of values) {
-      if (controller.signal.aborted) throw abortError("Upload cancelled");
-      const entry = await uploadSingleFile(
-        path,
-        file,
-        (currentFileLoaded) => {
-          const loaded = Math.min(total, completed + currentFileLoaded);
-          const progress = {
-            loaded,
-            total,
-            percent: total ? Math.min(100, Math.round((loaded / total) * 100)) : 100,
-            detail: file.name,
-          };
-          onProgress?.(progress);
-          updateBackgroundUpload(taskId, {
-            loaded,
-            progress: progress.percent,
-            currentFile: file.name,
-          });
-        },
-        controller.signal,
-      );
-      completed += file.size;
-      uploaded.push(entry);
-    }
-
-    onProgress?.({ loaded: total, total, percent: 100 });
-    updateBackgroundUpload(taskId, { status: "completed", loaded: total, progress: 100 });
-    notifySilently({
-      title: "Upload completed",
-      message: `${values.length} file(s) uploaded to ${path}.`,
-      tone: "success",
-      link: `/explorer?path=${encodeURIComponent(path)}`,
-      source: "upload",
-    });
-    return { uploaded };
-  } catch (cause) {
-    updateBackgroundUpload(taskId, {
-      status: controller.signal.aborted ? "cancelled" : "failed",
-      error: cause instanceof Error ? cause.message : "Upload failed",
-    });
-    throw cause;
-  } finally {
-    signal?.removeEventListener("abort", relayAbort);
+  for (const file of values) {
+    const entry = await uploadSingleFile(directory, file, completed, total, onProgress);
+    completed += file.size;
+    uploaded.push(entry);
   }
+  onProgress?.({ loaded: total, total, percent: 100 });
+  return { uploaded };
 }
 
-async function runJob(
-  operation: "copy" | "move" | "delete",
-  source: string,
-  destination: string | undefined,
-  onProgress?: (job: OperationJob) => void,
-) {
+async function runJob(operation: "copy" | "move", source: string, destination: string) {
   const started = await post<{ job: OperationJob }>("job-start", {
     operation,
     source,
     destination,
   });
-  onProgress?.(started.job);
   const deadline = Date.now() + 24 * 60 * 60 * 1000;
-  let delay = 500;
+  let delay = 400;
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, delay));
-    delay = Math.min(2_000, Math.round(delay * 1.25));
+    delay = Math.min(1500, Math.round(delay * 1.25));
     const current = await get<{ job: OperationJob }>("job", { id: started.job.id });
-    onProgress?.(current.job);
-    if (current.job.status === "completed") {
-      notifySilently({
-        title: `${operation[0].toUpperCase()}${operation.slice(1)} completed`,
-        message: destination ? `${source} → ${destination}` : source,
-        tone: "success",
-        link: destination ? `/explorer?path=${encodeURIComponent(destination)}` : "/trash",
-        source: "file-operation",
-      });
-      return current.job;
-    }
+    if (current.job.status === "completed") return current.job;
     if (["failed", "cancelled", "interrupted"].includes(current.job.status)) {
       throw new Error(current.job.error || `${operation} ${current.job.status}`);
     }
@@ -432,14 +244,7 @@ async function runJob(
   throw new Error(`${operation} did not complete within 24 hours`);
 }
 
-async function downloadWithProgress(
-  path: string,
-  filename: string,
-  onProgress?: (progress: ProgressState) => void,
-  signal?: AbortSignal,
-) {
-  if (signal?.aborted) throw abortError(`Download cancelled for ${filename}`);
-  onProgress?.({ loaded: 0, total: 0, percent: 0, detail: filename });
+function startBrowserDownload(path: string, filename: string) {
   const query = new URLSearchParams({ action: "download", path });
   const link = document.createElement("a");
   link.href = `/api/local?${query}`;
@@ -449,14 +254,7 @@ async function downloadWithProgress(
   document.body.appendChild(link);
   link.click();
   link.remove();
-  onProgress?.({ loaded: 0, total: 0, percent: 100, detail: "Download handed to the browser" });
-  notifySilently({
-    title: "Download started",
-    message: `${filename} is being streamed by your browser.`,
-    tone: "info",
-    source: "download",
-  });
-  return { downloaded: path, size: 0, started: true };
+  return Promise.resolve({ downloaded: path, started: true });
 }
 
 export const localApi = {
@@ -467,122 +265,31 @@ export const localApi = {
       ...(query ? { q: query } : {}),
     }),
   read: (path: string) =>
-    get<{
-      path: string;
-      content: string;
-      size: number;
-      mime: string;
-      modifiedAt: string;
-      mode: string;
-    }>("read", { path }),
-  createFile: async (path: string, name: string) => {
-    const result = await post<LocalFileEntry>("create-file", { path, name });
-    notifySilently({
-      title: "File created",
-      message: result.path,
-      tone: "success",
-      link: `/explorer?path=${encodeURIComponent(path)}`,
-      source: "file-operation",
-    });
-    return result;
-  },
-  createDirectory: async (path: string, name: string) => {
-    const result = await post<LocalFileEntry>("create-directory", { path, name });
-    notifySilently({
-      title: "Folder created",
-      message: result.path,
-      tone: "success",
-      link: `/explorer?path=${encodeURIComponent(path)}`,
-      source: "file-operation",
-    });
-    return result;
-  },
+    get<{ path: string; content: string; size: number; mime: string; modifiedAt: string; mode: string }>(
+      "read",
+      { path },
+    ),
+  createFile: (path: string, name: string) => post<LocalFileEntry>("create-file", { path, name }),
+  createDirectory: (path: string, name: string) =>
+    post<LocalFileEntry>("create-directory", { path, name }),
   save: (path: string, content: string, expectedModifiedAt?: string) =>
-    post("save", { path, content, expectedModifiedAt }),
-  rename: (path: string, name: string) => post("rename", { path, name }),
-  delete: (path: string, onProgress?: (job: OperationJob) => void) =>
-    runJob("delete", path, undefined, onProgress),
-  copy: (source: string, destination: string, onProgress?: (job: OperationJob) => void) =>
-    runJob("copy", source, destination, onProgress),
-  move: (source: string, destination: string, onProgress?: (job: OperationJob) => void) =>
-    runJob("move", source, destination, onProgress),
-  jobs: () => get<{ jobs: OperationJob[] }>("jobs"),
-  cancelJob: (id: string) => post<{ job: OperationJob }>("job-cancel", { id }),
-  backgroundUploads: backgroundUploadTasks,
-  subscribeBackgroundUploads,
-  cancelBackgroundUpload,
-  chmod: (path: string, mode: string) => post("chmod", { path, mode }),
-  checksum: (path: string, algorithm: "sha256" | "sha512" = "sha256") =>
-    post<{ path: string; algorithm: string; checksum: string }>("checksum", { path, algorithm }),
+    post<LocalFileEntry>("save", { path, content, expectedModifiedAt }),
+  rename: (path: string, name: string) =>
+    post<{ source: string; destination: string }>("rename", { path, name }),
+  copy: (source: string, destination: string) => runJob("copy", source, destination),
+  move: (source: string, destination: string) => runJob("move", source, destination),
+  upload: uploadFiles,
+  download: startBrowserDownload,
   trash: {
     list: () => get<TrashResult>("trash-list"),
-    move: async (path: string) => {
-      const result = await post<TrashItem>("trash-move", { path });
-      notifySilently({
-        title: "Moved to trash",
-        message: result.originalPath,
-        tone: "info",
-        link: "/trash",
-        source: "trash",
-      });
-      return result;
-    },
-    restore: async (id: string) => {
-      const result = await post<{ restored: string; item: TrashItem }>("trash-restore", { id });
-      const restoredParent = result.restored.split("/").slice(0, -1).join("/") || "/";
-      notifySilently({
-        title: "Item restored",
-        message: result.restored,
-        tone: "success",
-        link: `/explorer?path=${encodeURIComponent(restoredParent)}`,
-        source: "trash",
-      });
-      return result;
-    },
-    delete: async (id: string) => {
-      const result = await post<{ deleted: string; item: TrashItem }>("trash-delete", { id });
-      notifySilently({
-        title: "Item permanently deleted",
-        message: result.item.originalPath,
-        tone: "warning",
-        source: "trash",
-      });
-      return result;
-    },
-    empty: async () => {
-      const result = await post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {});
-      notifySilently({
-        title: "Trash emptied",
-        message: `${result.deletedItems} item(s) permanently deleted.`,
-        tone: "warning",
-        source: "trash",
-      });
-      return result;
-    },
+    move: (path: string) => post<{ item: TrashItem }>("trash-move", { path }),
+    restore: (id: string) => post<{ restored: string }>("trash-restore", { id }),
+    delete: (id: string) => post<{ deleted: string }>("trash-delete", { id }),
+    empty: () => post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {}),
   },
   overview: () => get<FileManagerOverview>("overview"),
   updateInfo: () => get<UpdateInfo>("update-info"),
+  updateStatus: () => get<UpdateInfo>("update-status"),
   installUpdate: () => post<{ success: true; state: UpdateState }>("update-install", {}),
   rollbackUpdate: () => post<{ success: true; state: UpdateState }>("update-rollback", {}),
-  upload: uploadWithProgress,
-  download: downloadWithProgress,
-  terminalIdentity: () => get<TerminalIdentity>("terminal-user"),
-  ptyCreate: (
-    cwd: string | undefined,
-    cols = 120,
-    rows = 32,
-    mode: "user" | "root" = "user",
-    password?: string,
-  ) =>
-    post<{ sessionId: string; mode: "user" | "root"; linuxUsername: string; home: string }>(
-      "pty-create",
-      { cwd, cols, rows, mode, password },
-    ),
-  ptyInput: (sessionId: string, data: string) =>
-    post<{ success: true }>("pty-input", { sessionId, data }),
-  ptyResize: (sessionId: string, cols: number, rows: number) =>
-    post<{ success: true }>("pty-resize", { sessionId, cols, rows }),
-  ptyOutput: (sessionId: string, cursor: number) =>
-    get<PtyOutput>("pty-output", { id: sessionId, cursor: String(cursor) }),
-  ptyClose: (sessionId: string) => post<{ success: true }>("pty-close", { sessionId }),
 };
