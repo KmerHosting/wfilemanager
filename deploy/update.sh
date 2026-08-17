@@ -77,19 +77,20 @@ health_check() {
 }
 
 verify_release_archive() {
-  local archive="$1"
-  python3 - "$archive" <<'PY'
-import pathlib, sys, tarfile
-archive_path = sys.argv[1]
-with tarfile.open(archive_path, "r:gz") as archive:
-    for member in archive.getmembers():
-        name = member.name.replace("\\", "/")
-        pure = pathlib.PurePosixPath(name)
-        if pure.is_absolute() or ".." in pure.parts:
-            raise SystemExit("The release archive contains an unsafe path")
-        if member.issym() or member.islnk() or member.isdev() or member.isfifo():
-            raise SystemExit("The release archive contains an unsupported special entry")
-PY
+  local archive="$1" member="" type=""
+  tar -tzf "$archive" >/dev/null || return 1
+  while IFS= read -r member; do
+    [[ -n "$member" ]] || continue
+    [[ "$member" != /* ]] || { echo "Release archive contains an absolute path" >&2; return 1; }
+    [[ ! "$member" =~ (^|/)\.\.(/|$) ]] || { echo "Release archive contains path traversal" >&2; return 1; }
+  done < <(tar -tzf "$archive")
+
+  while IFS= read -r type; do
+    case "$type" in
+      -|d) ;;
+      *) echo "Release archive contains an unsupported special entry" >&2; return 1 ;;
+    esac
+  done < <(tar -tvzf "$archive" | awk '{print substr($1,1,1)}')
 }
 
 activate_release() {
