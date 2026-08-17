@@ -1,0 +1,35 @@
+name: Refresh simplified lockfile
+
+on:
+  push:
+    branches: [release/0.11-simplified]
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: ${{ !contains(github.event.head_commit.message, 'chore: refresh bun lock') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/0.11-simplified
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Refresh lockfile
+        run: bun install --lockfile-only
+      - name: Commit lockfile when needed
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if git diff --quiet -- bun.lock; then
+            echo "bun.lock already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bun.lock
+          git commit -m "chore: refresh bun lock"
+          git push origin HEAD:release/0.11-simplified
