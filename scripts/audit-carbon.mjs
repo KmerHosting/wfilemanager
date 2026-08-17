@@ -57,6 +57,11 @@ for (const required of [
 if (/#[0-9a-fA-F]{3,8}\b/.test(styles)) {
   violations.push("src/styles.scss: raw hexadecimal color detected; use Carbon semantic tokens");
 }
+if (/\.cds--loading-overlay|--cds-overlay\s*:/.test(styles)) {
+  violations.push(
+    "src/styles.scss: Carbon loading overlay must use the official $overlay token without app overrides",
+  );
+}
 
 const carbon = await readFile(new URL("src/carbon.scss", root), "utf8");
 for (const required of ['@use "@carbon/react"', "themes.$white", "themes.$g100", "theme.theme"]) {
@@ -74,6 +79,9 @@ if (routeRoot.includes("fonts.googleapis.com") || routeRoot.includes("fonts.gsta
 const app = await readFile(new URL("src/routes/_app.tsx", root), "utf8");
 if (!app.includes("HeaderContainer") || !app.includes("Content")) {
   violations.push("app shell: Carbon HeaderContainer/Content not used");
+}
+if (!app.includes('<Loading description="Loading wFileManager" withOverlay />')) {
+  violations.push("app shell: full-page loading must use Carbon Loading with its standard overlay");
 }
 
 const sidebar = await readFile(new URL("src/components/app-shell/sidebar.tsx", root), "utf8");
@@ -100,6 +108,13 @@ for (const file of visibleRoutes) {
   if (!content.includes("@carbon/react")) {
     violations.push(`${file}: no @carbon/react component import`);
   }
+}
+
+const account = await readFile(new URL("src/routes/_app.account.tsx", root), "utf8");
+if (!account.includes("Layer") || !account.includes("<Layer>")) {
+  violations.push(
+    "account route: password inputs inside the layer-01 tile must use Carbon Layer context for field contrast",
+  );
 }
 
 if (violations.length) {
