@@ -52,7 +52,14 @@ export interface ProgressState {
 export interface OperationJob {
   id: string;
   operation: "copy" | "move" | "delete";
-  status: "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
+  status:
+    | "queued"
+    | "running"
+    | "cancelling"
+    | "cancelled"
+    | "completed"
+    | "failed"
+    | "interrupted";
   progress: number;
   processedBytes: number;
   totalBytes: number;
