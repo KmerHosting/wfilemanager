@@ -49,14 +49,18 @@ export interface ProgressState {
   detail?: string;
 }
 
+const OPERATION_JOB_STATUSES = {
+  queued: "queued",
+  running: "running",
+  cancelling: "cancelling",
+  cancelled: "cancelled",
+  completed: "completed",
+  failed: "failed",
+  interrupted: "interrupted",
+} as const;
+
 export type OperationJobStatus =
-  | "queued"
-  | "running"
-  | "cancelling"
-  | "cancelled"
-  | "completed"
-  | "failed"
-  | "interrupted";
+  (typeof OPERATION_JOB_STATUSES)[keyof typeof OPERATION_JOB_STATUSES];
 
 export interface OperationJob {
   id: string;
