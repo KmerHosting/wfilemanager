@@ -10,9 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as LockedRouteImport } from './routes/locked'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as SessionExpiredRouteImport } from './routes/session-expired'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppIndexRouteImport } from './routes/_app.index'
@@ -29,19 +27,9 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LockedRoute = LockedRouteImport.update({
-  id: '/locked',
-  path: '/locked',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SessionExpiredRoute = SessionExpiredRouteImport.update({
-  id: '/session-expired',
-  path: '/session-expired',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SetupRoute = SetupRouteImport.update({
@@ -102,9 +90,7 @@ const ApiSqliteRoute = ApiSqliteRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/locked': typeof LockedRoute
   '/login': typeof LoginRoute
-  '/session-expired': typeof SessionExpiredRoute
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/about': typeof AppAboutRoute
@@ -117,9 +103,7 @@ export interface FileRoutesByFullPath {
   '/api/sqlite': typeof ApiSqliteRoute
 }
 export interface FileRoutesByTo {
-  '/locked': typeof LockedRoute
   '/login': typeof LoginRoute
-  '/session-expired': typeof SessionExpiredRoute
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/about': typeof AppAboutRoute
@@ -135,9 +119,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/locked': typeof LockedRoute
   '/login': typeof LoginRoute
-  '/session-expired': typeof SessionExpiredRoute
   '/setup': typeof SetupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/about': typeof AppAboutRoute
@@ -154,9 +136,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/locked'
     | '/login'
-    | '/session-expired'
     | '/setup'
     | '/sitemap.xml'
     | '/about'
@@ -169,9 +149,7 @@ export interface FileRouteTypes {
     | '/api/sqlite'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/locked'
     | '/login'
-    | '/session-expired'
     | '/setup'
     | '/sitemap.xml'
     | '/about'
@@ -186,9 +164,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
-    | '/locked'
     | '/login'
-    | '/session-expired'
     | '/setup'
     | '/sitemap.xml'
     | '/_app/about'
@@ -204,9 +180,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
-  LockedRoute: typeof LockedRoute
   LoginRoute: typeof LoginRoute
-  SessionExpiredRoute: typeof SessionExpiredRoute
   SetupRoute: typeof SetupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiGatewayRoute: typeof ApiGatewayRoute
@@ -224,25 +198,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/locked': {
-      id: '/locked'
-      path: '/locked'
-      fullPath: '/locked'
-      preLoaderRoute: typeof LockedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/session-expired': {
-      id: '/session-expired'
-      path: '/session-expired'
-      fullPath: '/session-expired'
-      preLoaderRoute: typeof SessionExpiredRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/setup': {
@@ -345,9 +305,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
-  LockedRoute: LockedRoute,
   LoginRoute: LoginRoute,
-  SessionExpiredRoute: SessionExpiredRoute,
   SetupRoute: SetupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiGatewayRoute: ApiGatewayRoute,
