@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Download, RefreshCw, RotateCcw } from "@/components/ui/icons";
-import { SERVER_INFO } from "@/lib/demo/data";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
 import { formatBytes } from "@/lib/format";
 import { toast } from "sonner";
@@ -22,9 +21,13 @@ function About() {
     try {
       const result = await localApi.updateInfo();
       setUpdate(result);
-      if (notify) toast.success(result.updateAvailable ? `Version ${result.latestVersion} is available` : "Already up to date");
+      if (notify)
+        toast.success(
+          result.updateAvailable ? `Version ${result.latestVersion} is available` : "Already up to date",
+        );
     } catch (error) {
-      if (notify) toast.error(error instanceof Error ? error.message : "Unable to check for updates");
+      if (notify)
+        toast.error(error instanceof Error ? error.message : "Unable to check for updates");
     }
   };
 
@@ -73,10 +76,22 @@ function About() {
             <CardDescription>No hosted database, licence key or multi-user service.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Version</span><strong className="font-mono">{update?.currentVersion || SERVER_INFO.wfmVersion}</strong></div>
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Database</span><strong>Local SQLite</strong></div>
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Account model</span><strong>Single administrator</strong></div>
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">License</span><strong>MIT</strong></div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Version</span>
+              <strong className="font-mono">{update?.currentVersion || "—"}</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Database</span>
+              <strong>Local SQLite</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Account model</span>
+              <strong>Single administrator</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">License</span>
+              <strong>MIT</strong>
+            </div>
           </CardContent>
         </Card>
 
@@ -94,12 +109,22 @@ function About() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2 text-sm">
-              <div className="flex justify-between gap-4"><span className="text-muted-foreground">Latest</span><strong className="font-mono">{update?.latestVersion || "Not checked"}</strong></div>
-              {update?.size != null && <div className="flex justify-between gap-4"><span className="text-muted-foreground">Download</span><strong>{formatBytes(update.size)}</strong></div>}
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Latest</span>
+                <strong className="font-mono">{update?.latestVersion || "Not checked"}</strong>
+              </div>
+              {update?.size != null && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Download</span>
+                  <strong>{formatBytes(update.size)}</strong>
+                </div>
+              )}
             </div>
 
             {update?.state.status === "failed" && (
-              <Alert variant="destructive"><AlertDescription>{update.state.error || update.state.message}</AlertDescription></Alert>
+              <Alert variant="destructive">
+                <AlertDescription>{update.state.error || update.state.message}</AlertDescription>
+              </Alert>
             )}
 
             <div className="flex flex-wrap gap-2">
