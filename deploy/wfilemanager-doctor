@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+[[ "${EUID:-$(id -u)}" -eq 0 ]] || { echo "Run this command as root." >&2; exit 1; }
+[[ $# -eq 0 ]] || { echo "Usage: sudo wfilemanager-doctor" >&2; exit 2; }
+
+ENV_FILE="/etc/wfilemanager/wfilemanager.env"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
+PORT="${PORT:-1973}"
+HEALTH_URL="${WFILEMANAGER_HEALTH_URL:-http://127.0.0.1:$PORT/api/health}"
+SERVER_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1 || true)"
+[[ -n "$SERVER_IP" ]] || SERVER_IP="$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -m1 -E '^[0-9]+(\.[0-9]+){3}$' || true)"
+
+SERVICE_OK=false
+HEALTH_OK=false
+LISTENER_OK=false
+
+if systemctl is-active --quiet wfilemanager.service; then
+  SERVICE_OK=true
+fi
+
+HEALTH_JSON="$(curl -fsS --max-time 5 "$HEALTH_URL" 2>/dev/null || true)"
+if [[ -n "$HEALTH_JSON" ]] && jq -e '.ok == true and .status == "healthy"' >/dev/null 2>&1 <<<"$HEALTH_JSON"; then
+  HEALTH_OK=true
+fi
+
+if ss -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)$PORT$"; then
+  LISTENER_OK=true
+fi
+
+echo "wFileManager doctor"
+echo
+echo "Service:   $([[ "$SERVICE_OK" == true ]] && echo HEALTHY || echo FAILED)"
+echo "Health API: $([[ "$HEALTH_OK" == true ]] && echo HEALTHY || echo FAILED)"
+echo "Listener:  $([[ "$LISTENER_OK" == true ]] && echo "0.0.0.0:$PORT available" || echo "TCP $PORT not detected")"
+echo "Open:      http://${SERVER_IP:-SERVER_IP}:$PORT/"
+
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q '^Status: active'; then
+  if ufw status 2>/dev/null | grep -Eq "^$PORT(/tcp)?[[:space:]]+ALLOW"; then
+    echo "UFW:       TCP $PORT allowed"
+  else
+    echo "UFW:       TCP $PORT is NOT allowed"
+    echo "Fix:       sudo ufw allow $PORT/tcp"
+  fi
+else
+  echo "UFW:       inactive or not installed"
+fi
+
+AUTH_STATUS="$(curl -fsS --max-time 5 "http://127.0.0.1:$PORT/api/gateway?scope=auth&action=status" 2>/dev/null || printf '{}')"
+CONFIGURED="$(jq -r '.configured // false' <<<"$AUTH_STATUS" 2>/dev/null || echo false)"
+if [[ "$CONFIGURED" != "true" ]]; then
+  SETUP_CODE="$(cat /etc/wfilemanager/setup-secret.key 2>/dev/null || true)"
+  echo "Setup:     pending"
+  echo "Setup code: ${SETUP_CODE:-unavailable}"
+else
+  echo "Setup:     complete"
+fi
+
+echo
+if [[ "$SERVICE_OK" == true && "$HEALTH_OK" == true && "$LISTENER_OK" == true ]]; then
+  echo "The wFileManager application itself is working."
+  echo "If a remote browser still times out, allow TCP $PORT in the VPS provider firewall/security group or place wFileManager behind a reverse proxy."
+  exit 0
+fi
+
+echo "wFileManager has a local runtime problem. Recent service logs:"
+journalctl -u wfilemanager.service -n 40 --no-pager 2>/dev/null || true
+exit 1
