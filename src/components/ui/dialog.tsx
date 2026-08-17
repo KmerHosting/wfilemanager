@@ -60,7 +60,7 @@ const DialogClose = React.forwardRef<
 DialogClose.displayName = "DialogClose";
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <ModalHeader className={cn("wfm-carbon-modal__header", className)} {...props} />
+  <div className={className} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -69,9 +69,9 @@ const DialogFooter = ({
   children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { children: React.ReactNode }) => (
-  <ModalFooter className={cn("wfm-carbon-modal__footer", className)} {...props}>
+  <div className={className} {...props}>
     {children}
-  </ModalFooter>
+  </div>
 );
 DialogFooter.displayName = "DialogFooter";
 
@@ -81,11 +81,19 @@ const DialogContent = React.forwardRef<
 >(({ className, children, containerClassName, ...props }, ref) => {
   const context = React.useContext(DialogContext);
   if (!context) return null;
+
   const content = React.Children.toArray(children);
+  const header = content.find(
+    (child) => React.isValidElement(child) && child.type === DialogHeader,
+  ) as React.ReactElement<React.HTMLAttributes<HTMLDivElement>> | undefined;
+  const footer = content.find(
+    (child) => React.isValidElement(child) && child.type === DialogFooter,
+  ) as React.ReactElement<React.HTMLAttributes<HTMLDivElement>> | undefined;
   const body = content.filter(
     (child) =>
       !React.isValidElement(child) || (child.type !== DialogHeader && child.type !== DialogFooter),
   );
+
   return (
     <ComposedModal
       ref={ref}
@@ -95,9 +103,17 @@ const DialogContent = React.forwardRef<
       containerClassName={cn("wfm-carbon-modal__container", className, containerClassName)}
       {...props}
     >
-      {content.filter((child) => React.isValidElement(child) && child.type === DialogHeader)}
+      {header && (
+        <ModalHeader className={cn("wfm-carbon-modal__header", header.props.className)}>
+          {header.props.children}
+        </ModalHeader>
+      )}
       {body.length > 0 && <ModalBody className="wfm-carbon-modal__body">{body}</ModalBody>}
-      {content.filter((child) => React.isValidElement(child) && child.type === DialogFooter)}
+      {footer && (
+        <ModalFooter className={cn("wfm-carbon-modal__footer", footer.props.className)}>
+          {footer.props.children}
+        </ModalFooter>
+      )}
     </ComposedModal>
   );
 });
