@@ -1,7 +1,10 @@
 import os from "node:os";
 import { access, readdir, readFile, stat } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
+const execFileAsync = promisify(execFile);
 const COMMON_LOCATIONS = ["/", "/root", "/etc", "/var/www", "/opt"] as const;
 const MAX_TEXT_BYTES = Number(process.env.WFILEMANAGER_MAX_TEXT_BYTES || 5 * 1024 * 1024);
 const MAX_UPLOAD_BYTES = Number(
@@ -67,21 +70,59 @@ async function linuxLoginUsers() {
   }
 }
 
-function primaryIpv4() {
-  const interfaces = os.networkInterfaces();
-  for (const addresses of Object.values(interfaces)) {
-    for (const address of addresses || []) {
-      if (address.family === "IPv4" && !address.internal) return address.address;
-    }
+function validIpv4(value: string | undefined | null) {
+  if (!value) return null;
+  const match = value.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+  if (!match) return null;
+  const octets = match[0].split(".").map(Number);
+  return octets.every((octet) => octet >= 0 && octet <= 255) ? match[0] : null;
+}
+
+async function primaryIpv4() {
+  const configured = validIpv4(process.env.WFILEMANAGER_SERVER_IPV4);
+  if (configured) return configured;
+
+  try {
+    const { stdout } = await execFileAsync("ip", ["-4", "route", "get", "1.1.1.1"], {
+      timeout: 2000,
+    });
+    const routeSource = stdout.match(/\bsrc\s+((?:\d{1,3}\.){3}\d{1,3})\b/)?.[1];
+    const detected = validIpv4(routeSource);
+    if (detected) return detected;
+  } catch {
+    // Fall through to another local-only detection method.
   }
+
+  try {
+    const { stdout } = await execFileAsync("hostname", ["-I"], { timeout: 2000 });
+    for (const candidate of stdout.trim().split(/\s+/)) {
+      const detected = validIpv4(candidate);
+      if (detected && !detected.startsWith("127.")) return detected;
+    }
+  } catch {
+    // Fall through to Node's interface list when libuv supports it.
+  }
+
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const addresses of Object.values(interfaces)) {
+      for (const address of addresses || []) {
+        if (address.family === "IPv4" && !address.internal) return address.address;
+      }
+    }
+  } catch {
+    // Some virtualized Linux environments return UV_ENOTSUP here. IPv4 is optional metadata.
+  }
+
   return null;
 }
 
 export async function fileManagerSummary() {
-  const [release, locations, loginUsers] = await Promise.all([
+  const [release, locations, loginUsers, ipv4] = await Promise.all([
     osRelease(),
     Promise.all(COMMON_LOCATIONS.map(locationStatus)),
     linuxLoginUsers(),
+    primaryIpv4(),
   ]);
   const root = locations.find((location) => location.path === "/") || null;
   const availableLocations = locations.filter(
@@ -93,7 +134,7 @@ export async function fileManagerSummary() {
 
   return {
     hostname: os.hostname(),
-    ipv4: primaryIpv4(),
+    ipv4,
     platform: os.platform(),
     release: os.release(),
     architecture: os.arch(),
