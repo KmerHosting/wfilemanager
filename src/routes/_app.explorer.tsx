@@ -2,63 +2,27 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import {
-  ArrowLeft,
-  ArrowRight,
   ArrowUp,
   Copy,
   Download,
-  CircleX,
-  Eye,
   File as FileIcon,
-  FileArchive,
-  FileAudio,
-  FileCode2,
-  FileImage,
-  FileJson2,
-  FileSpreadsheet,
-  FileText,
-  FileVideo,
   FilePlus2,
   Folder,
-  FolderInput,
   FolderPlus,
-  HardDriveUpload,
-  Home,
-  Info,
-  Grid2X2,
-  Link2,
-  List,
-  Loader2,
-  MoreHorizontal,
+  MoveRight,
   Pencil,
   RefreshCw,
   Save,
   Search,
-  Shield,
   Trash2,
   UploadCloud,
 } from "@/components/ui/icons";
 import { toast } from "sonner";
-import {
-  localApi,
-  type LocalFileEntry,
-  type OperationJob,
-  type ProgressState,
-} from "@/lib/local-api";
-import {
-  archiveApi,
-  type ArchiveFormat,
-  type ArchiveInspection,
-  type ConflictPolicy,
-  type ExtractionMode,
-} from "@/lib/archive-api";
+import { localApi, type LocalFileEntry, type ProgressState } from "@/lib/local-api";
 import { formatBytes, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -77,29 +41,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { cn } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -122,12 +63,6 @@ export const Route = createFileRoute("/_app/explorer")({
 
 type CreateKind = "file" | "directory";
 type TransferKind = "copy" | "move";
-type LayoutMode = "list" | "grid";
-
-type ExtractPlan = {
-  entry: LocalFileEntry;
-  inspection: ArchiveInspection;
-};
 
 function normalizePath(value: string) {
   const parts = value.split("/").filter(Boolean);
@@ -146,83 +81,6 @@ function parentPath(value: string) {
   return `/${parts.join("/")}` || "/";
 }
 
-function isArchiveEntry(entry: LocalFileEntry) {
-  if (entry.kind !== "file") return false;
-  const name = entry.name.toLowerCase();
-  return name.endsWith(".zip") || name.endsWith(".tar.gz") || name.endsWith(".tgz");
-}
-
-function entryVisual(entry: LocalFileEntry) {
-  if (entry.kind === "directory") {
-    return {
-      Icon: Folder,
-      tone: "wfm-file-icon-tile--folder",
-      icon: "wfm-file-icon--folder",
-    };
-  }
-  if (entry.kind === "symlink") {
-    return {
-      Icon: Link2,
-      tone: "border-sky-500/20 bg-sky-500/10 text-sky-400",
-      icon: "text-sky-400",
-    };
-  }
-  const extension = entry.name.split(".").pop()?.toLowerCase() || "";
-  if (entry.mime.startsWith("image/"))
-    return {
-      Icon: FileImage,
-      tone: "border-fuchsia-500/20 bg-fuchsia-500/10",
-      icon: "text-fuchsia-400",
-    };
-  if (entry.mime.startsWith("audio/"))
-    return { Icon: FileAudio, tone: "border-pink-500/20 bg-pink-500/10", icon: "text-pink-400" };
-  if (entry.mime.startsWith("video/"))
-    return {
-      Icon: FileVideo,
-      tone: "border-violet-500/20 bg-violet-500/10",
-      icon: "text-violet-400",
-    };
-  if (["zip", "gz", "bz2", "xz", "7z", "rar", "tar"].includes(extension))
-    return {
-      Icon: FileArchive,
-      tone: "border-amber-500/20 bg-amber-500/10",
-      icon: "text-amber-400",
-    };
-  if (
-    [
-      "js",
-      "jsx",
-      "ts",
-      "tsx",
-      "mjs",
-      "cjs",
-      "py",
-      "php",
-      "sh",
-      "bash",
-      "css",
-      "html",
-      "sql",
-    ].includes(extension)
-  )
-    return { Icon: FileCode2, tone: "border-cyan-500/20 bg-cyan-500/10", icon: "text-cyan-400" };
-  if (["json", "yaml", "yml", "xml"].includes(extension))
-    return {
-      Icon: FileJson2,
-      tone: "border-yellow-500/20 bg-yellow-500/10",
-      icon: "text-yellow-400",
-    };
-  if (["csv", "xls", "xlsx", "ods"].includes(extension))
-    return {
-      Icon: FileSpreadsheet,
-      tone: "border-emerald-500/20 bg-emerald-500/10",
-      icon: "text-emerald-400",
-    };
-  if (entry.mime.startsWith("text/") || ["md", "log", "conf", "ini", "service"].includes(extension))
-    return { Icon: FileText, tone: "border-blue-500/20 bg-blue-500/10", icon: "text-blue-400" };
-  return { Icon: FileIcon, tone: "border-border bg-muted/40", icon: "text-muted-foreground" };
-}
-
 function Explorer() {
   const { path = "/", q = "" } = Route.useSearch();
   const navigate = useNavigate({ from: "/explorer" });
@@ -230,51 +88,21 @@ function Explorer() {
   const uploadInput = useRef<HTMLInputElement>(null);
 
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
-  const [realPath, setRealPath] = useState(currentPath);
   const [pathInput, setPathInput] = useState(currentPath);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
-  const [layout, setLayout] = useState<LayoutMode>(() => {
-    if (typeof window === "undefined") return "list";
-    return window.localStorage.getItem("wfilemanager.explorer.layout") === "grid" ? "grid" : "list";
-  });
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(() => new Set());
-  const [lastSelectedPath, setLastSelectedPath] = useState<string | null>(null);
-  const [propertiesEntry, setPropertiesEntry] = useState<LocalFileEntry | null>(null);
   const [createKind, setCreateKind] = useState<CreateKind | null>(null);
   const [createName, setCreateName] = useState("");
   const [renameEntry, setRenameEntry] = useState<LocalFileEntry | null>(null);
   const [renameName, setRenameName] = useState("");
-  const [deleteEntries, setDeleteEntries] = useState<LocalFileEntry[]>([]);
-  const [transfer, setTransfer] = useState<{ kind: TransferKind; entry: LocalFileEntry } | null>(
-    null,
-  );
+  const [deleteEntry, setDeleteEntry] = useState<LocalFileEntry | null>(null);
+  const [transfer, setTransfer] = useState<{ kind: TransferKind; entry: LocalFileEntry } | null>(null);
   const [destination, setDestination] = useState(currentPath);
-  const [modeEntry, setModeEntry] = useState<LocalFileEntry | null>(null);
-  const [mode, setMode] = useState("");
   const [previewEntry, setPreviewEntry] = useState<LocalFileEntry | null>(null);
   const [editorContent, setEditorContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [extractPlan, setExtractPlan] = useState<ExtractPlan | null>(null);
-  const [archiveBusy, setArchiveBusy] = useState(false);
-  const [extractDestination, setExtractDestination] = useState("");
-  const [extractFolderName, setExtractFolderName] = useState("");
-  const [extractConflictPolicy, setExtractConflictPolicy] = useState<ConflictPolicy>("rename");
-  const [extractMode, setExtractMode] = useState<ExtractionMode>("current");
-  const [operationProgress, setOperationProgress] = useState<{
-    label: string;
-    percent: number;
-    detail?: string;
-    cancel?: () => void;
-  } | null>(null);
-
-  const clearSelection = () => {
-    setSelectedPaths(new Set());
-    setLastSelectedPath(null);
-  };
+  const [progress, setProgress] = useState<ProgressState | null>(null);
 
   const setPath = (value: string) => {
     navigate({
@@ -283,7 +111,6 @@ function Explorer() {
         path: normalizePath(value),
       }),
     });
-    clearSelection();
   };
 
   const setSearch = (value: string) => {
@@ -301,15 +128,9 @@ function Explorer() {
     try {
       const result = await localApi.list(currentPath);
       setEntries(result.entries);
-      setRealPath(result.realPath);
       setPathInput(result.path);
-      setSelectedPaths((current) => {
-        const existing = new Set(result.entries.map((entry) => entry.path));
-        return new Set(Array.from(current).filter((entryPath) => existing.has(entryPath)));
-      });
     } catch (cause) {
       setEntries([]);
-      clearSelection();
       setError(cause instanceof Error ? cause.message : "Unable to load this directory");
     } finally {
       setLoading(false);
@@ -317,1373 +138,285 @@ function Explorer() {
   };
 
   useEffect(() => {
-    clearSelection();
     void load();
   }, [currentPath]);
 
-  useEffect(() => {
-    window.localStorage.setItem("wfilemanager.explorer.layout", layout);
-  }, [layout]);
-
   const visibleEntries = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return entries.filter((entry) => {
-      if (!showHidden && entry.hidden) return false;
-      return !needle || entry.name.toLowerCase().includes(needle);
-    });
-  }, [entries, q, showHidden]);
-
-  const selectedEntries = useMemo(
-    () => entries.filter((entry) => selectedPaths.has(entry.path)),
-    [entries, selectedPaths],
-  );
-
-  const allVisibleSelected =
-    visibleEntries.length > 0 && visibleEntries.every((entry) => selectedPaths.has(entry.path));
-  const someVisibleSelected = visibleEntries.some((entry) => selectedPaths.has(entry.path));
-
-  useEffect(() => {
-    const listener = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const typing =
-        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
-      if (typing) return;
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
-        event.preventDefault();
-        setSelectedPaths(new Set(visibleEntries.map((entry) => entry.path)));
-      }
-      if (event.key === "Escape") clearSelection();
-    };
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, [visibleEntries]);
-
-  const crumbs = useMemo(() => {
-    const segments = currentPath.split("/").filter(Boolean);
-    return [
-      { label: "/", path: "/" },
-      ...segments.map((segment, index) => ({
-        label: segment,
-        path: `/${segments.slice(0, index + 1).join("/")}`,
-      })),
-    ];
-  }, [currentPath]);
-
-  const selectEntry = (
-    entry: LocalFileEntry,
-    options: { additive?: boolean; range?: boolean } = {},
-  ) => {
-    if (options.range && lastSelectedPath) {
-      const start = visibleEntries.findIndex((item) => item.path === lastSelectedPath);
-      const end = visibleEntries.findIndex((item) => item.path === entry.path);
-      if (start >= 0 && end >= 0) {
-        const [from, to] = start < end ? [start, end] : [end, start];
-        const rangePaths = visibleEntries.slice(from, to + 1).map((item) => item.path);
-        setSelectedPaths(
-          (current) => new Set(options.additive ? [...current, ...rangePaths] : rangePaths),
-        );
-        return;
-      }
-    }
-    setSelectedPaths((current) => {
-      if (!options.additive) return new Set([entry.path]);
-      const next = new Set(current);
-      if (next.has(entry.path)) next.delete(entry.path);
-      else next.add(entry.path);
-      return next;
-    });
-    setLastSelectedPath(entry.path);
-  };
-
-  const toggleEntry = (entry: LocalFileEntry) => {
-    selectEntry(entry, { additive: true });
-  };
-
-  const selectForContextMenu = (entry: LocalFileEntry) => {
-    if (!selectedPaths.has(entry.path)) {
-      setSelectedPaths(new Set([entry.path]));
-      setLastSelectedPath(entry.path);
-    }
-  };
+    return entries.filter((entry) => !needle || entry.name.toLowerCase().includes(needle));
+  }, [entries, q]);
 
   const openEntry = async (entry: LocalFileEntry) => {
     if (entry.kind === "directory") {
       setPath(entry.path);
       return;
     }
-    if (entry.kind === "symlink" && entry.linkTarget?.startsWith("/")) {
-      try {
-        const target = await localApi.list(entry.linkTarget);
-        if (target) setPath(entry.linkTarget);
-        return;
-      } catch {
-        // Continue to the text preview when the link does not target a directory.
-      }
-    }
     setPreviewEntry(entry);
     setPreviewLoading(true);
-    setPreviewError(null);
     setEditorContent("");
     try {
       const result = await localApi.read(entry.path);
       setEditorContent(result.content);
     } catch (cause) {
-      setPreviewError(cause instanceof Error ? cause.message : "Preview failed");
+      toast.error(cause instanceof Error ? cause.message : "This file cannot be previewed as text");
+      setPreviewEntry(null);
     } finally {
       setPreviewLoading(false);
     }
   };
 
-  const mutate = async (operation: () => Promise<unknown>, success: string) => {
+  const create = async () => {
+    const name = createName.trim();
+    if (!createKind || !name) return;
     try {
-      await operation();
-      toast.success(success);
-      await load();
-      return true;
-    } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Operation failed");
-      return false;
-    }
-  };
-
-  const isCancelled = (cause: unknown) =>
-    cause instanceof DOMException && cause.name === "AbortError";
-
-  const downloadEntry = async (entry: LocalFileEntry) => {
-    if (operationProgress) {
-      toast.warning("Wait for the current transfer to finish or cancel it first");
-      return;
-    }
-    const controller = new AbortController();
-    setOperationProgress({
-      label: `Downloading ${entry.name}`,
-      percent: 0,
-      detail: `0 B / ${formatBytes(entry.size)}`,
-      cancel: () => controller.abort(),
-    });
-    try {
-      await localApi.download(
-        entry.path,
-        entry.name,
-        (value) => {
-          setOperationProgress({
-            label: `Downloading ${entry.name}`,
-            percent: value.percent,
-            detail: `${formatBytes(value.loaded)} / ${formatBytes(value.total || entry.size)}`,
-            cancel: () => controller.abort(),
-          });
-        },
-        controller.signal,
-      );
-      toast.success(`${entry.name} downloaded`);
-    } catch (cause) {
-      if (isCancelled(cause)) toast.info(`Download of ${entry.name} cancelled`);
-      else toast.error(cause instanceof Error ? cause.message : "Download failed");
-    } finally {
-      setOperationProgress(null);
-    }
-  };
-
-  const createArchive = async (entry: LocalFileEntry, format: ArchiveFormat) => {
-    if (archiveBusy) return;
-    setArchiveBusy(true);
-    setOperationProgress({
-      label: `Creating ${format.toUpperCase()} archive`,
-      percent: 15,
-      detail: entry.name,
-    });
-    try {
-      const result = await archiveApi.create(entry.path, format);
-      setOperationProgress({
-        label: `Creating ${format.toUpperCase()} archive`,
-        percent: 100,
-        detail: result.path,
-      });
-      toast.success(
-        `${result.path} created${result.skippedLinks ? ` · ${result.skippedLinks} link(s) skipped` : ""}`,
-      );
+      if (createKind === "file") await localApi.createFile(currentPath, name);
+      else await localApi.createDirectory(currentPath, name);
+      toast.success(createKind === "file" ? "File created" : "Folder created");
+      setCreateKind(null);
+      setCreateName("");
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Archive creation failed");
-    } finally {
-      window.setTimeout(() => setOperationProgress(null), 650);
-      setArchiveBusy(false);
+      toast.error(cause instanceof Error ? cause.message : "Creation failed");
     }
   };
 
-  const extractArchive = async (entry: LocalFileEntry) => {
-    if (archiveBusy) return;
-    setArchiveBusy(true);
-    setOperationProgress({
-      label: `Inspecting ${entry.name}`,
-      percent: 15,
-      detail: "Checking archive safety and destination",
-    });
+  const rename = async () => {
+    if (!renameEntry || !renameName.trim()) return;
     try {
-      const inspection = await archiveApi.inspect(entry.path);
-      setOperationProgress(null);
-      if (inspection.multipleTopLevel || inspection.defaultConflicts.length > 0) {
-        setExtractDestination(inspection.destinationParent);
-        setExtractFolderName(inspection.suggestedFolder);
-        setExtractConflictPolicy("rename");
-        setExtractMode("current");
-        setExtractPlan({ entry, inspection });
-      } else {
-        setOperationProgress({
-          label: `Extracting ${entry.name}`,
-          percent: 35,
-          detail: `Into ${inspection.destinationParent}`,
-        });
-        const result = await archiveApi.extract(entry.path, {
-          mode: "current",
-          conflictPolicy: "error",
-        });
-        setOperationProgress({
-          label: `Extracting ${entry.name}`,
-          percent: 100,
-          detail: result.extractedTo,
-        });
-        toast.success(`${entry.name} extracted into ${result.extractedTo}`);
-        await load();
-      }
-    } catch (cause) {
-      setOperationProgress(null);
-      toast.error(cause instanceof Error ? cause.message : "Archive extraction failed");
-    } finally {
-      window.setTimeout(() => setOperationProgress(null), 650);
-      setArchiveBusy(false);
-    }
-  };
-
-  const confirmExtraction = async (mode: ExtractionMode) => {
-    if (!extractPlan || archiveBusy) return;
-    const plan = extractPlan;
-    setExtractPlan(null);
-    setArchiveBusy(true);
-    const detail =
-      mode === "folder"
-        ? `Into ${extractFolderName || plan.inspection.suggestedFolder}`
-        : mode === "custom"
-          ? `Into ${extractDestination}`
-          : `Into ${plan.inspection.destinationParent}`;
-    setOperationProgress({ label: `Extracting ${plan.entry.name}`, percent: 35, detail });
-    try {
-      const result = await archiveApi.extract(plan.entry.path, {
-        mode,
-        folderName:
-          mode === "folder" ? extractFolderName || plan.inspection.suggestedFolder : undefined,
-        destination: mode === "custom" ? extractDestination : undefined,
-        conflictPolicy: extractConflictPolicy,
-      });
-      setOperationProgress({
-        label: `Extracting ${plan.entry.name}`,
-        percent: 100,
-        detail: result.extractedTo,
-      });
-      const renamed = Object.entries(result.renamedTopLevel).filter(([from, to]) => from !== to);
-      toast.success(
-        `${plan.entry.name} extracted into ${result.extractedTo}${renamed.length ? ` · ${renamed.length} conflict(s) renamed` : ""}`,
-      );
+      await localApi.rename(renameEntry.path, renameName.trim());
+      toast.success("Renamed");
+      setRenameEntry(null);
       await load();
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Archive extraction failed");
-    } finally {
-      window.setTimeout(() => setOperationProgress(null), 650);
-      setArchiveBusy(false);
+      toast.error(cause instanceof Error ? cause.message : "Rename failed");
     }
   };
 
-  const openRename = (entry: LocalFileEntry) => {
-    setRenameEntry(entry);
-    setRenameName(entry.name);
+  const remove = async () => {
+    if (!deleteEntry) return;
+    try {
+      await localApi.trash.move(deleteEntry.path);
+      toast.success("Moved to trash");
+      setDeleteEntry(null);
+      await load();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Delete failed");
+    }
   };
 
-  const openTransfer = (kind: TransferKind, entry: LocalFileEntry) => {
-    setTransfer({ kind, entry });
-    setDestination(currentPath);
+  const transferEntry = async () => {
+    if (!transfer || !destination.trim()) return;
+    try {
+      if (transfer.kind === "copy") await localApi.copy(transfer.entry.path, destination.trim());
+      else await localApi.move(transfer.entry.path, destination.trim());
+      toast.success(transfer.kind === "copy" ? "Copied" : "Moved");
+      setTransfer(null);
+      await load();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "File operation failed");
+    }
   };
 
-  const openMode = (entry: LocalFileEntry) => {
-    setModeEntry(entry);
-    setMode(entry.mode);
+  const upload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setProgress({ loaded: 0, total: 0, percent: 0 });
+    try {
+      await localApi.upload(currentPath, files, setProgress);
+      toast.success(`${files.length} file(s) uploaded`);
+      await load();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Upload failed");
+    } finally {
+      window.setTimeout(() => setProgress(null), 800);
+      if (uploadInput.current) uploadInput.current.value = "";
+    }
   };
 
-  const dropdownMenu = (entry: LocalFileEntry) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 shrink-0 rounded-md hover:bg-muted"
-          aria-label={`Actions for ${entry.name}`}
-          onClick={(event) => event.stopPropagation()}
-          onDoubleClick={(event) => event.stopPropagation()}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-        <DropdownMenuItem onClick={() => void openEntry(entry)}>
-          <Eye className="mr-2 h-4 w-4" />
-          {entry.kind === "directory" ? "Open" : "View / edit"}
-        </DropdownMenuItem>
-        {entry.kind === "file" && (
-          <DropdownMenuItem onClick={() => void downloadEntry(entry)}>
-            <Download className="mr-2 h-4 w-4" />
-            Download
-          </DropdownMenuItem>
-        )}
-        {(entry.kind === "directory" || entry.kind === "file") && (
-          <DropdownMenuItem onClick={() => void createArchive(entry, "zip")}>
-            <FileArchive className="mr-2 h-4 w-4" />
-            Compress as ZIP
-          </DropdownMenuItem>
-        )}
-        {(entry.kind === "directory" || entry.kind === "file") && (
-          <DropdownMenuItem onClick={() => void createArchive(entry, "tar.gz")}>
-            <FileArchive className="mr-2 h-4 w-4" />
-            Compress as TAR.GZ
-          </DropdownMenuItem>
-        )}
-        {isArchiveEntry(entry) && (
-          <DropdownMenuItem onClick={() => void extractArchive(entry)}>
-            <FolderInput className="mr-2 h-4 w-4" />
-            Extract archive
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => openRename(entry)}>
-          <Pencil className="mr-2 h-4 w-4" />
-          Rename
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openTransfer("copy", entry)}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy to…
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openTransfer("move", entry)}>
-          <FolderInput className="mr-2 h-4 w-4" />
-          Move to…
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openMode(entry)}>
-          <Shield className="mr-2 h-4 w-4" />
-          Permissions
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setPropertiesEntry(entry)}>
-          <Info className="mr-2 h-4 w-4" />
-          Properties
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={() => setDeleteEntries([entry])}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Move to trash
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  const download = async (entry: LocalFileEntry) => {
+    try {
+      await localApi.download(entry.path, entry.name);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Download failed");
+    }
+  };
 
-  const contextMenu = (entry: LocalFileEntry) => (
-    <ContextMenuContent className="wfm-carbon-context-menu min-w-56">
-      <ContextMenuItem onClick={() => void openEntry(entry)}>
-        <Eye className="mr-2 h-4 w-4" />
-        {entry.kind === "directory" ? "Open" : "View / edit"}
-      </ContextMenuItem>
-      {entry.kind === "file" && (
-        <ContextMenuItem onClick={() => void downloadEntry(entry)}>
-          <Download className="mr-2 h-4 w-4" />
-          Download
-        </ContextMenuItem>
-      )}
-      {(entry.kind === "directory" || entry.kind === "file") && (
-        <ContextMenuItem onClick={() => void createArchive(entry, "zip")}>
-          <FileArchive className="mr-2 h-4 w-4" />
-          Compress as ZIP
-        </ContextMenuItem>
-      )}
-      {(entry.kind === "directory" || entry.kind === "file") && (
-        <ContextMenuItem onClick={() => void createArchive(entry, "tar.gz")}>
-          <FileArchive className="mr-2 h-4 w-4" />
-          Compress as TAR.GZ
-        </ContextMenuItem>
-      )}
-      {isArchiveEntry(entry) && (
-        <ContextMenuItem onClick={() => void extractArchive(entry)}>
-          <FolderInput className="mr-2 h-4 w-4" />
-          Extract archive
-        </ContextMenuItem>
-      )}
-      <ContextMenuSeparator />
-      <ContextMenuItem onClick={() => openRename(entry)}>
-        <Pencil className="mr-2 h-4 w-4" />
-        Rename
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => openTransfer("copy", entry)}>
-        <Copy className="mr-2 h-4 w-4" />
-        Copy to…
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => openTransfer("move", entry)}>
-        <FolderInput className="mr-2 h-4 w-4" />
-        Move to…
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => openMode(entry)}>
-        <Shield className="mr-2 h-4 w-4" />
-        Permissions
-      </ContextMenuItem>
-      <ContextMenuItem onClick={() => setPropertiesEntry(entry)}>
-        <Info className="mr-2 h-4 w-4" />
-        Properties
-      </ContextMenuItem>
-      <ContextMenuSeparator />
-      <ContextMenuItem
-        className="text-destructive focus:text-destructive"
-        onClick={() =>
-          setDeleteEntries(
-            selectedPaths.has(entry.path) && selectedEntries.length > 1 ? selectedEntries : [entry],
-          )
-        }
-      >
-        <Trash2 className="mr-2 h-4 w-4" />
-        {selectedPaths.has(entry.path) && selectedEntries.length > 1
-          ? `Delete all selected (${selectedEntries.length})`
-          : "Move to trash"}
-      </ContextMenuItem>
-    </ContextMenuContent>
-  );
+  const save = async () => {
+    if (!previewEntry) return;
+    setSaving(true);
+    try {
+      await localApi.save(previewEntry.path, editorContent, previewEntry.modifiedAt);
+      toast.success("File saved");
+      setPreviewEntry(null);
+      await load();
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-border bg-surface/60 p-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" onClick={() => history.back()} aria-label="Back">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => history.forward()}
-              aria-label="Forward"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              disabled={currentPath === "/"}
-              onClick={() => setPath(parentPath(currentPath))}
-              aria-label="Parent"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setPath("/root")}
-              aria-label="Root home"
-            >
-              <Home className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={() => void load()} aria-label="Refresh">
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            </Button>
-          </div>
-
-          <form
-            className="flex min-w-[260px] flex-1 items-center gap-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPath(pathInput);
-            }}
-          >
-            <Input
-              value={pathInput}
-              onChange={(event) => setPathInput(event.target.value)}
-              className="font-mono text-xs"
-              aria-label="Server path"
-            />
-          </form>
-
-          <div className="relative min-w-[190px]">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={q}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Filter current directory"
-              className="pl-8"
-            />
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setCreateKind("file");
-              setCreateName("");
-            }}
-          >
-            <FilePlus2 className="mr-1.5 h-4 w-4" />
-            New file
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setCreateKind("directory");
-              setCreateName("");
-            }}
-          >
-            <FolderPlus className="mr-1.5 h-4 w-4" />
-            New folder
-          </Button>
-          <Button size="sm" onClick={() => uploadInput.current?.click()}>
-            <UploadCloud className="mr-1.5 h-4 w-4" />
-            Upload
-          </Button>
-          <input
-            ref={uploadInput}
-            type="file"
-            multiple
-            hidden
-            onChange={async (event) => {
-              if (!event.target.files?.length) return;
-              if (operationProgress) {
-                toast.warning("Wait for the current transfer to finish or cancel it first");
-                event.target.value = "";
-                return;
-              }
-              const files = event.target.files;
-              const controller = new AbortController();
-              setOperationProgress({
-                label: `Uploading ${files.length} file(s)`,
-                percent: 0,
-                cancel: () => controller.abort(),
-              });
-              try {
-                await localApi.upload(
-                  currentPath,
-                  files,
-                  (value: ProgressState) => {
-                    setOperationProgress({
-                      label: `Uploading ${files.length} file(s)`,
-                      percent: value.percent,
-                      detail: `${formatBytes(value.loaded)} / ${formatBytes(value.total)}${value.detail ? ` · ${value.detail}` : ""}`,
-                      cancel: () => controller.abort(),
-                    });
-                  },
-                  controller.signal,
-                );
-                toast.success(`${files.length} file(s) uploaded`);
-                await load();
-              } catch (cause) {
-                if (isCancelled(cause)) toast.info("Upload cancelled");
-                else toast.error(cause instanceof Error ? cause.message : "Upload failed");
-              } finally {
-                setOperationProgress(null);
-                event.target.value = "";
-              }
-            }}
-          />
+    <div className="wfm-page">
+      <header className="wfm-page__header">
+        <div>
+          <p className="wfm-eyebrow">Server files</p>
+          <h1>File Explorer</h1>
+          <p>Browse and manage files directly on this Linux server.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="icon" onClick={() => void load()} aria-label="Refresh">
+            <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          </Button>
+          <Button variant="outline" onClick={() => { setCreateKind("directory"); setCreateName(""); }}>
+            <FolderPlus className="mr-2 h-4 w-4" />Folder
+          </Button>
+          <Button variant="outline" onClick={() => { setCreateKind("file"); setCreateName(""); }}>
+            <FilePlus2 className="mr-2 h-4 w-4" />File
+          </Button>
+          <Button onClick={() => uploadInput.current?.click()}>
+            <UploadCloud className="mr-2 h-4 w-4" />Upload
+          </Button>
+          <input ref={uploadInput} type="file" multiple className="hidden" onChange={(event) => void upload(event.target.files)} />
+        </div>
+      </header>
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <Breadcrumb>
-            <BreadcrumbList>
-              {crumbs.map((crumb, index) => (
-                <span key={crumb.path} className="contents">
-                  {index > 0 && <BreadcrumbSeparator />}
-                  <BreadcrumbItem>
-                    {index === crumbs.length - 1 ? (
-                      <BreadcrumbPage className="font-mono text-xs">{crumb.label}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink asChild>
-                        <button className="font-mono text-xs" onClick={() => setPath(crumb.path)}>
-                          {crumb.label}
-                        </button>
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                </span>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex items-center gap-2">
-            <div className="wfm-explorer-layout-toggle" aria-label="Explorer layout">
-              <Button
-                size="icon"
-                variant={layout === "list" ? "secondary" : "ghost"}
-                className="wfm-explorer-layout-toggle__button"
-                onClick={() => setLayout("list")}
-                aria-label="List layout"
-                aria-pressed={layout === "list"}
-                title="List layout"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant={layout === "grid" ? "secondary" : "ghost"}
-                className="wfm-explorer-layout-toggle__button"
-                onClick={() => setLayout("grid")}
-                aria-label="Mosaic layout"
-                aria-pressed={layout === "grid"}
-                title="Mosaic layout"
-              >
-                <Grid2X2 className="h-4 w-4" />
-              </Button>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Checkbox
-                checked={showHidden}
-                onCheckedChange={(value) => setShowHidden(Boolean(value))}
-              />
-              Show hidden files
-            </label>
-          </div>
+      <div className="mb-4 flex flex-col gap-2 md:flex-row">
+        <form
+          className="flex flex-1 gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPath(pathInput);
+          }}
+        >
+          <Button type="button" variant="outline" size="icon" disabled={currentPath === "/"} onClick={() => setPath(parentPath(currentPath))}>
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Input value={pathInput} onChange={(event) => setPathInput(event.target.value)} className="font-mono" />
+        </form>
+        <div className="relative md:w-80">
+          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input value={q} onChange={(event) => setSearch(event.target.value)} placeholder="Search this folder" className="pl-9" />
         </div>
       </div>
 
-      {operationProgress && (
-        <div className="border-b border-border bg-surface/70 px-3 py-2">
-          <div className="mb-1.5 flex items-center gap-3 text-xs">
-            <span className="min-w-0 flex-1 truncate font-medium">{operationProgress.label}</span>
-            <span className="shrink-0 font-mono text-muted-foreground">
-              {operationProgress.detail || `${operationProgress.percent}%`}
-            </span>
-            {operationProgress.cancel && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 shrink-0 text-xs"
-                onClick={operationProgress.cancel}
-              >
-                <CircleX className="mr-1 h-3.5 w-3.5" />
-                Cancel
-              </Button>
-            )}
+      {progress && (
+        <div className="mb-4 rounded-md border p-3">
+          <div className="mb-2 flex justify-between text-xs text-muted-foreground">
+            <span>{progress.detail || "Uploading"}</span>
+            <span>{progress.percent}%</span>
           </div>
-          <Progress value={operationProgress.percent} />
+          <Progress value={progress.percent} />
         </div>
       )}
 
-      {currentPath !== realPath && !loading && (
-        <Alert className="m-3 mb-0">
-          <AlertDescription>
-            Resolved path: <span className="font-mono">{realPath}</span>
-          </AlertDescription>
-        </Alert>
-      )}
-      {error && (
-        <Alert variant="destructive" className="m-3 mb-0">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <div className="mb-4 rounded-md border border-destructive/30 p-3 text-sm text-destructive">{error}</div>}
 
-      <div
-        className="min-h-0 flex-1 overflow-auto p-4"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) clearSelection();
-        }}
-      >
-        {loading ? (
-          <div className="grid h-56 place-items-center text-sm text-muted-foreground">
-            <div className="text-center">
-              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
-              Loading {currentPath}
-            </div>
-          </div>
-        ) : !error && visibleEntries.length === 0 ? (
-          <div className="grid h-64 place-items-center rounded-xl border border-dashed border-border bg-muted/10 text-center">
-            <div>
-              <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl border border-primary/20 bg-primary/10 shadow-sm">
-                <Folder className="wfm-file-icon--folder h-9 w-9" />
-              </div>
-              <p className="font-medium">This directory is empty</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Create a file, create a folder or upload something here.
-              </p>
-            </div>
-          </div>
-        ) : layout === "grid" ? (
-          <div className="wfm-explorer-grid">
-            {visibleEntries.map((entry) => {
-              const visual = entryVisual(entry);
-              const Icon = visual.Icon;
-              const active = selectedPaths.has(entry.path);
-              return (
-                <ContextMenu key={entry.path}>
-                  <ContextMenuTrigger asChild onContextMenu={() => selectForContextMenu(entry)}>
-                    <article
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`${entry.kind === "directory" ? "Folder" : "File"} ${entry.name}`}
-                      aria-selected={active}
-                      className={cn(
-                        "wfm-explorer-grid__item group relative flex cursor-pointer flex-col outline-none no-underline",
-                        active && "wfm-explorer-grid__item--selected",
+      <div className="overflow-hidden rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead className="w-28">Size</TableHead>
+              <TableHead className="w-44">Modified</TableHead>
+              <TableHead className="w-80 text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={4} className="py-12 text-center text-muted-foreground">Loading…</TableCell></TableRow>
+            ) : visibleEntries.length === 0 ? (
+              <TableRow><TableCell colSpan={4} className="py-12 text-center text-muted-foreground">This folder is empty.</TableCell></TableRow>
+            ) : (
+              visibleEntries.map((entry) => (
+                <TableRow key={entry.path}>
+                  <TableCell>
+                    <button className="flex max-w-full items-center gap-2 text-left hover:underline" onClick={() => void openEntry(entry)}>
+                      {entry.kind === "directory" ? <Folder className="h-4 w-4 shrink-0" /> : <FileIcon className="h-4 w-4 shrink-0" />}
+                      <span className="truncate">{entry.name}</span>
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{entry.kind === "file" ? formatBytes(entry.size) : "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDate(entry.modifiedAt)}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      {entry.kind === "file" && (
+                        <Button size="sm" variant="ghost" onClick={() => void download(entry)}><Download className="mr-1 h-3.5 w-3.5" />Download</Button>
                       )}
-                      onClick={(event) =>
-                        selectEntry(entry, {
-                          additive: event.ctrlKey || event.metaKey,
-                          range: event.shiftKey,
-                        })
-                      }
-                      onDoubleClick={() => void openEntry(entry)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") void openEntry(entry);
-                        if (event.key === " ") {
-                          event.preventDefault();
-                          toggleEntry(entry);
-                        }
-                      }}
-                    >
-                      <div
-                        className="wfm-explorer-grid__select absolute left-3 top-3 z-10"
-                        onClick={(event) => event.stopPropagation()}
-                        onDoubleClick={(event) => event.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={active}
-                          onCheckedChange={() => toggleEntry(entry)}
-                          aria-label={`Select ${entry.name}`}
-                        />
-                      </div>
-                      <div className="wfm-explorer-grid__actions absolute right-2 top-2 z-10">
-                        {dropdownMenu(entry)}
-                      </div>
-                      <div className="wfm-explorer-grid__content flex flex-1 flex-col items-center justify-center text-center">
-                        <div
-                          className={cn(
-                            "wfm-explorer-grid__icon grid place-items-center",
-                            visual.tone,
-                          )}
-                        >
-                          <Icon className={cn("wfm-explorer-grid__icon-svg", visual.icon)} />
-                        </div>
-                        <div
-                          className="wfm-explorer-grid__name w-full truncate text-sm font-medium no-underline group-hover:no-underline"
-                          title={entry.name}
-                        >
-                          {entry.name}
-                        </div>
-                        {entry.linkTarget && (
-                          <div
-                            className="wfm-explorer-grid__link mt-1 w-full truncate font-mono text-[10px] text-muted-foreground no-underline"
-                            title={entry.linkTarget}
-                          >
-                            → {entry.linkTarget}
-                          </div>
-                        )}
-                      </div>
-                      <div className="wfm-explorer-grid__meta mt-2 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
-                        <span className="truncate">
-                          {entry.kind === "directory" ? "Folder" : formatBytes(entry.size)}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="wfm-explorer-grid__mode h-5 px-1.5 font-mono text-[9px] font-normal"
-                        >
-                          {entry.mode}
-                        </Badge>
-                      </div>
-                    </article>
-                  </ContextMenuTrigger>
-                  {contextMenu(entry)}
-                </ContextMenu>
-              );
-            })}
-          </div>
-        ) : (
-          <Table className="wfm-explorer__table">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={
-                      allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
-                    }
-                    onCheckedChange={() =>
-                      setSelectedPaths(
-                        allVisibleSelected
-                          ? new Set()
-                          : new Set(visibleEntries.map((entry) => entry.path)),
-                      )
-                    }
-                    aria-label="Select all visible items"
-                  />
-                </TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="text-right">Size</TableHead>
-                <TableHead className="hidden md:table-cell">Mode</TableHead>
-                <TableHead className="hidden md:table-cell">Owner</TableHead>
-                <TableHead className="hidden md:table-cell">Modified</TableHead>
-                <TableHead aria-label="Actions" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visibleEntries.map((entry) => {
-                const visual = entryVisual(entry);
-                const Icon = visual.Icon;
-                const active = selectedPaths.has(entry.path);
-                return (
-                  <ContextMenu key={entry.path}>
-                    <ContextMenuTrigger asChild onContextMenu={() => selectForContextMenu(entry)}>
-                      <TableRow
-                        tabIndex={0}
-                        aria-label={`${entry.kind === "directory" ? "Folder" : "File"} ${entry.name}`}
-                        aria-selected={active}
-                        className={cn(
-                          "cursor-pointer",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
-                          active && "bg-primary/10",
-                        )}
-                        onClick={(event) =>
-                          selectEntry(entry, {
-                            additive: event.ctrlKey || event.metaKey,
-                            range: event.shiftKey,
-                          })
-                        }
-                        onDoubleClick={() => void openEntry(entry)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") void openEntry(entry);
-                          if (event.key === " ") {
-                            event.preventDefault();
-                            toggleEntry(entry);
-                          }
-                        }}
-                      >
-                        <TableCell
-                          onClick={(event) => event.stopPropagation()}
-                          onDoubleClick={(event) => event.stopPropagation()}
-                        >
-                          <Checkbox
-                            checked={active}
-                            onCheckedChange={() => toggleEntry(entry)}
-                            aria-label={`Select ${entry.name}`}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div
-                              className={cn(
-                                "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
-                                visual.tone,
-                              )}
-                            >
-                              <Icon className={cn("h-5 w-5", visual.icon)} />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-medium" title={entry.name}>
-                                {entry.name}
-                              </div>
-                              {entry.linkTarget && (
-                                <div
-                                  className="truncate font-mono text-[10px] text-muted-foreground"
-                                  title={entry.linkTarget}
-                                >
-                                  ? {entry.linkTarget}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">
-                          {entry.kind === "directory" ? "?" : formatBytes(entry.size)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <Badge
-                            variant="outline"
-                            className="h-5 w-fit px-1.5 font-mono text-[10px] font-normal"
-                          >
-                            {entry.mode}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
-                          {entry.uid}:{entry.gid}
-                        </TableCell>
-                        <TableCell className="hidden truncate text-xs text-muted-foreground md:table-cell">
-                          {formatDate(entry.modifiedAt)}
-                        </TableCell>
-                        <TableCell
-                          className="text-right"
-                          onDoubleClick={(event) => event.stopPropagation()}
-                        >
-                          {dropdownMenu(entry)}
-                        </TableCell>
-                      </TableRow>
-                    </ContextMenuTrigger>
-                    {contextMenu(entry)}
-                  </ContextMenu>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface/60 px-3 py-1.5 text-[11px] text-muted-foreground">
-        <span>
-          {visibleEntries.length} item(s) · {selectedEntries.length} selected · Ctrl/⌘ and Shift
-          supported · right-click for actions
-        </span>
-        <span className="font-mono">
-          {selectedEntries.length === 1 ? selectedEntries[0].path : currentPath}
-        </span>
+                      <Button size="sm" variant="ghost" onClick={() => { setRenameEntry(entry); setRenameName(entry.name); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setTransfer({ kind: "copy", entry }); setDestination(currentPath); }}><Copy className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setTransfer({ kind: "move", entry }); setDestination(currentPath); }}><MoveRight className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteEntry(entry)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       <Dialog open={Boolean(createKind)} onOpenChange={(open) => !open && setCreateKind(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create {createKind === "directory" ? "directory" : "file"}</DialogTitle>
-            <DialogDescription>
-              It will be created inside <span className="font-mono">{currentPath}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
-            value={createName}
-            onChange={(event) => setCreateName(event.target.value)}
-            placeholder={createKind === "directory" ? "new-directory" : "new-file.txt"}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateKind(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!createName.trim()}
-              onClick={async () => {
-                const ok = await mutate(
-                  () =>
-                    createKind === "directory"
-                      ? localApi.createDirectory(currentPath, createName)
-                      : localApi.createFile(currentPath, createName),
-                  `${createName} created`,
-                );
-                if (ok) setCreateKind(null);
-              }}
-            >
-              Create
-            </Button>
-          </DialogFooter>
+        <DialogContent size="sm">
+          <DialogHeader><DialogTitle>Create {createKind === "file" ? "file" : "folder"}</DialogTitle></DialogHeader>
+          <Input autoFocus value={createName} onChange={(event) => setCreateName(event.target.value)} placeholder="Name" />
+          <DialogFooter><Button onClick={() => void create()} disabled={!createName.trim()}>Create</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(renameEntry)} onOpenChange={(open) => !open && setRenameEntry(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename</DialogTitle>
-            <DialogDescription>
-              Rename <span className="font-mono">{renameEntry?.path}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus
-            value={renameName}
-            onChange={(event) => setRenameName(event.target.value)}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameEntry(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!renameName.trim()}
-              onClick={async () => {
-                if (!renameEntry) return;
-                const ok = await mutate(
-                  () => localApi.rename(renameEntry.path, renameName),
-                  "Item renamed",
-                );
-                if (ok) setRenameEntry(null);
-              }}
-            >
-              Rename
-            </Button>
-          </DialogFooter>
+        <DialogContent size="sm">
+          <DialogHeader><DialogTitle>Rename</DialogTitle></DialogHeader>
+          <Input autoFocus value={renameName} onChange={(event) => setRenameName(event.target.value)} />
+          <DialogFooter><Button onClick={() => void rename()} disabled={!renameName.trim()}>Rename</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(transfer)} onOpenChange={(open) => !open && setTransfer(null)}>
-        <DialogContent>
+        <DialogContent size="sm">
           <DialogHeader>
-            <DialogTitle>{transfer?.kind === "copy" ? "Copy" : "Move"} item</DialogTitle>
-            <DialogDescription>Enter an existing destination directory.</DialogDescription>
+            <DialogTitle>{transfer?.kind === "copy" ? "Copy" : "Move"}</DialogTitle>
+            <DialogDescription>Enter the destination directory.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-2">
-            <span className="truncate font-mono text-xs text-muted-foreground">
-              Source: {transfer?.entry.path}
-            </span>
-            <Input
-              value={destination}
-              onChange={(event) => setDestination(event.target.value)}
-              className="font-mono"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTransfer(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!transfer) return;
-                const ok = await mutate(
-                  () => {
-                    const label =
-                      transfer.kind === "copy"
-                        ? `Copying ${transfer.entry.name}`
-                        : `Moving ${transfer.entry.name}`;
-                    setOperationProgress({ label, percent: 0 });
-                    const update = (job: OperationJob) =>
-                      setOperationProgress({
-                        label,
-                        percent: job.progress,
-                        detail: job.currentItem
-                          ? `${job.progress}% · ${job.currentItem}`
-                          : `${job.progress}%`,
-                      });
-                    return transfer.kind === "copy"
-                      ? localApi.copy(transfer.entry.path, destination, update)
-                      : localApi.move(transfer.entry.path, destination, update);
-                  },
-                  transfer.kind === "copy" ? "Item copied" : "Item moved",
-                );
-                setTimeout(() => setOperationProgress(null), 800);
-                if (ok) setTransfer(null);
-              }}
-            >
-              {transfer?.kind === "copy" ? "Copy" : "Move"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={Boolean(modeEntry)} onOpenChange={(open) => !open && setModeEntry(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change permissions</DialogTitle>
-            <DialogDescription>Enter an octal mode such as 0644, 0755 or 0600.</DialogDescription>
-          </DialogHeader>
-          <Input
-            value={mode}
-            onChange={(event) => setMode(event.target.value)}
-            className="font-mono"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModeEntry(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!modeEntry) return;
-                const ok = await mutate(
-                  () => localApi.chmod(modeEntry.path, mode),
-                  "Permissions changed",
-                );
-                if (ok) setModeEntry(null);
-              }}
-            >
-              Apply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(propertiesEntry)}
-        onOpenChange={(open) => !open && setPropertiesEntry(null)}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              Properties
-            </DialogTitle>
-            <DialogDescription className="truncate font-mono">
-              {propertiesEntry?.path}
-            </DialogDescription>
-          </DialogHeader>
-          {propertiesEntry && (
-            <div className="overflow-hidden rounded-lg border border-border">
-              <dl className="divide-y divide-border text-sm">
-                {[
-                  ["Name", propertiesEntry.name],
-                  [
-                    "Type",
-                    propertiesEntry.kind === "directory"
-                      ? "Directory"
-                      : propertiesEntry.kind === "symlink"
-                        ? "Symbolic link"
-                        : propertiesEntry.kind === "file"
-                          ? "File"
-                          : "Other",
-                  ],
-                  ["MIME type", propertiesEntry.mime || "—"],
-                  [
-                    "Size",
-                    propertiesEntry.kind === "directory"
-                      ? "—"
-                      : `${formatBytes(propertiesEntry.size)} (${propertiesEntry.size.toLocaleString()} bytes)`,
-                  ],
-                  ["Permissions", propertiesEntry.mode],
-                  ["Owner", `${propertiesEntry.uid}:${propertiesEntry.gid}`],
-                  ["Modified", formatDate(propertiesEntry.modifiedAt)],
-                  ["Created", formatDate(propertiesEntry.createdAt)],
-                  ["Last accessed", formatDate(propertiesEntry.accessedAt)],
-                  ["Readable", propertiesEntry.readable ? "Yes" : "No"],
-                  ["Writable", propertiesEntry.writable ? "Yes" : "No"],
-                  ["Hidden", propertiesEntry.hidden ? "Yes" : "No"],
-                  ...(propertiesEntry.linkTarget
-                    ? [["Link target", propertiesEntry.linkTarget]]
-                    : []),
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="grid grid-cols-[140px_minmax(0,1fr)] gap-4 px-4 py-2.5"
-                  >
-                    <dt className="text-muted-foreground">{label}</dt>
-                    <dd
-                      className={cn(
-                        "min-w-0 break-all",
-                        ["Permissions", "Owner", "Link target"].includes(label) && "font-mono",
-                      )}
-                    >
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-          <DialogFooter>
-            <Button onClick={() => setPropertiesEntry(null)}>Close</Button>
-          </DialogFooter>
+          <Input autoFocus value={destination} onChange={(event) => setDestination(event.target.value)} className="font-mono" />
+          <DialogFooter><Button onClick={() => void transferEntry()} disabled={!destination.trim()}>{transfer?.kind === "copy" ? "Copy" : "Move"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={Boolean(previewEntry)} onOpenChange={(open) => !open && setPreviewEntry(null)}>
-        <DialogContent className="flex h-[85vh] max-w-5xl flex-col">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileIcon className="h-4 w-4" />
-              {previewEntry?.name}
-            </DialogTitle>
-            <DialogDescription className="truncate font-mono">
-              {previewEntry?.path}
-            </DialogDescription>
+            <DialogTitle>{previewEntry?.name}</DialogTitle>
+            <DialogDescription>Simple text editor. Binary or oversized files are not opened here.</DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1">
-            {previewLoading ? (
-              <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                <Loader2 className="mb-2 h-5 w-5 animate-spin" />
-                Loading file…
-              </div>
-            ) : previewError ? (
-              <div className="grid h-full place-items-center p-8 text-center">
-                <div>
-                  <HardDriveUpload className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-                  <p className="font-medium">Text preview unavailable</p>
-                  <p className="mt-1 max-w-lg text-sm text-muted-foreground">{previewError}</p>
-                  {previewEntry?.kind === "file" && (
-                    <Button
-                      className="mt-4"
-                      variant="outline"
-                      onClick={() => void downloadEntry(previewEntry)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download file
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <textarea
-                value={editorContent}
-                onChange={(event) => setEditorContent(event.target.value)}
-                spellCheck={false}
-                className="h-full w-full resize-none rounded-md border border-border bg-[oklch(0.14_0.005_260)] p-4 font-mono text-[13px] leading-relaxed text-[oklch(0.92_0.005_250)] outline-none focus:ring-1 focus:ring-ring"
-              />
-            )}
-          </div>
-          <DialogFooter className="items-center sm:justify-between">
-            <span className="text-xs text-muted-foreground">Maximum editable size: 5 MB</span>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setPreviewEntry(null)}>
-                Close
-              </Button>
-              <Button
-                disabled={Boolean(previewError) || previewLoading || saving}
-                onClick={async () => {
-                  if (!previewEntry) return;
-                  setSaving(true);
-                  try {
-                    await localApi.save(previewEntry.path, editorContent);
-                    toast.success("File saved");
-                    await load();
-                  } catch (cause) {
-                    toast.error(cause instanceof Error ? cause.message : "Save failed");
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-              >
-                {saving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                Save
-              </Button>
-            </div>
+          {previewLoading ? (
+            <div className="py-16 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : (
+            <textarea
+              className="min-h-[55vh] w-full resize-y rounded-md border bg-background p-3 font-mono text-sm outline-none"
+              value={editorContent}
+              onChange={(event) => setEditorContent(event.target.value)}
+            />
+          )}
+          <DialogFooter>
+            <Button onClick={() => void save()} disabled={saving || previewLoading}>
+              <Save className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={deleteEntries.length > 0}
-        onOpenChange={(open) => !open && setDeleteEntries([])}
-      >
+      <AlertDialog open={Boolean(deleteEntry)} onOpenChange={(open) => !open && setDeleteEntry(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Move {deleteEntries.length > 1 ? `${deleteEntries.length} items` : "item"} to trash?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteEntries.length === 1 ? (
-                <span className="font-mono">{deleteEntries[0]?.path}</span>
-              ) : (
-                "All selected files and folders"
-              )}{" "}
-              will be moved to the wFileManager trash. They can be restored later from the Trash
-              page.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Move to trash?</AlertDialogTitle>
+            <AlertDialogDescription>{deleteEntry?.path}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => {
-                const pending = [...deleteEntries];
-                if (!pending.length) return;
-                const label = `Moving ${pending.length} item(s) to trash`;
-                const ok = await mutate(async () => {
-                  for (let index = 0; index < pending.length; index += 1) {
-                    const entry = pending[index];
-                    setOperationProgress({
-                      label,
-                      percent: Math.round((index / pending.length) * 100),
-                      detail: entry.name,
-                    });
-                    await localApi.trash.move(entry.path);
-                  }
-                  setOperationProgress({ label, percent: 100, detail: "Moved to trash" });
-                }, `${pending.length} item(s) moved to trash`);
-                setTimeout(() => setOperationProgress(null), 650);
-                if (ok) {
-                  setDeleteEntries([]);
-                  clearSelection();
-                }
-              }}
-            >
-              Move to trash
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => void remove()}>Move to trash</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={Boolean(extractPlan)} onOpenChange={(open) => !open && setExtractPlan(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Extract archive</DialogTitle>
-            <DialogDescription>
-              Choose the destination and how existing items should be handled.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {extractPlan?.inspection.multipleTopLevel && (
-              <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-                <p className="font-medium">Several first-level items will be extracted.</p>
-                <p className="mt-1 text-muted-foreground">
-                  Using the current directory will place them directly beside the archive.
-                </p>
-              </div>
-            )}
-
-            {(extractPlan?.inspection.defaultConflicts.length || 0) > 0 && (
-              <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-                <p className="font-medium">Existing items were detected.</p>
-                <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                  {extractPlan?.inspection.defaultConflicts.join(", ")}
-                </p>
-              </div>
-            )}
-
-            <div className="grid gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Destination</label>
-              <select
-                value={extractMode}
-                onChange={(event) => setExtractMode(event.target.value as ExtractionMode)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="current">Current directory</option>
-                <option value="folder">New folder</option>
-                <option value="custom">Other destination</option>
-              </select>
-            </div>
-
-            {extractMode === "folder" && (
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Folder name</label>
-                <Input
-                  value={extractFolderName}
-                  onChange={(event) => setExtractFolderName(event.target.value)}
-                  className="font-mono"
-                />
-              </div>
-            )}
-
-            {extractMode === "custom" && (
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Destination path
-                </label>
-                <Input
-                  value={extractDestination}
-                  onChange={(event) => setExtractDestination(event.target.value)}
-                  className="font-mono"
-                />
-              </div>
-            )}
-
-            <div className="grid gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Existing items</label>
-              <select
-                value={extractConflictPolicy}
-                onChange={(event) => setExtractConflictPolicy(event.target.value as ConflictPolicy)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="rename">Keep both using (1), (2)…</option>
-                <option value="overwrite">Replace existing items</option>
-              </select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExtractPlan(null)}>
-              Cancel
-            </Button>
-            <Button
-              disabled={
-                (extractMode === "folder" && !extractFolderName.trim()) ||
-                (extractMode === "custom" && !extractDestination.trim())
-              }
-              onClick={() => void confirmExtraction(extractMode)}
-            >
-              Extract
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
