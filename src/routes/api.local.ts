@@ -95,7 +95,9 @@ export const Route = createFileRoute("/api/local")({
           if (action === "job") {
             const user = await auth.requireAdmin(request);
             const operations = await operationRuntime();
-            return json({ job: await operations.getOperationJob(user.id, url.searchParams.get("id")) });
+            return json({
+              job: await operations.getOperationJob(user.id, url.searchParams.get("id")),
+            });
           }
           if (action === "jobs") {
             const user = await auth.requireAdmin(request);
@@ -116,7 +118,9 @@ export const Route = createFileRoute("/api/local")({
           }
           if (action === "read") {
             const user = await auth.requireAdmin(request);
-            return json(await api.readTextFile(await policy.assertExistingPathAllowed(user, target)));
+            return json(
+              await api.readTextFile(await policy.assertExistingPathAllowed(user, target)),
+            );
           }
           if (action === "download") {
             const user = await auth.requireAdmin(request);
@@ -223,7 +227,9 @@ export const Route = createFileRoute("/api/local")({
               await policy.assertExistingPathAllowed(user, body.path),
             );
             const atomic = await atomicFileRuntime();
-            return json(await atomic.saveTextFileAtomic(target, body.content, body.expectedModifiedAt));
+            return json(
+              await atomic.saveTextFileAtomic(target, body.content, body.expectedModifiedAt),
+            );
           }
 
           if (action === "rename") {
@@ -254,7 +260,8 @@ export const Route = createFileRoute("/api/local")({
             return json(await api.restoreTrashItem(user, body.id));
           }
 
-          if (action === "trash-delete") return json(await api.permanentlyDeleteTrashItem(user, body.id));
+          if (action === "trash-delete")
+            return json(await api.permanentlyDeleteTrashItem(user, body.id));
           if (action === "trash-empty") return json(await api.emptyTrash(user));
 
           if (action === "job-start") {

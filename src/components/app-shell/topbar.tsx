@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import {
-  Checkmark,
-  Laptop,
-  Light,
-  Logout,
-  Moon,
-  UserAvatar,
-} from "@carbon/icons-react";
+import { Checkmark, Laptop, Light, Logout, Moon, UserAvatar } from "@carbon/icons-react";
 import {
   Header,
   HeaderGlobalAction,

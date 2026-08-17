@@ -28,7 +28,10 @@ function LoginPage() {
   }, [auth.loading, auth.user, auth.configured, nav]);
 
   return (
-    <AuthShell title="Administrator sign in" desc="Enter the password for this wFileManager server.">
+    <AuthShell
+      title="Administrator sign in"
+      desc="Enter the password for this wFileManager server."
+    >
       {err && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{err}</AlertDescription>

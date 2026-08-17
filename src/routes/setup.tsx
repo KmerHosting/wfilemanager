@@ -49,7 +49,10 @@ function Setup() {
   };
 
   return (
-    <AuthShell title="Set up wFileManager" desc="Create the only administrator account for this server.">
+    <AuthShell
+      title="Set up wFileManager"
+      desc="Create the only administrator account for this server."
+    >
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
@@ -81,14 +84,25 @@ function Setup() {
             onChange={(event) => setConfirm(event.target.value)}
           />
         </div>
-        <p className={policyError || confirmationError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+        <p
+          className={
+            policyError || confirmationError
+              ? "text-xs text-destructive"
+              : "text-xs text-muted-foreground"
+          }
+        >
           {policyError || confirmationError || ADMIN_PASSWORD_POLICY_TEXT}
         </p>
-        <Button className="w-full" disabled={!valid || submitting} onClick={() => void completeSetup()}>
+        <Button
+          className="w-full"
+          disabled={!valid || submitting}
+          onClick={() => void completeSetup()}
+        >
           {submitting ? "Creating administrator…" : "Finish setup"}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          The password can always be reset from the server with <code>sudo wfilemanager-reset-admin-password</code>.
+          The password can always be reset from the server with{" "}
+          <code>sudo wfilemanager-reset-admin-password</code>.
         </p>
       </div>
     </AuthShell>

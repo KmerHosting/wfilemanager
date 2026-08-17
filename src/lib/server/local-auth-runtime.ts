@@ -1,4 +1,7 @@
-import { sessionUser as sqliteSessionUser, userResponse as sqliteUserResponse } from "@/lib/server/admin-store";
+import {
+  sessionUser as sqliteSessionUser,
+  userResponse as sqliteUserResponse,
+} from "@/lib/server/admin-store";
 import { LocalApiError, type LocalUser as BaseLocalUser } from "@/lib/server/local-runtime";
 
 const COOKIE_NAME = "wfm_session";

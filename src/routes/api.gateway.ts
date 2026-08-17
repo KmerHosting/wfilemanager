@@ -145,7 +145,10 @@ async function proxy(request: Request) {
     });
 
     if (scopeValue === "login" && upstream.ok && typeof payload.token === "string") {
-      responseHeaders.append("Set-Cookie", sessionCookie(request, payload.token, payload.expiresAt));
+      responseHeaders.append(
+        "Set-Cookie",
+        sessionCookie(request, payload.token, payload.expiresAt),
+      );
       delete payload.token;
     }
     if (action === "logout" || upstream.status === 401)
@@ -157,7 +160,10 @@ async function proxy(request: Request) {
     });
   } catch (error) {
     const status = Number((error as { status?: number }).status || 500);
-    return json({ error: error instanceof Error ? error.message : "Gateway request failed" }, status);
+    return json(
+      { error: error instanceof Error ? error.message : "Gateway request failed" },
+      status,
+    );
   }
 }
 

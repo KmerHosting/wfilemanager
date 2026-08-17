@@ -23,7 +23,9 @@ function About() {
       setUpdate(result);
       if (notify)
         toast.success(
-          result.updateAvailable ? `Version ${result.latestVersion} is available` : "Already up to date",
+          result.updateAvailable
+            ? `Version ${result.latestVersion} is available`
+            : "Already up to date",
         );
     } catch (error) {
       if (notify)
@@ -73,7 +75,9 @@ function About() {
         <Card>
           <CardHeader>
             <CardTitle>Installation</CardTitle>
-            <CardDescription>No hosted database, licence key or multi-user service.</CardDescription>
+            <CardDescription>
+              No hosted database, licence key or multi-user service.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -100,10 +104,13 @@ function About() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <CardTitle>Updates</CardTitle>
-                <CardDescription>Verified prebuilt releases with atomic activation and rollback.</CardDescription>
+                <CardDescription>
+                  Verified prebuilt releases with atomic activation and rollback.
+                </CardDescription>
               </div>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => void check(true)}>
-                <RefreshCw className="mr-2 h-4 w-4" />Check
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Check
               </Button>
             </div>
           </CardHeader>
@@ -130,12 +137,14 @@ function About() {
             <div className="flex flex-wrap gap-2">
               {update?.updateAvailable && (
                 <Button disabled={busy} onClick={() => void install()}>
-                  <Download className="mr-2 h-4 w-4" />Install {update.latestVersion}
+                  <Download className="mr-2 h-4 w-4" />
+                  Install {update.latestVersion}
                 </Button>
               )}
               {update?.rollbackAvailable && (
                 <Button variant="outline" disabled={busy} onClick={() => void rollback()}>
-                  <RotateCcw className="mr-2 h-4 w-4" />Rollback
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Rollback
                 </Button>
               )}
             </div>

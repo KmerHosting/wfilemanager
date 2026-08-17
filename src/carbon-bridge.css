@@ -115,7 +115,7 @@
 }
 
 .wfm-carbon-tabs__trigger[data-state="active"] {
-  border-bottom-color: #1A73E8;
+  border-bottom-color: #1a73e8;
   color: var(--cds-text-primary);
   font-weight: 600;
 }

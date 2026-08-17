@@ -2,7 +2,10 @@ import { access, readFile } from "node:fs/promises";
 import { test, expect } from "bun:test";
 
 const read = (path: string) => readFile(path, "utf8");
-const missing = async (path: string) => access(path).then(() => false).catch(() => true);
+const missing = async (path: string) =>
+  access(path)
+    .then(() => false)
+    .catch(() => true);
 
 test("wFileManager has exactly one local administrator", async () => {
   const [auth, api, store, login, setup] = await Promise.all([
@@ -52,7 +55,14 @@ test("gateway exposes only status login setup logout and password change", async
   expect(gateway).toContain('login: new Set(["login"])');
   expect(gateway).toContain('setup: new Set(["setup"])');
   expect(gateway).toContain('account: new Set(["password"])');
-  for (const retired of ["users:", "roles:", "notifications:", "presence:", "profile", "sessions"]) {
+  for (const retired of [
+    "users:",
+    "roles:",
+    "notifications:",
+    "presence:",
+    "profile",
+    "sessions",
+  ]) {
     expect(gateway).not.toContain(retired);
   }
 });

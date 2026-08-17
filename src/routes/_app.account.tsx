@@ -7,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { wfilemanagerApi } from "@/lib/wfilemanager-api";
-import { ADMIN_PASSWORD_POLICY_TEXT, administratorPasswordError } from "@/lib/admin-password-policy";
+import {
+  ADMIN_PASSWORD_POLICY_TEXT,
+  administratorPasswordError,
+} from "@/lib/admin-password-policy";
 
 export const Route = createFileRoute("/_app/account")({
   head: () => ({ meta: [{ title: "Administrator — wFileManager" }] }),
@@ -39,7 +42,9 @@ function Administrator() {
         <div>
           <p className="wfm-eyebrow">Local administrator</p>
           <h1>Administrator</h1>
-          <p>wFileManager has one account with the fixed username <strong>admin</strong>.</p>
+          <p>
+            wFileManager has one account with the fixed username <strong>admin</strong>.
+          </p>
         </div>
         <UserCircle2 className="h-5 w-5" />
       </header>
@@ -86,12 +91,23 @@ function Administrator() {
               />
             </div>
           </div>
-          <p className={policyError || mismatch ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+          <p
+            className={
+              policyError || mismatch ? "text-xs text-destructive" : "text-xs text-muted-foreground"
+            }
+          >
             {policyError || (mismatch ? "Passwords do not match." : ADMIN_PASSWORD_POLICY_TEXT)}
           </p>
           <div className="flex justify-end">
             <Button
-              disabled={saving || !password.current || !password.next || Boolean(policyError) || Boolean(mismatch) || !password.confirm}
+              disabled={
+                saving ||
+                !password.current ||
+                !password.next ||
+                Boolean(policyError) ||
+                Boolean(mismatch) ||
+                !password.confirm
+              }
               onClick={() => void changePassword()}
             >
               {saving ? "Changing…" : "Change password"}
@@ -103,10 +119,14 @@ function Administrator() {
       <Card className="mt-4 max-w-3xl">
         <CardHeader>
           <CardTitle className="text-base">Lost the password?</CardTitle>
-          <CardDescription>Password recovery is intentionally available only from the server shell.</CardDescription>
+          <CardDescription>
+            Password recovery is intentionally available only from the server shell.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <code className="block rounded-md border bg-muted/30 p-3 text-sm">sudo wfilemanager-reset-admin-password</code>
+          <code className="block rounded-md border bg-muted/30 p-3 text-sm">
+            sudo wfilemanager-reset-admin-password
+          </code>
         </CardContent>
       </Card>
     </div>

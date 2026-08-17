@@ -56,7 +56,11 @@ function Overview() {
         </div>
       </header>
 
-      {error && <div className="rounded-md border border-destructive/30 p-4 text-sm text-destructive">{error}</div>}
+      {error && (
+        <div className="rounded-md border border-destructive/30 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -65,10 +69,24 @@ function Overview() {
             <CardDescription>Runtime information used by the file manager.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Hostname</span><strong>{summary?.hostname || "—"}</strong></div>
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Operating system</span><strong>{summary?.os.prettyName || "—"}</strong></div>
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Architecture</span><strong>{summary?.architecture || "—"}</strong></div>
-            <div className="flex justify-between gap-4"><span className="text-muted-foreground">Readable locations</span><strong>{summary ? `${summary.availableLocations}/${summary.totalCommonLocations}` : "—"}</strong></div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Hostname</span>
+              <strong>{summary?.hostname || "—"}</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Operating system</span>
+              <strong>{summary?.os.prettyName || "—"}</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Architecture</span>
+              <strong>{summary?.architecture || "—"}</strong>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Readable locations</span>
+              <strong>
+                {summary ? `${summary.availableLocations}/${summary.totalCommonLocations}` : "—"}
+              </strong>
+            </div>
           </CardContent>
         </Card>
 
@@ -79,10 +97,16 @@ function Overview() {
           </CardHeader>
           <CardContent className="grid gap-3">
             <Button asChild>
-              <Link to="/explorer" search={{ path: "/" }}><FolderTree className="mr-2 h-4 w-4" />Open File Explorer</Link>
+              <Link to="/explorer" search={{ path: "/" }}>
+                <FolderTree className="mr-2 h-4 w-4" />
+                Open File Explorer
+              </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/trash"><Trash2 className="mr-2 h-4 w-4" />Trash ({trashCount})</Link>
+              <Link to="/trash">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Trash ({trashCount})
+              </Link>
             </Button>
           </CardContent>
         </Card>

@@ -35,14 +35,15 @@ function now() {
 
 function tableExists(connection: DatabaseSync, name: string) {
   return Boolean(
-    connection.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ? LIMIT 1").get(name),
+    connection
+      .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ? LIMIT 1")
+      .get(name),
   );
 }
 
 function meta(connection: DatabaseSync, key: string) {
   const row = connection.prepare("SELECT value FROM wfm_meta WHERE key = ?").get(key) as
-    | { value?: string }
-    | undefined;
+    { value?: string } | undefined;
   return row?.value || null;
 }
 
@@ -247,7 +248,9 @@ export function login(data: Record<string, unknown>) {
   db()
     .prepare("INSERT INTO wfm_sessions(id, token_hash, expires_at, created_at) VALUES(?, ?, ?, ?)")
     .run(randomBytes(16).toString("hex"), tokenHash(token), expiresAt, createdAt);
-  db().prepare("UPDATE wfm_admin SET last_login_at = ?, updated_at = ? WHERE id = 1").run(createdAt, createdAt);
+  db()
+    .prepare("UPDATE wfm_admin SET last_login_at = ?, updated_at = ? WHERE id = 1")
+    .run(createdAt, createdAt);
   return { token, expiresAt, user: userResponse(requireAdminRow()) };
 }
 
@@ -273,7 +276,11 @@ export function verifyPassword(_user: AdminRow, password: string) {
   return true;
 }
 
-export function changePassword(_user: AdminRow, data: Record<string, unknown>, currentToken: string) {
+export function changePassword(
+  _user: AdminRow,
+  data: Record<string, unknown>,
+  currentToken: string,
+) {
   const value = requireAdminRow();
   const currentPassword = String(data.currentPassword || "");
   const nextPassword = String(data.newPassword || "");
@@ -286,9 +293,13 @@ export function changePassword(_user: AdminRow, data: Record<string, unknown>, c
   connection.exec("BEGIN IMMEDIATE");
   try {
     connection
-      .prepare("UPDATE wfm_admin SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = 1")
+      .prepare(
+        "UPDATE wfm_admin SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = 1",
+      )
       .run(credential.hash, credential.salt, now());
-    connection.prepare("DELETE FROM wfm_sessions WHERE token_hash <> ?").run(tokenHash(currentToken));
+    connection
+      .prepare("DELETE FROM wfm_sessions WHERE token_hash <> ?")
+      .run(tokenHash(currentToken));
     connection.exec("COMMIT");
   } catch (error) {
     connection.exec("ROLLBACK");
