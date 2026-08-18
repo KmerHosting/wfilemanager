@@ -62,6 +62,9 @@ if (/\.cds--loading-overlay|--cds-overlay\s*:/.test(styles)) {
     "src/styles.scss: Carbon loading overlay must use the official $overlay token without app overrides",
   );
 }
+if (styles.includes("grid-template-columns: repeat(3")) {
+  violations.push("src/styles.scss: account forms must not use a three-column field layout");
+}
 
 const carbon = await readFile(new URL("src/carbon.scss", root), "utf8");
 for (const required of ['@use "@carbon/react"', "themes.$white", "themes.$g100", "theme.theme"]) {
@@ -83,14 +86,19 @@ if (!app.includes("HeaderContainer") || !app.includes("Content")) {
 if (!app.includes('<Loading description="Loading wFileManager" withOverlay />')) {
   violations.push("app shell: full-page loading must use Carbon Loading with its standard overlay");
 }
-if (!app.includes("function AppLoadingShell") || !app.includes("SkeletonText")) {
+if (!app.includes("function AppLoadingShell") || !app.includes("<AppShell />")) {
   violations.push(
-    "app shell: full-page loading must preserve visible Carbon shell/skeleton content beneath the translucent overlay",
+    "app shell: full-page loading must keep the real application shell visible beneath the translucent overlay",
+  );
+}
+if (app.includes("SkeletonText") || app.includes("SkeletonPlaceholder")) {
+  violations.push(
+    "app shell: blocking Carbon loading overlay must not replace the real underlying screen with invented skeleton content",
   );
 }
 if (!app.includes('aria-hidden="true" inert')) {
   violations.push(
-    "app shell: loading preview underneath the blocking overlay must be inert and hidden from assistive technology",
+    "app shell: the real screen beneath the blocking overlay must be inert and hidden from assistive technology",
   );
 }
 
@@ -121,9 +129,15 @@ for (const file of visibleRoutes) {
 }
 
 const account = await readFile(new URL("src/routes/_app.account.tsx", root), "utf8");
-if (!account.includes("Layer") || !account.includes("<Layer>")) {
+if (!account.includes("Form") || !account.includes("<Form")) {
+  violations.push("account route: password change must use the Carbon Form component");
+}
+if (!account.includes("PasswordInput")) {
+  violations.push("account route: password fields must use Carbon PasswordInput");
+}
+if (account.includes("<Layer>") || account.includes("wfm-account-form__fields")) {
   violations.push(
-    "account route: password inputs inside the layer-01 tile must use Carbon Layer context for field contrast",
+    "account route: password form must use the default Carbon field context and canonical single-column form structure",
   );
 }
 
