@@ -6,6 +6,8 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const COMMON_LOCATIONS = ["/", "/root", "/etc", "/var/www", "/opt"] as const;
+const IP_COMMANDS = ["ip", "/usr/sbin/ip", "/sbin/ip", "/usr/bin/ip", "/bin/ip"] as const;
+const HOSTNAME_COMMANDS = ["hostname", "/usr/bin/hostname", "/bin/hostname"] as const;
 const MAX_TEXT_BYTES = Number(process.env.WFILEMANAGER_MAX_TEXT_BYTES || 5 * 1024 * 1024);
 const MAX_UPLOAD_BYTES = Number(
   process.env.WFILEMANAGER_MAX_UPLOAD_BYTES || 10 * 1024 * 1024 * 1024,
@@ -78,43 +80,88 @@ function validIpv4(value: string | undefined | null) {
   return octets.every((octet) => octet >= 0 && octet <= 255) ? match[0] : null;
 }
 
+function isUsableIpv4(value: string) {
+  const [first, second] = value.split(".").map(Number);
+  if (first === 0 || first === 127 || first >= 224) return false;
+  if (first === 169 && second === 254) return false;
+  return true;
+}
+
+function isPrivateIpv4(value: string) {
+  const [first, second] = value.split(".").map(Number);
+  return (
+    first === 10 ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 100 && second >= 64 && second <= 127)
+  );
+}
+
+async function execFirst(commands: readonly string[], args: string[]) {
+  for (const command of commands) {
+    try {
+      const { stdout } = await execFileAsync(command, args, { timeout: 2000 });
+      if (stdout.trim()) return stdout;
+    } catch {
+      // Try the next common absolute path. systemd services can have a reduced PATH.
+    }
+  }
+  return "";
+}
+
+function addIpv4Candidate(candidates: Set<string>, value: string | undefined | null) {
+  const detected = validIpv4(value);
+  if (detected && isUsableIpv4(detected)) candidates.add(detected);
+}
+
 async function primaryIpv4() {
   const configured = validIpv4(process.env.WFILEMANAGER_SERVER_IPV4);
-  if (configured) return configured;
+  if (configured && isUsableIpv4(configured)) return configured;
 
-  try {
-    const { stdout } = await execFileAsync("ip", ["-4", "route", "get", "1.1.1.1"], {
-      timeout: 2000,
-    });
-    const routeSource = stdout.match(/\bsrc\s+((?:\d{1,3}\.){3}\d{1,3})\b/)?.[1];
-    const detected = validIpv4(routeSource);
-    if (detected) return detected;
-  } catch {
-    // Fall through to another local-only detection method.
+  const candidates = new Set<string>();
+
+  const routeOutput = await execFirst(IP_COMMANDS, ["-4", "route", "get", "1.1.1.1"]);
+  addIpv4Candidate(
+    candidates,
+    routeOutput.match(/\bsrc\s+((?:\d{1,3}\.){3}\d{1,3})\b/)?.[1],
+  );
+
+  const addressOutput = await execFirst(IP_COMMANDS, ["-o", "-4", "addr", "show", "scope", "global"]);
+  for (const match of addressOutput.matchAll(/\binet\s+((?:\d{1,3}\.){3}\d{1,3})\/\d+\b/g)) {
+    addIpv4Candidate(candidates, match[1]);
+  }
+
+  const hostnameOutput = await execFirst(HOSTNAME_COMMANDS, ["-I"]);
+  for (const candidate of hostnameOutput.trim().split(/\s+/)) {
+    addIpv4Candidate(candidates, candidate);
   }
 
   try {
-    const { stdout } = await execFileAsync("hostname", ["-I"], { timeout: 2000 });
-    for (const candidate of stdout.trim().split(/\s+/)) {
-      const detected = validIpv4(candidate);
-      if (detected && !detected.startsWith("127.")) return detected;
+    const fibTrie = await readFile("/proc/net/fib_trie", "utf8");
+    for (const match of fibTrie.matchAll(
+      /\|--\s+((?:\d{1,3}\.){3}\d{1,3})\s*\n\s*\/32 host LOCAL/g,
+    )) {
+      addIpv4Candidate(candidates, match[1]);
     }
   } catch {
-    // Fall through to Node's interface list when libuv supports it.
+    // /proc can be restricted by hardened service settings; other methods remain available.
   }
 
   try {
     const interfaces = os.networkInterfaces();
     for (const addresses of Object.values(interfaces)) {
       for (const address of addresses || []) {
-        if (address.family === "IPv4" && !address.internal) return address.address;
+        if (address.family === "IPv4" && !address.internal) {
+          addIpv4Candidate(candidates, address.address);
+        }
       }
     }
   } catch {
-    // Some virtualized Linux environments return UV_ENOTSUP here. IPv4 is optional metadata.
+    // Some standalone or virtualized Linux runtimes return UV_ENOTSUP here.
   }
 
-  return null;
+  const values = [...candidates];
+  return values.find((value) => !isPrivateIpv4(value)) || values[0] || null;
 }
 
 export async function fileManagerSummary() {
