@@ -140,7 +140,7 @@ jobs:
           gh release create "$TAG" "$ARCHIVE#Prebuilt Linux x64 runtime" SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" \
             --target "$RELEASE_REF" \
-            --title "wFileManager $VERSION" \
+            --title "$TAG" \
             --notes-file release-notes.md \
             --latest
 
