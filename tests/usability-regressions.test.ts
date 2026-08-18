@@ -3,13 +3,33 @@ import { expect, test } from "bun:test";
 
 const read = (path: string) => readFile(path, "utf8");
 
-test("overview IPv4 detection never depends solely on libuv network interfaces", async () => {
+test("overview IPv4 detection uses multiple Linux-local fallbacks", async () => {
   const runtime = await read("src/lib/server/file-manager-runtime.ts");
-  expect(runtime).toContain('execFileAsync("ip", ["-4", "route", "get", "1.1.1.1"]');
-  expect(runtime).toContain('execFileAsync("hostname", ["-I"]');
+  expect(runtime).toContain('const IP_COMMANDS = ["ip", "/usr/sbin/ip", "/sbin/ip"');
+  expect(runtime).toContain('["-4", "route", "get", "1.1.1.1"]');
+  expect(runtime).toContain('["-o", "-4", "addr", "show", "scope", "global"]');
+  expect(runtime).toContain('const HOSTNAME_COMMANDS = ["hostname"');
+  expect(runtime).toContain('["-I"]');
+  expect(runtime).toContain('readFile("/proc/net/fib_trie", "utf8")');
   expect(runtime).toContain("os.networkInterfaces()");
   expect(runtime).toContain("UV_ENOTSUP");
+  expect(runtime).toContain("isPrivateIpv4");
   expect(runtime).toContain("ipv4,");
+});
+
+test("overview KPI tiles complement rather than duplicate server identity", async () => {
+  const overview = await read("src/routes/_app.index.tsx");
+
+  expect(overview).toContain(">Uptime<");
+  expect(overview).toContain(">Login users<");
+  expect(overview).toContain(">Accessible paths<");
+  expect(overview).toContain(">Trash<");
+  expect(overview).toContain("formatUptime(summary?.uptime)");
+  expect(overview).toContain("summary.availableLocations");
+  expect(overview).toContain("summary.writableLocations");
+  expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Hostname</div>');
+  expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Operating system</div>');
+  expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Server IPv4</div>');
 });
 
 test("application shell delegates navigation and fixed-header behavior to Carbon", async () => {
