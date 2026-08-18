@@ -224,9 +224,9 @@ kbd,
 
 .wfm-path-controls {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
   gap: spacing.$spacing-03;
   align-items: end;
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .wfm-progress-block {
@@ -414,19 +414,32 @@ kbd,
   background: var(--cds-layer-01);
 }
 
-.wfm-account-form {
+.wfm-account-stack {
+  display: grid;
+  gap: spacing.$spacing-07;
   max-inline-size: 48rem;
 }
 
-.wfm-account-form__fields {
-  display: grid;
-  gap: spacing.$spacing-05;
+.wfm-account-section,
+.wfm-account-password-form {
+  inline-size: min(100%, 32rem);
 }
 
-@include breakpoint.breakpoint("md") {
-  .wfm-account-form__fields {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.wfm-account-section .wfm-section-title {
+  margin-block-end: spacing.$spacing-07;
+}
+
+.wfm-account-password-form__fields {
+  display: grid;
+  gap: spacing.$spacing-07;
+}
+
+.wfm-account-password-form__actions {
+  margin-block-start: spacing.$spacing-07;
+}
+
+.wfm-account-recovery {
+  max-inline-size: 48rem;
 }
 
 .wfm-about-grid {
@@ -513,8 +526,4 @@ kbd,
 
 .wfm-between {
   justify-content: space-between;
-}
-
-.wfm-path-controls {
-  grid-template-columns: auto minmax(0, 1fr) auto;
 }
