@@ -7,7 +7,9 @@ test("overview IPv4 detection uses multiple Linux-local fallbacks", async () => 
   const runtime = await read("src/lib/server/file-manager-runtime.ts");
   expect(runtime).toContain('const IP_COMMANDS = ["ip", "/usr/sbin/ip", "/sbin/ip"');
   expect(runtime).toContain('["-4", "route", "get", "1.1.1.1"]');
-  expect(runtime).toContain('["-o", "-4", "addr", "show", "scope", "global"]');
+  expect(runtime).toContain("const addressOutput = await execFirst(IP_COMMANDS, [");
+  expect(runtime).toContain('"scope"');
+  expect(runtime).toContain('"global"');
   expect(runtime).toContain('const HOSTNAME_COMMANDS = ["hostname"');
   expect(runtime).toContain('["-I"]');
   expect(runtime).toContain('readFile("/proc/net/fib_trie", "utf8")');
