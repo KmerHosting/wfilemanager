@@ -11,6 +11,19 @@ export const Route = createFileRoute("/_app/")({
 
 type OverviewInfo = Awaited<ReturnType<typeof localApi.overview>>;
 
+function formatUptime(seconds: number | undefined) {
+  if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return "—";
+
+  const totalMinutes = Math.floor(seconds / 60);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
 function Overview() {
   const [summary, setSummary] = useState<OverviewInfo | null>(null);
   const [trashCount, setTrashCount] = useState(0);
@@ -46,7 +59,7 @@ function Overview() {
             Overview
           </h1>
           <p className="wfm-page__description">
-            Local server state and direct access to the two day-to-day file management areas.
+            Local server health, filesystem access and direct access to everyday file management.
           </p>
         </div>
         <div className="wfm-page__actions">
@@ -72,23 +85,27 @@ function Overview() {
       <Grid fullWidth condensed className="wfm-kpi-grid">
         <Column sm={4} md={4} lg={4}>
           <Tile className="wfm-kpi-tile">
-            <div className="wfm-kpi-tile__label">Hostname</div>
-            <div className="wfm-kpi-tile__value wfm-mono">{summary?.hostname || "—"}</div>
-            <div className="wfm-kpi-tile__helper">Local Linux host</div>
+            <div className="wfm-kpi-tile__label">Uptime</div>
+            <div className="wfm-kpi-tile__value wfm-mono">{formatUptime(summary?.uptime)}</div>
+            <div className="wfm-kpi-tile__helper">Since the last server boot</div>
           </Tile>
         </Column>
         <Column sm={4} md={4} lg={4}>
           <Tile className="wfm-kpi-tile">
-            <div className="wfm-kpi-tile__label">Operating system</div>
-            <div className="wfm-kpi-tile__value">{summary?.os.prettyName || "—"}</div>
-            <div className="wfm-kpi-tile__helper">{summary?.architecture || "Architecture unknown"}</div>
+            <div className="wfm-kpi-tile__label">Login users</div>
+            <div className="wfm-kpi-tile__value">{summary?.loginUsers ?? "—"}</div>
+            <div className="wfm-kpi-tile__helper">Interactive Linux accounts</div>
           </Tile>
         </Column>
         <Column sm={4} md={4} lg={4}>
           <Tile className="wfm-kpi-tile">
-            <div className="wfm-kpi-tile__label">Server IPv4</div>
-            <div className="wfm-kpi-tile__value wfm-mono">{summary?.ipv4 || "—"}</div>
-            <div className="wfm-kpi-tile__helper">Detected address</div>
+            <div className="wfm-kpi-tile__label">Accessible paths</div>
+            <div className="wfm-kpi-tile__value">
+              {summary ? `${summary.availableLocations}/${summary.totalCommonLocations}` : "—"}
+            </div>
+            <div className="wfm-kpi-tile__helper">
+              {summary ? `${summary.writableLocations} writable` : "Common Linux locations"}
+            </div>
           </Tile>
         </Column>
         <Column sm={4} md={4} lg={4}>
