@@ -14,14 +14,16 @@
 
 </div>
 
+### What is wFileManager?
+
 > [!NOTE]
-> ### What is wFileManager?
 > wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, upload, download, edit, move, rename and delete files and folders.
 >
 > It uses a local SQLite database and does not require a hosted database or external account service.
 
+### Install
+
 > [!NOTE]
-> ### Install
 > Requires Ubuntu 20.04+ with root access and Internet connectivity.
 >
 > ```bash
