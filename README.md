@@ -44,7 +44,7 @@ sudo systemctl start wfilemanager-updater@rollback.service
 sudo wfilemanager-uninstall
 ```
 
-> [!NOTE]
+> [!WARNING]
 > ### Notice
 > wFileManager provides direct access to your server filesystem. Only install it on servers you control.
 >
