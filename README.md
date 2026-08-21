@@ -14,25 +14,38 @@
 
 </div>
 
-## What is wFileManager?
+> [!NOTE]
+> ### What is wFileManager?
+> wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, upload, download, edit, move, rename and delete files and folders.
+>
+> It uses a local SQLite database and does not require a hosted database or external account service.
 
-wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, upload, download, edit, move, rename and delete files and folders.
+> [!NOTE]
+> ### Install
+> Requires Ubuntu 20.04+ with root access and Internet connectivity.
+>
+> ```bash
+> curl -fsSL https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/install.sh | sudo bash
+> ```
+>
+> The installer starts wFileManager on TCP port `1973`. Open the URL printed by the installer and use the one-time setup code shown in the terminal.
 
-It uses a local SQLite database and does not require a hosted database or external account service.
-
-## Install
-
-Requires Ubuntu 20.04+ with root access and Internet connectivity.
+## Useful commands
 
 ```bash
-curl -fsSL https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/install.sh | sudo bash
+sudo wfilemanager-doctor
+sudo wfilemanager-reset-admin-password
+sudo systemctl status wfilemanager.service --no-pager
+sudo journalctl -u wfilemanager.service -f
+sudo systemctl start wfilemanager-updater@install.service
+sudo systemctl start wfilemanager-updater@rollback.service
+sudo wfilemanager-uninstall
 ```
 
-The installer starts wFileManager on TCP port `1973`. Open the URL printed by the installer and use the one-time setup code shown in the terminal.
-
-## Warnings
-
-- wFileManager provides direct access to your server filesystem. Only install it on servers you control.
-- Do not expose port `1973` directly to the public Internet. Put wFileManager behind HTTPS and appropriate access controls.
-- File deletion and modification can damage applications or the operating system. Keep backups of important data.
-- Review updates and maintain normal server security practices.
+> [!NOTE]
+> ### Notice
+> wFileManager provides direct access to your server filesystem. Only install it on servers you control.
+>
+> Do not expose port `1973` directly to the public Internet. Put wFileManager behind HTTPS and appropriate access controls.
+>
+> File deletion or modification can damage applications or the operating system. Keep backups of important data.
