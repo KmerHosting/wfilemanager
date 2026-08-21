@@ -14,74 +14,25 @@
 
 </div>
 
-wFileManager gives one administrator direct browser access to the server filesystem. It is intentionally simple: no hosted database, roles, secondary users, licence service or web terminal.
+## What is wFileManager?
 
-The application interface is built with IBM Carbon Design System for React. Carbon components, semantic theme tokens, typography, spacing, breakpoints, icons and motion are used as the UI source of truth.
+wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, upload, download, edit, move, rename and delete files and folders.
 
-## Features
-
-- Browse, upload, download and edit files.
-- Create, rename, copy and move files or folders.
-- Trash, restore and permanently delete items.
-- Native Carbon UI shell with responsive rail navigation.
-- Carbon data tables, forms, modals, notifications and loading states.
-- White and G100 Carbon themes, plus system theme selection.
-- One local `admin` account.
-- Local SQLite state.
-- Prebuilt verified updates with rollback.
-- CLI password reset and diagnostics.
-
-## Requirements
-
-- Ubuntu 20.04 LTS or newer
-- root access
-- systemd
-- Internet access for installation and updates
+It uses a local SQLite database and does not require a hosted database or external account service.
 
 ## Install
+
+Requires Ubuntu 20.04+ with root access and Internet connectivity.
 
 ```bash
 curl -fsSL https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/install.sh | sudo bash
 ```
 
-The installer downloads a prebuilt release and starts wFileManager on TCP `1973`. No domain, Nginx, Certbot, Bun or build toolchain is required.
+The installer starts wFileManager on TCP port `1973`. Open the URL printed by the installer and use the one-time setup code shown in the terminal.
 
-After installation, open the URL printed by the installer and enter the one-time setup code shown in the terminal.
+## Warnings
 
-For regular Internet use, place wFileManager behind HTTPS.
-
-## Commands
-
-```bash
-sudo wfilemanager-doctor
-sudo wfilemanager-reset-admin-password
-sudo systemctl status wfilemanager.service --no-pager
-sudo journalctl -u wfilemanager.service -f
-sudo systemctl start wfilemanager-updater@install.service
-sudo systemctl start wfilemanager-updater@rollback.service
-sudo wfilemanager-uninstall
-```
-
-Application state:
-
-```text
-/var/lib/wfilemanager/wfilemanager.db
-```
-
-## Development
-
-```bash
-bun install --frozen-lockfile
-bun run audit:carbon
-bun run test
-bun run typecheck
-bun run lint
-bun run build
-bun run dev
-```
-
-See `docs/CARBON.md` for the frontend conformance rules.
-
-Documentation: https://kmerhosting.com/docs  
-Security reports: `support@kmerhosting.com`  
-License: MIT
+- wFileManager provides direct access to your server filesystem. Only install it on servers you control.
+- Do not expose port `1973` directly to the public Internet. Put wFileManager behind HTTPS and appropriate access controls.
+- File deletion and modification can damage applications or the operating system. Keep backups of important data.
+- Review updates and maintain normal server security practices.
