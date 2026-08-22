@@ -559,8 +559,11 @@ audio.wfm-media-preview {
 }
 
 .wfm-auth-shell {
+  inline-size: 100%;
   min-block-size: 100dvh;
+  margin-inline: 0;
   padding: 0;
+  background: var(--cds-background-inverse);
 }
 
 .wfm-auth-shell > [class*="cds--col"] {
