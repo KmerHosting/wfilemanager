@@ -39,6 +39,7 @@ type OperationName = "copy" | "move" | "delete";
 type OperationStatus =
   "queued" | "running" | "cancelling" | "cancelled" | "completed" | "failed" | "interrupted";
 type OperationPhase = "queued" | "scanning" | "copying" | "source_cleanup" | "deleting" | "done";
+type ConflictPolicy = "error" | "skip" | "replace" | "keep-both";
 
 type TreeItem = {
   source: string;
@@ -55,6 +56,7 @@ export interface PersistentOperationJob {
   operation: OperationName;
   source: string;
   destinationDirectory?: string;
+  conflictPolicy?: ConflictPolicy;
   status: OperationStatus;
   phase: OperationPhase;
   progress: number;
@@ -250,6 +252,8 @@ async function perform(job: PersistentOperationJob) {
   await persist();
   let partialDestination: string | null = null;
   let preservedDestination: string | null = null;
+  let replacedDestinationBackup: string | null = null;
+  let operationDestination: string | null = null;
   try {
     if (job.operation === "delete") {
       await deleteTree(job.source, job);
@@ -266,15 +270,45 @@ async function perform(job: PersistentOperationJob) {
 
     if (!job.destinationDirectory)
       throw new LocalApiError(400, "A destination directory is required");
-    const destination = path.join(job.destinationDirectory, path.basename(job.source));
+    let destination = path.join(job.destinationDirectory, path.basename(job.source));
+    operationDestination = destination;
     if (destination === job.source || destination.startsWith(`${job.source}${path.sep}`))
       throw new LocalApiError(400, "The destination cannot be inside the source");
-    if (
-      await lstat(destination)
-        .then(() => true)
-        .catch(() => false)
-    )
-      throw new LocalApiError(409, `Destination already exists: ${destination}`);
+    const destinationExists = await lstat(destination)
+      .then(() => true)
+      .catch(() => false);
+    if (destinationExists) {
+      if (job.conflictPolicy === "skip") {
+        updateProgress(job, {
+          status: "completed",
+          phase: "done",
+          progress: 100,
+          result: { source: job.source, skipped: true, destination },
+        });
+        await persist();
+        return;
+      }
+      if (job.conflictPolicy === "replace") {
+        replacedDestinationBackup = path.join(
+          path.dirname(destination),
+          `.${path.basename(destination)}.wfilemanager-replaced-${crypto.randomUUID()}`,
+        );
+        await rename(destination, replacedDestinationBackup);
+      } else if (job.conflictPolicy === "keep-both") {
+        const parsed = path.parse(destination);
+        for (let index = 2; index < 10_000; index += 1) {
+          const candidate = path.join(parsed.dir, `${parsed.name} (${index})${parsed.ext}`);
+          const exists = await lstat(candidate)
+            .then(() => true)
+            .catch(() => false);
+          if (!exists) {
+            destination = candidate;
+            operationDestination = candidate;
+            break;
+          }
+        }
+      } else throw new LocalApiError(409, `Destination already exists: ${destination}`);
+    }
 
     if (job.operation === "move") {
       try {
@@ -284,6 +318,10 @@ async function perform(job: PersistentOperationJob) {
         job.totalBytes = items.reduce((sum, item) => sum + item.size, 0);
         job.currentItem = job.source;
         await rename(job.source, destination);
+        if (replacedDestinationBackup) {
+          await rm(replacedDestinationBackup, { recursive: true, force: true });
+          replacedDestinationBackup = null;
+        }
         updateProgress(job, {
           status: "completed",
           phase: "done",
@@ -316,6 +354,10 @@ async function perform(job: PersistentOperationJob) {
       await deleteTree(job.source, job, false, false);
     }
     partialDestination = null;
+    if (replacedDestinationBackup) {
+      await rm(replacedDestinationBackup, { recursive: true, force: true });
+      replacedDestinationBackup = null;
+    }
     updateProgress(job, {
       status: "completed",
       phase: "done",
@@ -327,6 +369,13 @@ async function perform(job: PersistentOperationJob) {
   } catch (error) {
     if (partialDestination)
       await rm(partialDestination, { recursive: true, force: true }).catch(() => undefined);
+    if (replacedDestinationBackup) {
+      if (operationDestination)
+        await rm(operationDestination, { recursive: true, force: true }).catch(() => undefined);
+      if (operationDestination)
+        await rename(replacedDestinationBackup, operationDestination).catch(() => undefined);
+      replacedDestinationBackup = null;
+    }
     if (job.status !== "cancelled")
       updateProgress(job, {
         status: "failed",
@@ -360,6 +409,7 @@ export async function startOperationJob(
   operationInput: unknown,
   source: string,
   destinationDirectory?: string,
+  conflictPolicy: ConflictPolicy = "error",
 ) {
   await initialize();
   const operation = String(operationInput || "") as OperationName;
@@ -387,6 +437,7 @@ export async function startOperationJob(
     operation,
     source,
     destinationDirectory,
+    conflictPolicy,
     status: "queued",
     phase: "queued",
     progress: 0,

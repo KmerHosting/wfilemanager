@@ -21,7 +21,7 @@ dpkg --compare-versions "${VERSION_ID:-0}" ge 20.04 || { echo "Ubuntu 20.04 LTS 
 }
 
 APT_OPTIONS=(-o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45)
-BASE_PACKAGES=(curl ca-certificates jq tar gzip xz-utils openssl util-linux)
+BASE_PACKAGES=(curl ca-certificates jq tar gzip xz-utils libarchive-tools openssl util-linux)
 apt-get "${APT_OPTIONS[@]}" update
 DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l apt-get "${APT_OPTIONS[@]}" install -y "${BASE_PACKAGES[@]}"
 

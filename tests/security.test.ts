@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { assertSafeExistingMutation } from "../src/lib/server/safe-path-runtime";
 import { saveRawUpload } from "../src/lib/server/upload-runtime";
 import { sameOrigin } from "../src/lib/server/request-security";
+import { validateArchiveMemberName } from "../src/lib/server/archive-runtime";
 
 const execFileAsync = promisify(execFile);
 const roots: string[] = [];
@@ -48,6 +49,16 @@ describe("filesystem mutation safety", () => {
 
     await expect(saveRawUpload(root, "existing.txt", body)).rejects.toThrow("already exists");
     expect(await readFile(target, "utf8")).toBe("original");
+  });
+
+  test("rejects archive members that could escape the extraction directory", () => {
+    expect(() => validateArchiveMemberName("../../etc/shadow")).toThrow("Unsafe archive member");
+    expect(() => validateArchiveMemberName("/etc/shadow")).toThrow("Unsafe archive member");
+    expect(() => validateArchiveMemberName("C:/Windows/System32/config")).toThrow(
+      "Unsafe archive member",
+    );
+    expect(() => validateArchiveMemberName("safe/../escape")).toThrow("Unsafe archive member");
+    expect(() => validateArchiveMemberName("safe/folder/file.txt")).not.toThrow();
   });
 });
 

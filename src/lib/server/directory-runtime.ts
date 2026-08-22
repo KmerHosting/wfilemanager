@@ -80,6 +80,14 @@ async function entryFor(parent: string, name: string): Promise<LocalFileEntry> {
   const info = await lstat(target);
   const kind = fileKind(info);
   const linkTarget = kind === "symlink" ? await readlink(target).catch(() => undefined) : undefined;
+  const followed = kind === "symlink" ? await stat(target).catch(() => null) : null;
+  const linkKind = followed
+    ? followed.isDirectory()
+      ? "directory"
+      : followed.isFile()
+        ? "file"
+        : "other"
+    : undefined;
   return {
     name,
     path: target,
@@ -93,6 +101,7 @@ async function entryFor(parent: string, name: string): Promise<LocalFileEntry> {
     accessedAt: info.atime.toISOString(),
     hidden: name.startsWith("."),
     linkTarget,
+    linkKind,
     mime: mimeFor(target, kind),
     ...(await permissionsFor(target)),
   };

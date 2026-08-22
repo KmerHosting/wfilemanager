@@ -11,6 +11,7 @@ export interface LocalFileEntry {
   accessedAt: string;
   hidden: boolean;
   linkTarget?: string;
+  linkKind?: "file" | "directory" | "other";
   mime: string;
   readable: boolean;
   writable: boolean;
@@ -74,7 +75,10 @@ export interface OperationJob {
   source: string;
   destinationDirectory?: string;
   cancellable: boolean;
+  result?: Record<string, unknown>;
 }
+
+export type ConflictPolicy = "error" | "skip" | "replace" | "keep-both";
 
 export type OperationProgressCallback = (job: OperationJob) => void;
 
@@ -243,15 +247,17 @@ async function uploadFiles(
 }
 
 async function runJob(
-  operation: "copy" | "move",
+  operation: "copy" | "move" | "delete",
   source: string,
-  destination: string,
+  destination: string | undefined,
   onProgress?: OperationProgressCallback,
+  conflict: ConflictPolicy = "error",
 ) {
   const started = await post<{ job: OperationJob }>("job-start", {
     operation,
     source,
     destination,
+    conflict,
   });
   onProgress?.(started.job);
 
@@ -271,6 +277,20 @@ async function runJob(
   throw new Error(`${operation} did not complete within 24 hours`);
 }
 
+async function runBatchJobs(
+  operation: "copy" | "move" | "delete",
+  sources: string[],
+  destination: string | undefined,
+  conflict: ConflictPolicy,
+  onProgress?: OperationProgressCallback,
+) {
+  const jobs: OperationJob[] = [];
+  for (const source of sources) {
+    jobs.push(await runJob(operation, source, destination, onProgress, conflict));
+  }
+  return { jobs };
+}
+
 function startBrowserDownload(path: string, filename: string) {
   const query = new URLSearchParams({ action: "download", path });
   const link = document.createElement("a");
@@ -285,11 +305,12 @@ function startBrowserDownload(path: string, filename: string) {
 }
 
 export const localApi = {
-  list: (path: string, cursor?: string, query?: string) =>
+  list: (path: string, cursor?: string, query?: string, limit?: number) =>
     get<DirectoryResult>("list", {
       path,
       ...(cursor ? { cursor } : {}),
       ...(query ? { q: query } : {}),
+      ...(limit ? { limit: String(limit) } : {}),
     }),
   read: (path: string) =>
     get<{
@@ -311,14 +332,55 @@ export const localApi = {
     runJob("copy", source, destination, onProgress),
   move: (source: string, destination: string, onProgress?: OperationProgressCallback) =>
     runJob("move", source, destination, onProgress),
+  copyMany: (
+    sources: string[],
+    destination: string,
+    conflict: ConflictPolicy,
+    onProgress?: OperationProgressCallback,
+  ) => runBatchJobs("copy", sources, destination, conflict, onProgress),
+  moveMany: (
+    sources: string[],
+    destination: string,
+    conflict: ConflictPolicy,
+    onProgress?: OperationProgressCallback,
+  ) => runBatchJobs("move", sources, destination, conflict, onProgress),
+  deleteMany: (sources: string[], onProgress?: OperationProgressCallback) =>
+    runBatchJobs("delete", sources, undefined, "error", onProgress),
+  jobs: {
+    list: () => get<{ jobs: OperationJob[] }>("jobs"),
+    cancel: (id: string) => post<{ job: OperationJob }>("job-cancel", { id }),
+  },
   upload: uploadFiles,
   download: startBrowserDownload,
   trash: {
     list: () => get<TrashResult>("trash-list"),
     move: (path: string) => post<{ item: TrashItem }>("trash-move", { path }),
+    moveMany: (paths: string[]) => post<{ items: TrashItem[] }>("trash-move-many", { paths }),
     restore: (id: string) => post<{ restored: string }>("trash-restore", { id }),
     delete: (id: string) => post<{ deleted: string }>("trash-delete", { id }),
     empty: () => post<{ deletedItems: number; deletedBytes: number }>("trash-empty", {}),
+  },
+  chmod: (path: string, mode: string) =>
+    post<{ path: string; mode: string }>("chmod", { path, mode }),
+  chown: (path: string, uid: number, gid: number) =>
+    post<{ path: string; uid: number; gid: number }>("chown", { path, uid, gid }),
+  archive: {
+    create: (input: {
+      sources: string[];
+      destination: string;
+      name: string;
+      format: "zip" | "tar.gz";
+    }) => post<{ path: string; name: string; format: string }>("archive-create", input),
+    extract: (input: {
+      archive: string;
+      destination: string;
+      mode: "here" | "subfolder";
+      conflict: "skip" | "replace" | "keep-both";
+    }) =>
+      post<{ archive: string; committed: string[]; entries: number; bytes: number }>(
+        "archive-extract",
+        input,
+      ),
   },
   overview: () => get<FileManagerOverview>("overview"),
   updateInfo: () => get<UpdateInfo>("update-info"),

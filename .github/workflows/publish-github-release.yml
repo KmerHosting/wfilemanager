@@ -119,11 +119,12 @@ jobs:
           cat > release-notes.md <<EOF
           wFileManager $VERSION is a prebuilt Linux runtime release.
 
-          - Rebuilt React frontend on IBM Carbon Design System.
-          - Carbon UI shell, rail navigation, forms, tables, modals, notifications and themes.
-          - Single local administrator account and local SQLite data.
-          - No server-side Bun install or application compilation.
-          - Verified atomic updates with rollback.
+          - Desktop-style multi-selection, keyboard shortcuts and right-click context menu.
+          - Multi-item copy, move, trash and permanent-delete operations with conflict handling.
+          - Sortable and paginated directories, server-side search, hidden files and drag-and-drop upload.
+          - ZIP and TAR.GZ creation plus safe ZIP, TAR, RAR and 7z-family extraction via libarchive.
+          - Text, image, audio, video and PDF previews plus Linux mode, UID and GID properties.
+          - Prebuilt deployment with verified atomic updates and rollback.
 
           SHA-256: \`$SHA256\`
           Size: \`$SIZE bytes\`

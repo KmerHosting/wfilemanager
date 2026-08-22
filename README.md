@@ -16,9 +16,18 @@
 
 ### What is wFileManager?
 
-> wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, upload, download, edit, move, rename and delete files and folders.
+> wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, select, upload, download, edit, copy, move, rename, archive and recover files and folders.
 >
 > It uses a local SQLite database and does not require a hosted database or external account service.
+
+### File Explorer
+
+- Familiar desktop selection: click, Ctrl/Command-click, Shift-click and Ctrl/Command+A
+- Keyboard actions for open, rename, copy, cut, paste, delete, refresh and navigation
+- Multi-item copy, move and trash operations with conflict handling
+- Right-click context menu, sortable details, hidden-file toggle and folder picker
+- ZIP and TAR.GZ creation; ZIP, TAR, RAR and 7z-family extraction through libarchive
+- Text, image, audio, video and PDF preview plus Linux permissions and ownership
 
 ### Install
 
@@ -43,7 +52,9 @@ sudo wfilemanager-uninstall
 ```
 
 > [!WARNING]
+>
 > ### Notice
+>
 > wFileManager provides direct access to your server filesystem. Only install it on servers you control.
 >
 > Do not expose port `1973` directly to the public Internet. Put wFileManager behind HTTPS and appropriate access controls.

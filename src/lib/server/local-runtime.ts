@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import {
   access,
   chmod,
-  copyFile,
+  chown,
   cp,
   lstat,
   mkdir,
@@ -14,10 +14,7 @@ import {
   realpath,
   rename,
   rm,
-  rmdir,
   stat,
-  symlink,
-  unlink,
   writeFile,
 } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
@@ -72,6 +69,7 @@ export interface LocalFileEntry {
   accessedAt: string;
   hidden: boolean;
   linkTarget?: string;
+  linkKind?: "file" | "directory" | "other";
   mime: string;
   readable: boolean;
   writable: boolean;
@@ -197,6 +195,14 @@ async function entryFor(parent: string, name: string): Promise<LocalFileEntry> {
   const kind = fileKind(info);
   const permissions = await permissionsFor(target);
   const linkTarget = kind === "symlink" ? await readlink(target).catch(() => undefined) : undefined;
+  const followed = kind === "symlink" ? await stat(target).catch(() => null) : null;
+  const linkKind = followed
+    ? followed.isDirectory()
+      ? "directory"
+      : followed.isFile()
+        ? "file"
+        : "other"
+    : undefined;
   return {
     name,
     path: target,
@@ -210,6 +216,7 @@ async function entryFor(parent: string, name: string): Promise<LocalFileEntry> {
     accessedAt: info.atime.toISOString(),
     hidden: name.startsWith("."),
     linkTarget,
+    linkKind,
     mime: mimeFor(target, kind),
     ...permissions,
   };
@@ -347,6 +354,17 @@ export async function changeMode(inputPath: unknown, modeInput: unknown) {
     throw new LocalApiError(400, "Mode must be an octal value such as 0644 or 0755");
   await chmod(target, Number.parseInt(modeText, 8));
   return { path: target, mode: modeText.padStart(4, "0") };
+}
+
+export async function changeOwnership(inputPath: unknown, uidInput: unknown, gidInput: unknown) {
+  const target = normalizeServerPath(inputPath);
+  assertSafeWrite(target);
+  const uid = Number(uidInput);
+  const gid = Number(gidInput);
+  if (!Number.isSafeInteger(uid) || uid < 0 || !Number.isSafeInteger(gid) || gid < 0)
+    throw new LocalApiError(400, "Owner and group must be non-negative numeric IDs");
+  await chown(target, uid, gid);
+  return { path: target, uid, gid };
 }
 
 export async function downloadResponse(inputPath: unknown) {
@@ -693,197 +711,3 @@ export function installAvailableUpdate() {
 export function rollbackApplicationUpdate() {
   return startUpdater("rollback");
 }
-
-type OperationName = "copy" | "move" | "delete";
-type OperationStatus = "queued" | "running" | "completed" | "failed";
-
-export interface OperationJob {
-  id: string;
-  ownerUserId: string;
-  operation: OperationName;
-  status: OperationStatus;
-  progress: number;
-  processedBytes: number;
-  totalBytes: number;
-  processedItems: number;
-  totalItems: number;
-  currentItem?: string;
-  error?: string;
-  result?: Record<string, unknown>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-type RuntimeState = typeof globalThis & {
-  __wfilemanagerJobs?: Map<string, OperationJob>;
-};
-
-const runtime = globalThis as RuntimeState;
-const operationJobs = (runtime.__wfilemanagerJobs ??= new Map<string, OperationJob>());
-
-function updateJob(job: OperationJob, patch: Partial<OperationJob>) {
-  Object.assign(job, patch, { updatedAt: Date.now() });
-  const numerator = job.totalBytes > 0 ? job.processedBytes : job.processedItems;
-  const denominator = job.totalBytes > 0 ? job.totalBytes : job.totalItems;
-  job.progress =
-    denominator > 0 ? Math.max(0, Math.min(100, Math.round((numerator / denominator) * 100))) : 0;
-}
-
-async function copyTree(source: string, destination: string, job: OperationJob) {
-  const items = await scanTree(source);
-  job.totalItems = items.length;
-  job.totalBytes = items.reduce((sum, item) => sum + item.size, 0);
-  updateJob(job, {});
-
-  for (const item of items) {
-    const target = item.relative ? path.join(destination, item.relative) : destination;
-    job.currentItem = item.source;
-    if (item.kind === "directory") {
-      await mkdir(target, { recursive: false, mode: item.mode });
-    } else if (item.kind === "file") {
-      await copyFile(item.source, target, fsConstants.COPYFILE_EXCL);
-      await chmod(target, item.mode).catch(() => undefined);
-    } else if (item.kind === "symlink") {
-      await symlink(item.linkTarget || "", target);
-    } else {
-      throw new LocalApiError(415, `Unsupported filesystem entry: ${item.source}`);
-    }
-    updateJob(job, {
-      processedItems: job.processedItems + 1,
-      processedBytes: job.processedBytes + item.size,
-    });
-  }
-}
-
-async function deleteTree(target: string, job: OperationJob) {
-  const items = await scanTree(target);
-  job.totalItems = items.length;
-  job.totalBytes = items.reduce((sum, item) => sum + item.size, 0);
-  updateJob(job, {});
-
-  for (const item of [...items].reverse()) {
-    job.currentItem = item.source;
-    if (item.kind === "directory") await rmdir(item.source);
-    else await unlink(item.source);
-    updateJob(job, {
-      processedItems: job.processedItems + 1,
-      processedBytes: job.processedBytes + item.size,
-    });
-  }
-}
-
-async function performJob(job: OperationJob, source: string, destinationDirectory?: string) {
-  updateJob(job, { status: "running" });
-  try {
-    assertSafeWrite(source);
-    if (job.operation === "delete") {
-      await deleteTree(source, job);
-      updateJob(job, {
-        status: "completed",
-        progress: 100,
-        result: { deleted: source },
-        currentItem: undefined,
-      });
-      return;
-    }
-
-    if (!destinationDirectory) throw new LocalApiError(400, "A destination directory is required");
-    const destination = path.join(destinationDirectory, path.basename(source));
-    assertSafeWrite(destination);
-    await ensureDestinationAbsent(destination);
-
-    if (job.operation === "move") {
-      try {
-        const items = await scanTree(source);
-        job.totalItems = items.length;
-        job.totalBytes = items.reduce((sum, item) => sum + item.size, 0);
-        job.currentItem = source;
-        await rename(source, destination);
-        updateJob(job, {
-          status: "completed",
-          processedItems: job.totalItems,
-          processedBytes: job.totalBytes,
-          progress: 100,
-          result: { source, destination },
-          currentItem: undefined,
-        });
-        return;
-      } catch (error) {
-        const value = error as NodeJS.ErrnoException;
-        if (value.code !== "EXDEV") throw error;
-      }
-    }
-
-    await copyTree(source, destination, job);
-    if (job.operation === "move") {
-      const cleanupJob = { ...job, processedItems: 0, processedBytes: 0 } as OperationJob;
-      await deleteTree(source, cleanupJob);
-    }
-    updateJob(job, {
-      status: "completed",
-      progress: 100,
-      result: { source, destination },
-      currentItem: undefined,
-    });
-  } catch (error) {
-    updateJob(job, {
-      status: "failed",
-      error: error instanceof Error ? error.message : "Operation failed",
-      currentItem: undefined,
-    });
-  }
-}
-
-export function startOperationJob(
-  ownerUserId: string,
-  operationInput: unknown,
-  sourceInput: unknown,
-  destinationInput?: unknown,
-) {
-  const operation = String(operationInput || "") as OperationName;
-  if (!["copy", "move", "delete"].includes(operation))
-    throw new LocalApiError(400, "Unsupported operation");
-  const source = normalizeServerPath(sourceInput);
-  const destination = destinationInput == null ? undefined : normalizeServerPath(destinationInput);
-  const id = crypto.randomUUID();
-  const job: OperationJob = {
-    id,
-    ownerUserId,
-    operation,
-    status: "queued",
-    progress: 0,
-    processedBytes: 0,
-    totalBytes: 0,
-    processedItems: 0,
-    totalItems: 0,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
-  operationJobs.set(id, job);
-  void performJob(job, source, destination);
-  return publicJob(job);
-}
-
-function publicJob(job: OperationJob) {
-  const { ownerUserId: _ownerUserId, createdAt: _createdAt, updatedAt: _updatedAt, ...value } = job;
-  return value;
-}
-
-export function getOperationJob(ownerUserId: string, idInput: unknown) {
-  const id = String(idInput || "");
-  const job = operationJobs.get(id);
-  if (!job || job.ownerUserId !== ownerUserId) throw new LocalApiError(404, "Operation not found");
-  return publicJob(job);
-}
-
-const jobCleanupTimer = setInterval(
-  () => {
-    const staleBefore = Date.now() - 60 * 60 * 1000;
-    for (const [id, job] of operationJobs) {
-      if (job.updatedAt < staleBefore && ["completed", "failed"].includes(job.status))
-        operationJobs.delete(id);
-    }
-  },
-  10 * 60 * 1000,
-);
-(jobCleanupTimer as unknown as { unref?: () => void }).unref?.();
