@@ -1,5 +1,5 @@
 import os from "node:os";
-import { access, readdir, readFile, stat } from "node:fs/promises";
+import { access, readdir, readFile, stat, statfs } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -72,6 +72,18 @@ async function linuxLoginUsers() {
   }
 }
 
+async function rootFilesystemUsage() {
+  try {
+    const filesystem = await statfs("/");
+    return {
+      totalBytes: Number(filesystem.blocks) * Number(filesystem.bsize),
+      freeBytes: Number(filesystem.bavail) * Number(filesystem.bsize),
+    };
+  } catch {
+    return { totalBytes: null, freeBytes: null };
+  }
+}
+
 function validIpv4(value: string | undefined | null) {
   if (!value) return null;
   const match = value.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
@@ -121,12 +133,16 @@ async function primaryIpv4() {
   const candidates = new Set<string>();
 
   const routeOutput = await execFirst(IP_COMMANDS, ["-4", "route", "get", "1.1.1.1"]);
-  addIpv4Candidate(
-    candidates,
-    routeOutput.match(/\bsrc\s+((?:\d{1,3}\.){3}\d{1,3})\b/)?.[1],
-  );
+  addIpv4Candidate(candidates, routeOutput.match(/\bsrc\s+((?:\d{1,3}\.){3}\d{1,3})\b/)?.[1]);
 
-  const addressOutput = await execFirst(IP_COMMANDS, ["-o", "-4", "addr", "show", "scope", "global"]);
+  const addressOutput = await execFirst(IP_COMMANDS, [
+    "-o",
+    "-4",
+    "addr",
+    "show",
+    "scope",
+    "global",
+  ]);
   for (const match of addressOutput.matchAll(/\binet\s+((?:\d{1,3}\.){3}\d{1,3})\/\d+\b/g)) {
     addIpv4Candidate(candidates, match[1]);
   }
@@ -165,11 +181,12 @@ async function primaryIpv4() {
 }
 
 export async function fileManagerSummary() {
-  const [release, locations, loginUsers, ipv4] = await Promise.all([
+  const [release, locations, loginUsers, ipv4, rootFilesystem] = await Promise.all([
     osRelease(),
     Promise.all(COMMON_LOCATIONS.map(locationStatus)),
     linuxLoginUsers(),
     primaryIpv4(),
+    rootFilesystemUsage(),
   ]);
   const root = locations.find((location) => location.path === "/") || null;
   const availableLocations = locations.filter(
@@ -188,6 +205,11 @@ export async function fileManagerSummary() {
     uptime: os.uptime(),
     node: process.version,
     loginUsers,
+    memory: {
+      totalBytes: os.totalmem(),
+      freeBytes: os.freemem(),
+    },
+    rootFilesystem,
     root: {
       path: "/",
       entries: root?.entries ?? null,

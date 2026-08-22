@@ -19,19 +19,31 @@ test("overview IPv4 detection uses multiple Linux-local fallbacks", async () => 
   expect(runtime).toContain("ipv4,");
 });
 
-test("overview KPI tiles complement rather than duplicate server identity", async () => {
+test("overview KPI tiles show useful server capacity without duplicating identity", async () => {
   const overview = await read("src/routes/_app.index.tsx");
+  const runtime = await read("src/lib/server/file-manager-runtime.ts");
 
   expect(overview).toContain(">Uptime<");
   expect(overview).toContain(">Login users<");
-  expect(overview).toContain(">Accessible paths<");
-  expect(overview).toContain(">Trash<");
+  expect(overview).toContain(">Storage free<");
+  expect(overview).toContain(">Memory used<");
   expect(overview).toContain("formatUptime(summary?.uptime)");
-  expect(overview).toContain("summary.availableLocations");
-  expect(overview).toContain("summary.writableLocations");
+  expect(overview).toContain("summary.rootFilesystem.freeBytes");
+  expect(overview).toContain("summary.memory.totalBytes - summary.memory.freeBytes");
+  expect(runtime).toContain('statfs("/")');
+  expect(runtime).toContain("os.totalmem()");
+  expect(overview).not.toContain(">Accessible paths<");
+  expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Trash</div>');
   expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Hostname</div>');
   expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Operating system</div>');
   expect(overview).not.toContain('<div className="wfm-kpi-tile__label">Server IPv4</div>');
+});
+
+test("About omits redundant account-model details", async () => {
+  const about = await read("src/routes/_app.about.tsx");
+
+  expect(about).not.toContain("Account model");
+  expect(about).not.toContain("Single administrator");
 });
 
 test("application shell delegates navigation and fixed-header behavior to Carbon", async () => {
@@ -60,6 +72,20 @@ test("full-page loading uses Carbon overlay over the real screen", async () => {
   expect(layout).not.toContain("SkeletonPlaceholder");
   expect(styles).not.toContain(".cds--loading-overlay");
   expect(styles).not.toContain("--cds-overlay:");
+});
+
+test("authentication focuses on file-manager capabilities without a condensed edge gutter", async () => {
+  const authShell = await read("src/components/auth/auth-shell.tsx");
+  const styles = await read("src/styles.scss");
+
+  expect(authShell).toContain("Manage files on your Linux server.");
+  expect(authShell).toContain("Browse, upload, edit, preview, archive and recover files");
+  expect(authShell).not.toContain("native Carbon interface");
+  expect(authShell).not.toContain("local SQLite state");
+  expect(authShell).toContain("<Grid fullWidth condensed");
+  expect(authShell).toContain("<Column");
+  expect(styles).toContain('.wfm-auth-shell > [class*="cds--col"]');
+  expect(styles).toContain("padding: 0");
 });
 
 test("administrator password change uses canonical Carbon form structure", async () => {

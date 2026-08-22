@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Dashboard, FolderOpen, Renew, TrashCan } from "@carbon/icons-react";
 import { Button, Column, Grid, InlineNotification, Tag, Tile } from "@carbon/react";
+import { formatBytes } from "@/lib/format";
 import { localApi } from "@/lib/local-api";
 
 export const Route = createFileRoute("/_app/")({
@@ -99,20 +100,28 @@ function Overview() {
         </Column>
         <Column sm={4} md={4} lg={4}>
           <Tile className="wfm-kpi-tile">
-            <div className="wfm-kpi-tile__label">Accessible paths</div>
+            <div className="wfm-kpi-tile__label">Storage free</div>
             <div className="wfm-kpi-tile__value">
-              {summary ? `${summary.availableLocations}/${summary.totalCommonLocations}` : "—"}
+              {summary?.rootFilesystem.freeBytes != null
+                ? formatBytes(summary.rootFilesystem.freeBytes)
+                : "—"}
             </div>
             <div className="wfm-kpi-tile__helper">
-              {summary ? `${summary.writableLocations} writable` : "Common Linux locations"}
+              {summary?.rootFilesystem.totalBytes != null
+                ? `${formatBytes(summary.rootFilesystem.totalBytes)} total on /`
+                : "Root filesystem"}
             </div>
           </Tile>
         </Column>
         <Column sm={4} md={4} lg={4}>
           <Tile className="wfm-kpi-tile">
-            <div className="wfm-kpi-tile__label">Trash</div>
-            <div className="wfm-kpi-tile__value">{trashCount}</div>
-            <div className="wfm-kpi-tile__helper">Recoverable item(s)</div>
+            <div className="wfm-kpi-tile__label">Memory used</div>
+            <div className="wfm-kpi-tile__value">
+              {summary ? formatBytes(summary.memory.totalBytes - summary.memory.freeBytes) : "—"}
+            </div>
+            <div className="wfm-kpi-tile__helper">
+              {summary ? `${formatBytes(summary.memory.totalBytes)} total` : "System memory"}
+            </div>
           </Tile>
         </Column>
       </Grid>
