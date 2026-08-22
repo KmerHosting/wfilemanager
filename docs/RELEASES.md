@@ -1,5 +1,12 @@
 # wFileManager release procedure
 
+## 0.11.13
+
+- Removed the remaining light one-pixel edge from the setup and sign-in screens.
+- Extended the inverse authentication background to the viewport edge while keeping the form area on
+  the standard Carbon page background.
+- Added regression coverage for the authentication split background.
+
 ## 0.11.12
 
 - Added local standard-user accounts with the same file-management access as the administrator.
