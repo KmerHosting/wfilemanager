@@ -77,15 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "wFileManager is a self-hosted file manager for Linux servers, with a Carbon Design System administration interface.",
+          "wFileManager is a self-hosted web file manager for browsing, editing, transferring and archiving files on Linux servers.",
       },
       { name: "author", content: "KmerHosting LLC" },
       { name: "theme-color", content: "#161616" },
       { property: "og:title", content: "wFileManager — Linux file manager for servers" },
       {
         property: "og:description",
-        content:
-          "Browse, edit, upload and manage files on a Linux server from a Carbon Design System interface.",
+        content: "Browse, edit, upload, archive and recover files directly on a Linux server.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

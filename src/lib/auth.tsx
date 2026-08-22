@@ -15,7 +15,7 @@ type AuthContextValue = {
   loading: boolean;
   configured: boolean | null;
   refresh: () => Promise<void>;
-  login: (password: string, remember: boolean) => Promise<void>;
+  login: (username: string, password: string, remember: boolean) => Promise<void>;
   setup: (payload: SetupPayload) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((await wfilemanagerApi.me()).user);
       } catch (error) {
         if ((error as Error & { status?: number }).status !== 401)
-          console.warn("Unable to restore the administrator session", error);
+          console.warn("Unable to restore the user session", error);
         setUser(null);
       }
     } catch {
@@ -60,14 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured,
       refresh,
-      async login(password, remember) {
-        const result = await wfilemanagerApi.login(password, remember);
+      async login(username, password, remember) {
+        const result = await wfilemanagerApi.login(username, password, remember);
         setUser(result.user);
         setConfigured(true);
       },
       async setup(payload) {
         await setupWFileManager(payload);
-        const result = await wfilemanagerApi.login(payload.password, true);
+        const result = await wfilemanagerApi.login("admin", payload.password, true);
         setUser(result.user);
         setConfigured(true);
       },

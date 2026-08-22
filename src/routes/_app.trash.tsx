@@ -130,7 +130,8 @@ function Trash() {
             Trash
           </h1>
           <p className="wfm-page__description">
-            {items.length} item(s), {formatBytes(totalSize)}. Restore items or delete them permanently.
+            {items.length} item(s), {formatBytes(totalSize)}. Restore items or delete them
+            permanently.
           </p>
         </div>
         <div className="wfm-page__actions">

@@ -72,28 +72,28 @@ export const Route = createFileRoute("/api/local")({
           const target = url.searchParams.get("path") || "/";
 
           if (action === "overview") {
-            await auth.requireAdmin(request);
+            await auth.requireUser(request);
             const overview = await overviewRuntime();
             return json(await overview.fileManagerSummary());
           }
           if (action === "update-info" || action === "update-status") {
-            await auth.requireAdmin(request);
+            await auth.requireUser(request);
             return json(await api.updateSummary());
           }
           if (action === "job") {
-            const user = await auth.requireAdmin(request);
+            const user = await auth.requireUser(request);
             const operations = await operationRuntime();
             return json({
               job: await operations.getOperationJob(user.id, url.searchParams.get("id")),
             });
           }
           if (action === "jobs") {
-            const user = await auth.requireAdmin(request);
+            const user = await auth.requireUser(request);
             const operations = await operationRuntime();
             return json({ jobs: await operations.listOperationJobs(user.id) });
           }
           if (action === "list") {
-            const user = await auth.requireAdmin(request);
+            const user = await auth.requireUser(request);
             const allowedTarget = await policy.assertDirectoryPathAllowed(user, target);
             const directory = await directoryRuntime();
             return json(
@@ -105,13 +105,13 @@ export const Route = createFileRoute("/api/local")({
             );
           }
           if (action === "read") {
-            const user = await auth.requireAdmin(request);
+            const user = await auth.requireUser(request);
             return json(
               await api.readTextFile(await policy.assertExistingPathAllowed(user, target)),
             );
           }
           if (action === "download") {
-            const user = await auth.requireAdmin(request);
+            const user = await auth.requireUser(request);
             const download = await downloadRuntime();
             return download.streamedDownloadResponse(
               request,
@@ -119,7 +119,7 @@ export const Route = createFileRoute("/api/local")({
             );
           }
           if (action === "trash-list") {
-            const user = await auth.requireAdmin(request);
+            const user = await auth.requireUser(request);
             return json(await api.listTrash(user));
           }
           return json({ error: "Unknown action" }, 404);
@@ -137,7 +137,7 @@ export const Route = createFileRoute("/api/local")({
           const safe = await safePathRuntime();
           const url = new URL(request.url);
           const action = url.searchParams.get("action") || "";
-          const user = await auth.requireAdmin(request);
+          const user = await auth.requireUser(request);
 
           if (action === "upload-raw") {
             const upload = await uploadRuntime();

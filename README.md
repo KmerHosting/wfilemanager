@@ -16,7 +16,7 @@
 
 ### What is wFileManager?
 
-> wFileManager is a small self-hosted web file manager for Linux servers. It gives one administrator browser access to browse, select, upload, download, edit, copy, move, rename, archive and recover files and folders.
+> wFileManager is a small self-hosted web file manager for Linux servers. Local administrators and users can browse, select, upload, download, edit, copy, move, rename, archive and recover files and folders.
 >
 > It uses a local SQLite database and does not require a hosted database or external account service.
 

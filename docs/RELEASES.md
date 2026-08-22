@@ -1,5 +1,15 @@
 # wFileManager release procedure
 
+## 0.11.12
+
+- Added local standard-user accounts with the same file-management access as the administrator.
+- Added administrator-only creation, password reset, suspension, reactivation and deletion controls.
+- Migrated the existing administrator credentials and active sessions without resetting the account.
+- Revoked user sessions immediately after password reset, suspension or deletion.
+- Renamed Administrator to Account and added a current account-type indicator.
+- Moved Website, Documentation and Support links from the sidebar to About & updates.
+- Removed the implementation-focused IBM Carbon Design System row from About.
+
 ## 0.11.11
 
 - Replaced Carbon-focused authentication copy with a concise file-manager feature summary.

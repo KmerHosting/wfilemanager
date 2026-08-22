@@ -4,16 +4,16 @@ wFileManager is a local Node.js application backed by SQLite.
 
 ## Account model
 
-There is exactly one application account:
+The first-run setup creates the local `admin` account. Administrators can create, suspend, delete and
+reset passwords for additional local users from **Account**. Standard users can perform the same file
+operations as the administrator but cannot access account-management APIs.
 
-```text
-admin
-```
+These accounts are stored locally and are not Linux users. All file access remains subject to the
+built-in safety rules that protect pseudo-filesystems and the private trash directory. Suspending,
+deleting or resetting a user immediately revokes that user's sessions.
 
-The account is stored locally and is not a Linux user. There are no secondary users, custom roles,
-path ACLs or hosted identities. The administrator can access the filesystem exposed by the
-wFileManager service process, subject to the built-in safety rules that protect pseudo-filesystems and
-the private trash directory.
+Because every account has the same file access, Trash is shared. Each item records who deleted it,
+and the existing administrator trash remains available after this upgrade.
 
 The administrator password can be reset from the server shell with:
 

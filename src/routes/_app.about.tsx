@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, LogoGithub, Renew, Reset } from "@carbon/icons-react";
+import { Book, Download, Globe, Help, LogoGithub, Renew, Reset } from "@carbon/icons-react";
 import { Button, Column, Grid, InlineLoading, InlineNotification, Tag, Tile } from "@carbon/react";
 import { formatBytes } from "@/lib/format";
 import { localApi, type UpdateInfo } from "@/lib/local-api";
@@ -189,10 +189,6 @@ function About() {
                 <dd>Local SQLite</dd>
               </div>
               <div className="wfm-definition-list__row">
-                <dt>Interface</dt>
-                <dd>IBM Carbon Design System</dd>
-              </div>
-              <div className="wfm-definition-list__row">
                 <dt>Source</dt>
                 <dd>
                   <Button
@@ -204,6 +200,49 @@ function About() {
                     rel="noreferrer"
                   >
                     GitHub
+                  </Button>
+                </dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>Website</dt>
+                <dd>
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    renderIcon={Globe}
+                    href="https://wfilemanager.kmerhosting.com"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open website
+                  </Button>
+                </dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>Documentation</dt>
+                <dd>
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    renderIcon={Book}
+                    href="https://kmerhosting.com/docs"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open docs
+                  </Button>
+                </dd>
+              </div>
+              <div className="wfm-definition-list__row">
+                <dt>Support</dt>
+                <dd>
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    renderIcon={Help}
+                    href="mailto:support@kmerhosting.com"
+                  >
+                    Contact support
                   </Button>
                 </dd>
               </div>

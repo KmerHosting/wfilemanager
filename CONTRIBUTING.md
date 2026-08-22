@@ -1,7 +1,7 @@
 # Contributing
 
 > [!NOTE]
-> Keep changes small, secure and focused on wFileManager's goal: a simple single-admin Linux file manager.
+> Keep changes small, secure and focused on wFileManager's goal: a simple local Linux file manager.
 
 ## Development
 

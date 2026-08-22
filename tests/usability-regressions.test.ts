@@ -88,17 +88,45 @@ test("authentication focuses on file-manager capabilities without a condensed ed
   expect(styles).toContain("padding: 0");
 });
 
-test("administrator password change uses canonical Carbon form structure", async () => {
+test("Account exposes the current role and Carbon-based user management", async () => {
   const account = await read("src/routes/_app.account.tsx");
   const styles = await read("src/styles.scss");
 
   expect(account).toContain("Form");
   expect(account).toContain("PasswordInput");
+  expect(account).toContain('auth.user.isAdmin ? "Administrator" : "User"');
+  expect(account).toContain("Add user");
+  expect(account).toContain("Reset password");
+  expect(account).toContain("Suspend");
+  expect(account).toContain("Delete user");
   expect(account).toContain('<Form\n            className="wfm-account-password-form"');
   expect(account).not.toContain("<Layer>");
   expect(styles).toContain(".wfm-account-password-form__fields");
   expect(styles).toContain("gap: spacing.$spacing-07");
   expect(styles).not.toContain("grid-template-columns: repeat(3");
+});
+
+test("About owns project links and the sidebar keeps only application routes", async () => {
+  const about = await read("src/routes/_app.about.tsx");
+  const sidebar = await read("src/components/app-shell/sidebar.tsx");
+
+  expect(about).not.toContain("IBM Carbon Design System");
+  expect(about).not.toContain("<dt>Interface</dt>");
+  expect(about).toContain("Open website");
+  expect(about).toContain("Open docs");
+  expect(about).toContain("Contact support");
+  expect(sidebar).toContain('label: "Account"');
+  expect(sidebar).not.toContain('label: "Documentation"');
+  expect(sidebar).not.toContain('label: "Support"');
+  expect(sidebar).not.toContain('label: "Website"');
+});
+
+test("multi-user file access includes the existing shared trash", async () => {
+  const runtime = await read("src/lib/server/local-runtime.ts");
+
+  expect(runtime).toContain('const SHARED_TRASH_OWNER = "admin"');
+  expect(runtime).toContain("return path.join(TRASH_ROOT, SHARED_TRASH_OWNER)");
+  expect(runtime).toContain("deletedBy: user.displayName || user.username");
 });
 
 test("visible dialogs use Carbon Modal directly instead of a parallel dialog system", async () => {

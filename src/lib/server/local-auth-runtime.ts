@@ -24,17 +24,17 @@ function tokenFromRequest(request: Request) {
   return cookieValue(request, COOKIE_NAME);
 }
 
-export async function requireAdmin(request: Request): Promise<LocalUser> {
+export async function requireUser(request: Request): Promise<LocalUser> {
   const token = tokenFromRequest(request);
-  if (!token) throw new LocalApiError(401, "Missing administrator session");
+  if (!token) throw new LocalApiError(401, "Missing user session");
   try {
     const user = sqliteUserResponse(sqliteSessionUser(token));
     return {
       id: user.id,
-      username: "admin",
-      displayName: "Administrator",
-      isAdmin: true,
-      status: "active",
+      username: user.username,
+      displayName: user.displayName,
+      isAdmin: user.isAdmin,
+      status: user.status,
     };
   } catch (error) {
     const value = error as { status?: number; message?: string };
@@ -43,4 +43,10 @@ export async function requireAdmin(request: Request): Promise<LocalUser> {
       value.message || "Your wFileManager session is invalid or expired",
     );
   }
+}
+
+export async function requireAdmin(request: Request): Promise<LocalUser> {
+  const user = await requireUser(request);
+  if (!user.isAdmin) throw new LocalApiError(403, "Administrator access is required");
+  return user;
 }
