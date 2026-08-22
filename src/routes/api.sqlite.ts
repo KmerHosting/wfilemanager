@@ -5,11 +5,16 @@ import type {} from "@tanstack/react-start";
 import {
   SqliteAuthError,
   changePassword,
+  createUser,
+  deleteUser,
   instanceInfo,
   isConfigured,
+  listUsers,
   login,
   logout,
+  resetUserPassword,
   sessionUser,
+  setUserSuspended,
   setup,
   userResponse,
 } from "@/lib/server/admin-store";
@@ -58,7 +63,10 @@ async function assertSetupSecret(payload: Record<string, unknown>) {
   const expected = (await readFile(SETUP_SECRET_FILE, "utf8").catch(() => "")).trim();
   const supplied = String(payload.setupCode || "").trim();
   if (!expected || !supplied || !secureEqual(expected, supplied))
-    throw new SqliteAuthError(403, "The setup code is invalid. Use the code shown by the installer.");
+    throw new SqliteAuthError(
+      403,
+      "The setup code is invalid. Use the code shown by the installer.",
+    );
   delete payload.setupCode;
 }
 
@@ -87,7 +95,11 @@ export const Route = createFileRoute("/api/sqlite")({
             const user = sessionUser(token(request));
             return json({ user: userResponse(user), instance: instanceInfo() });
           }
-          return json({ error: "Unsupported single-admin API action." }, 404);
+          if (scope === "users" && action === "list") {
+            const user = sessionUser(token(request));
+            return json({ users: listUsers(user) });
+          }
+          return json({ error: "Unsupported account API action." }, 404);
         } catch (error) {
           return errorResponse(error);
         }
@@ -106,14 +118,17 @@ export const Route = createFileRoute("/api/sqlite")({
             return json(setup(payload), 201);
           }
           if (scope === "auth" && action === "login") {
-            assertLoginAllowed(request, "admin");
+            const username = String(payload.username || "admin")
+              .trim()
+              .toLowerCase();
+            assertLoginAllowed(request, username);
             try {
               const result = login(payload);
-              recordLoginSuccess(request, "admin");
+              recordLoginSuccess(request, username);
               return json(result);
             } catch (error) {
               if (error instanceof SqliteAuthError && error.status === 401)
-                recordLoginFailure(request, "admin");
+                recordLoginFailure(request, username);
               throw error;
             }
           }
@@ -123,7 +138,14 @@ export const Route = createFileRoute("/api/sqlite")({
           if (scope === "auth" && action === "logout") return json(logout(sessionToken));
           if (scope === "account" && action === "password")
             return json(changePassword(user, payload, sessionToken));
-          return json({ error: "Unsupported single-admin API action." }, 404);
+          if (scope === "users" && action === "create")
+            return json({ user: createUser(user, payload) }, 201);
+          if (scope === "users" && action === "reset-password")
+            return json(resetUserPassword(user, payload));
+          if (scope === "users" && action === "suspension")
+            return json({ user: setUserSuspended(user, payload) });
+          if (scope === "users" && action === "delete") return json(deleteUser(user, payload));
+          return json({ error: "Unsupported account API action." }, 404);
         } catch (error) {
           return errorResponse(error);
         }

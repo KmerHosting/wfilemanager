@@ -157,7 +157,7 @@ echo "Application status: HEALTHY (local health check passed)"
 echo "Listening: 0.0.0.0:$PORT"
 echo "Firewall: $FIREWALL_STATUS"
 echo "Open: http://$OPEN_HOST:$PORT/$OPEN_PATH"
-echo "Account model: single administrator"
+echo "Initial account: administrator (additional users can be created in Account)"
 echo "Database: $STATE_ROOT/wfilemanager.db"
 
 if [[ "$CONFIGURED" != "true" ]]; then

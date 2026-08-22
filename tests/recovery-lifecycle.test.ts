@@ -71,10 +71,11 @@ test("administrator recovery is one shell command with no username selection", a
   const reset = await read("deploy/wfilemanager-reset-admin-password");
   const doctor = await read("deploy/wfilemanager-doctor");
 
-  expect(reset).toContain("wfm_admin");
-  expect(reset).toContain("DELETE FROM wfm_sessions");
+  expect(reset).toContain("wfm_users");
+  expect(reset).toContain("WHERE id = 'admin' AND is_admin = 1");
+  expect(reset).toContain("DELETE FROM wfm_sessions WHERE user_id = 'admin'");
   expect(reset).toContain("Usage: sudo wfilemanager-reset-admin-password");
-  expect(reset).not.toContain("wfm_users");
+  expect(reset).not.toContain('db.prepare("DELETE FROM wfm_sessions").run()');
   expect(reset).not.toContain("Specify an administrator username");
   expect(doctor).toContain("The wFileManager application itself is working.");
   expect(doctor).toContain("VPS provider firewall/security group");

@@ -15,13 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useNotifications } from "@/lib/notifications";
 import { useTheme } from "@/lib/theme";
 
-export function Topbar({
-  expanded,
-  onToggle,
-}: {
-  expanded: boolean;
-  onToggle: () => void;
-}) {
+export function Topbar({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
   const { theme, setTheme } = useTheme();
   const auth = useAuth();
   const navigate = useNavigate();
@@ -55,7 +49,7 @@ export function Topbar({
           <ThemeIcon size={20} />
         </HeaderGlobalAction>
         <HeaderGlobalAction
-          aria-label="Administrator account"
+          aria-label={`${auth.user?.isAdmin ? "Administrator" : "User"} account: ${auth.user?.username || "unknown"}`}
           tooltipAlignment="end"
           onClick={() => navigate({ to: "/account" })}
         >

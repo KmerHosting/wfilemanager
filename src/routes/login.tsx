@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Button, Checkbox, InlineNotification, PasswordInput } from "@carbon/react";
+import { Button, Checkbox, InlineNotification, PasswordInput, TextInput } from "@carbon/react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { useAuth } from "@/lib/auth";
 import { useNotifications } from "@/lib/notifications";
@@ -14,6 +14,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const auth = useAuth();
   const { notify } = useNotifications();
+  const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +29,8 @@ function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await auth.login(password, remember);
-      notify({ kind: "success", title: "Signed in", subtitle: "Administrator session started." });
+      await auth.login(username, password, remember);
+      notify({ kind: "success", title: "Signed in", subtitle: "Your session is ready." });
       navigate({ to: "/explorer" });
     } catch (value) {
       setError(value instanceof Error ? value.message : "Sign-in failed");
@@ -39,10 +40,7 @@ function LoginPage() {
   };
 
   return (
-    <AuthShell
-      title="Administrator sign in"
-      desc="Enter the password for the local administrator account on this server."
-    >
+    <AuthShell title="Sign in" desc="Enter your local wFileManager account credentials.">
       {error ? (
         <InlineNotification
           kind="error"
@@ -60,13 +58,17 @@ function LoginPage() {
           void submit();
         }}
       >
-        <div className="wfm-auth-account-note">
-          Account: <strong>admin</strong>
-        </div>
+        <TextInput
+          id="login-username"
+          labelText="Username"
+          autoFocus
+          autoComplete="username"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+        />
         <PasswordInput
           id="login-password"
           labelText="Password"
-          autoFocus
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
@@ -80,12 +82,13 @@ function LoginPage() {
         <Button
           type="submit"
           className="wfm-full-width-button"
-          disabled={submitting || !password}
+          disabled={submitting || !username.trim() || !password}
         >
           {submitting ? "Signing in…" : "Sign in"}
         </Button>
         <p className="wfm-form-helper">
-          Lost the password? Run <code>sudo wfilemanager-reset-admin-password</code> on the server.
+          Administrators can recover access with <code>sudo wfilemanager-reset-admin-password</code>
+          . Other users should contact an administrator.
         </p>
       </form>
     </AuthShell>

@@ -28,6 +28,7 @@ const MAX_TEXT_BYTES = Number(process.env.WFILEMANAGER_MAX_TEXT_BYTES || 5 * 102
 const TRASH_ROOT = path.resolve(
   process.env.WFILEMANAGER_TRASH_DIR || "/var/lib/wfilemanager/trash",
 );
+const SHARED_TRASH_OWNER = "admin";
 const UPDATE_MANIFEST_URL =
   process.env.WFILEMANAGER_UPDATE_MANIFEST_URL ||
   "https://igihzeyfgwhnuiflamvn.supabase.co/storage/v1/object/public/releases.kmerhosting.com/wfilemanager/stable.json";
@@ -384,10 +385,6 @@ export async function downloadResponse(inputPath: unknown) {
   });
 }
 
-function safeTrashOwner(ownerUserId: string) {
-  return ownerUserId.replace(/[^a-zA-Z0-9_-]/g, "_");
-}
-
 function safeTrashId(idInput: unknown) {
   const id = String(idInput || "");
   if (!/^[a-zA-Z0-9_-]{8,100}$/.test(id))
@@ -395,8 +392,8 @@ function safeTrashId(idInput: unknown) {
   return id;
 }
 
-function trashOwnerRoot(ownerUserId: string) {
-  return path.join(TRASH_ROOT, safeTrashOwner(ownerUserId));
+function trashOwnerRoot(_ownerUserId: string) {
+  return path.join(TRASH_ROOT, SHARED_TRASH_OWNER);
 }
 
 function trashPaths(ownerUserId: string, id: string) {

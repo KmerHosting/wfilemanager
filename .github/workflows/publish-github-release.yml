@@ -119,12 +119,13 @@ jobs:
           cat > release-notes.md <<EOF
           wFileManager $VERSION is a prebuilt Linux runtime release.
 
-          - Replaced implementation-focused authentication copy with file-manager capabilities.
-          - Highlights browsing, uploads, editing, previews, archives and recovery.
-          - Removed the one-pixel condensed-grid gutter from authentication screen edges.
-          - Preserves the responsive Carbon Grid and Column layout.
-          - Shows root storage and memory usage on Overview instead of path and trash counts.
-          - Removes redundant account-model details from About.
+          - Adds local standard-user accounts with full file-management access.
+          - Adds administrator-only account creation, password reset, suspension and deletion.
+          - Migrates the existing administrator credentials and sessions without resetting them.
+          - Revokes user sessions after password reset, suspension or deletion.
+          - Renames Administrator to Account and shows the current account type.
+          - Moves Website, Documentation and Support links from the sidebar to About.
+          - Removes the implementation-focused interface row from About.
           - Prebuilt deployment with verified atomic updates and rollback.
 
           SHA-256: \`$SHA256\`

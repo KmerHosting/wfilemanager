@@ -1,13 +1,14 @@
 const DATABASE_MODE = "sqlite";
 
 export interface AuthUser {
-  id: "admin" | string;
+  id: string;
   instanceId: string;
-  username: "admin" | string;
-  displayName: "Administrator" | string;
-  status: "active";
-  isAdmin: true;
+  username: string;
+  displayName: string;
+  status: "active" | "suspended";
+  isAdmin: boolean;
   createdAt: string;
+  lastLoginAt: string | null;
 }
 
 export interface WFileManagerInstance {
@@ -26,7 +27,7 @@ export interface InstanceStatusResponse {
   instance?: WFileManagerInstance;
 }
 
-type GatewayScope = "auth" | "login" | "setup" | "account";
+type GatewayScope = "auth" | "login" | "setup" | "account" | "users";
 
 function gatewayUrl(scope: GatewayScope, action: string) {
   const query = new URLSearchParams({ scope, action });
@@ -65,10 +66,10 @@ export const wfilemanagerApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  login: (password: string, remember: boolean) =>
+  login: (username: string, password: string, remember: boolean) =>
     perform<{ expiresAt: string; user: AuthUser }>("login", "login", {
       method: "POST",
-      body: JSON.stringify({ password, remember }),
+      body: JSON.stringify({ username, password, remember }),
     }),
   me: () => perform<{ user: AuthUser; instance: WFileManagerInstance }>("auth", "me"),
   logout: () => perform<{ success: true }>("auth", "logout", { method: "POST", body: "{}" }),
@@ -76,5 +77,26 @@ export const wfilemanagerApi = {
     perform<{ success: true }>("account", "password", {
       method: "POST",
       body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+  users: () => perform<{ users: AuthUser[] }>("users", "list"),
+  createUser: (username: string, displayName: string, password: string) =>
+    perform<{ user: AuthUser }>("users", "create", {
+      method: "POST",
+      body: JSON.stringify({ username, displayName, password }),
+    }),
+  resetUserPassword: (userId: string, password: string) =>
+    perform<{ success: true }>("users", "reset-password", {
+      method: "POST",
+      body: JSON.stringify({ userId, password }),
+    }),
+  setUserSuspended: (userId: string, suspended: boolean) =>
+    perform<{ user: AuthUser }>("users", "suspension", {
+      method: "POST",
+      body: JSON.stringify({ userId, suspended }),
+    }),
+  deleteUser: (userId: string) =>
+    perform<{ success: true }>("users", "delete", {
+      method: "POST",
+      body: JSON.stringify({ userId }),
     }),
 };

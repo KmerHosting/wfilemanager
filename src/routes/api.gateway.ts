@@ -16,6 +16,7 @@ const allowedActions = {
   login: new Set(["login"]),
   setup: new Set(["setup"]),
   account: new Set(["password"]),
+  users: new Set(["list", "create", "reset-password", "suspension", "delete"]),
 } as const;
 
 function json(body: unknown, status = 200, headers?: HeadersInit) {

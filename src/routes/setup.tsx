@@ -38,7 +38,11 @@ function Setup() {
     setError(null);
     try {
       await auth.setup({ password, setupCode: setupCode.trim() });
-      notify({ kind: "success", title: "wFileManager is ready", subtitle: "Administrator created." });
+      notify({
+        kind: "success",
+        title: "wFileManager is ready",
+        subtitle: "Administrator created.",
+      });
       navigate({ to: "/explorer" });
     } catch (value) {
       setError(value instanceof Error ? value.message : "Setup failed");
@@ -50,7 +54,7 @@ function Setup() {
   return (
     <AuthShell
       title="Set up wFileManager"
-      desc="Create the only administrator account for this server."
+      desc="Create the initial administrator account for this server."
     >
       {error ? (
         <InlineNotification

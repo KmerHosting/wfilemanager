@@ -8,8 +8,8 @@ The database is stored at:
 /var/lib/wfilemanager/wfilemanager.db
 ```
 
-It contains the single administrator account, administrator sessions and minimal application metadata.
-There are no hosted data plans, product wallets, licences, roles or secondary application users.
+It contains local user accounts, their sessions and minimal application metadata.
+There are no hosted data plans, product wallets, licences or custom roles.
 
 Filesystem content is not copied into SQLite. Websites, uploads, mounted volumes, databases and other
 server files remain in their normal Linux locations.
