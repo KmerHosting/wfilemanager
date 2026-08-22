@@ -1,5 +1,12 @@
 # wFileManager release procedure
 
+## 0.11.10
+
+- Fixed legitimate same-origin sign-in requests being rejected on direct IP access.
+- Improved origin reconstruction for deployments using forwarded host and protocol headers.
+- Expanded the uninstaller to remove the dedicated firewall rule, Nginx configuration and unshared Let's Encrypt certificates.
+- Kept shared web-server configuration, shared certificates, Nginx, Certbot and Node.js protected.
+
 ## 0.11.9
 
 - Reworked File Explorer selection and keyboard behavior to match familiar desktop file managers.

@@ -63,16 +63,51 @@ describe("filesystem mutation safety", () => {
 });
 
 describe("authentication protection", () => {
+  test("accepts a browser-marked same-origin login through a direct IP address", () => {
+    const request = new Request("http://127.0.0.1:1973/api/gateway", {
+      method: "POST",
+      headers: {
+        origin: "http://84.247.132.49:1973",
+        "sec-fetch-site": "same-origin",
+      },
+    });
+
+    expect(sameOrigin(request)).toBe(true);
+  });
+
   test("accepts the public HTTPS origin when the app is behind an HTTP proxy", () => {
     const request = new Request("http://127.0.0.1:1973/api/sqlite", {
       headers: {
-        host: "wfm-s1.kmerhosting.com",
         origin: "https://wfm-s1.kmerhosting.com",
+        "x-forwarded-host": "wfm-s1.kmerhosting.com",
         "x-forwarded-proto": "https",
       },
     });
 
     expect(sameOrigin(request)).toBe(true);
+  });
+
+  test("rejects browser cross-site mutations even when proxy headers are forged", () => {
+    const request = new Request("http://127.0.0.1:1973/api/gateway", {
+      method: "POST",
+      headers: {
+        origin: "https://attacker.example",
+        "sec-fetch-site": "cross-site",
+        "x-forwarded-host": "attacker.example",
+        "x-forwarded-proto": "https",
+      },
+    });
+
+    expect(sameOrigin(request)).toBe(false);
+  });
+
+  test("rejects an unmatched origin when Fetch Metadata is unavailable", () => {
+    const request = new Request("http://127.0.0.1:1973/api/gateway", {
+      method: "POST",
+      headers: { origin: "https://attacker.example" },
+    });
+
+    expect(sameOrigin(request)).toBe(false);
   });
 
   test("blocks repeated administrator login failures from the same IP", async () => {

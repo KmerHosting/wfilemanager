@@ -51,6 +51,10 @@ sudo systemctl start wfilemanager-updater@rollback.service
 sudo wfilemanager-uninstall
 ```
 
+The uninstaller removes wFileManager services, state, its dedicated firewall rule, dedicated Nginx
+configuration and unshared Let's Encrypt certificates. It preserves Node.js, Nginx, Certbot and
+configuration or certificates shared with other services.
+
 > [!WARNING]
 >
 > ### Notice

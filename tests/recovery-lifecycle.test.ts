@@ -80,13 +80,17 @@ test("administrator recovery is one shell command with no username selection", a
   expect(doctor).toContain("VPS provider firewall/security group");
 });
 
-test("uninstaller removes only wFileManager and does not own the web stack", async () => {
+test("uninstaller removes dedicated integrations without uninstalling the web stack", async () => {
   const uninstall = await read("deploy/uninstall.sh");
 
-  expect(uninstall).toContain("It does NOT remove Node.js or other system packages");
+  expect(uninstall).toContain(
+    "It does NOT remove Node.js, Nginx, Certbot or other system packages",
+  );
   expect(uninstall).toContain("wfilemanager-doctor");
   expect(uninstall).toContain("10-root-terminal.conf");
-  expect(uninstall).not.toContain("certbot delete");
-  expect(uninstall).not.toContain("sites-enabled/wfilemanager");
+  expect(uninstall).toContain("/etc/nginx/sites-enabled");
+  expect(uninstall).toContain('certbot delete --cert-name "$certificate_name"');
+  expect(uninstall).toContain("certificate_still_referenced");
+  expect(uninstall).toContain('ufw --force delete allow "$PORT/tcp"');
   expect(uninstall).not.toContain("apt-get purge");
 });
