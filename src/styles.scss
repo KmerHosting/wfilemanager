@@ -563,6 +563,10 @@ audio.wfm-media-preview {
   padding: 0;
 }
 
+.wfm-auth-shell > [class*="cds--col"] {
+  padding: 0;
+}
+
 .wfm-auth-aside {
   display: none;
   min-block-size: 100dvh;

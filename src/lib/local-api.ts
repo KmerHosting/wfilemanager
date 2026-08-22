@@ -91,6 +91,8 @@ export interface FileManagerOverview {
   uptime: number;
   node: string;
   loginUsers: number;
+  memory: { totalBytes: number; freeBytes: number };
+  rootFilesystem: { totalBytes: number | null; freeBytes: number | null };
   root: { path: string; entries: number | null; readable: boolean; writable: boolean };
   locations: Array<{
     path: string;

@@ -21,10 +21,10 @@ export function AuthShell({
             wFileManager
           </Link>
           <div className="wfm-auth-aside__copy">
-            <h2>Server file management with a native Carbon interface.</h2>
+            <h2>Manage files on your Linux server.</h2>
             <p>
-              Browse, edit, upload and recover files directly on this Linux server. One local
-              administrator account and local SQLite state.
+              Browse, upload, edit, preview, archive and recover files from a familiar web
+              interface.
             </p>
           </div>
           <p className="wfm-auth-aside__legal">

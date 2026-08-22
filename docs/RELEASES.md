@@ -1,5 +1,13 @@
 # wFileManager release procedure
 
+## 0.11.11
+
+- Replaced Carbon-focused authentication copy with a concise file-manager feature summary.
+- Removed the one-pixel condensed-grid gutter from the authentication screen edges.
+- Kept the authentication layout on Carbon Grid and Column components.
+- Replaced Accessible paths and Trash overview cards with root storage and memory usage.
+- Removed the redundant account-model row from About.
+
 ## 0.11.10
 
 - Fixed legitimate same-origin sign-in requests being rejected on direct IP access.

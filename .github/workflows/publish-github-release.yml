@@ -119,11 +119,12 @@ jobs:
           cat > release-notes.md <<EOF
           wFileManager $VERSION is a prebuilt Linux runtime release.
 
-          - Fixed legitimate same-origin sign-in requests on direct IP access.
-          - Improved public-origin detection behind reverse proxies.
-          - Expanded complete removal of dedicated wFileManager Nginx and firewall configuration.
-          - Removes unshared Let's Encrypt certificates while protecting certificates used by other services.
-          - Keeps Node.js, Nginx, Certbot and unrelated server configuration installed.
+          - Replaced implementation-focused authentication copy with file-manager capabilities.
+          - Highlights browsing, uploads, editing, previews, archives and recovery.
+          - Removed the one-pixel condensed-grid gutter from authentication screen edges.
+          - Preserves the responsive Carbon Grid and Column layout.
+          - Shows root storage and memory usage on Overview instead of path and trash counts.
+          - Removes redundant account-model details from About.
           - Prebuilt deployment with verified atomic updates and rollback.
 
           SHA-256: \`$SHA256\`

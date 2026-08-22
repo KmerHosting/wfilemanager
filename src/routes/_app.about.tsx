@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Download, LogoGithub, Renew, Reset } from "@carbon/icons-react";
 import { Button, Column, Grid, InlineLoading, InlineNotification, Tag, Tile } from "@carbon/react";
@@ -17,34 +17,40 @@ function About() {
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  const check = async (announce = false) => {
-    setChecking(true);
-    try {
-      const result = await localApi.updateInfo();
-      setUpdate(result);
-      if (announce) {
-        notify({
-          kind: result.updateAvailable ? "info" : "success",
-          title: result.updateAvailable ? "Update available" : "Already up to date",
-          subtitle: result.updateAvailable ? `Version ${result.latestVersion} is available.` : undefined,
-        });
+  const check = useCallback(
+    async (announce = false) => {
+      setChecking(true);
+      try {
+        const result = await localApi.updateInfo();
+        setUpdate(result);
+        if (announce) {
+          notify({
+            kind: result.updateAvailable ? "info" : "success",
+            title: result.updateAvailable ? "Update available" : "Already up to date",
+            subtitle: result.updateAvailable
+              ? `Version ${result.latestVersion} is available.`
+              : undefined,
+          });
+        }
+      } catch (error) {
+        if (announce) {
+          notify({
+            kind: "error",
+            title: "Unable to check for updates",
+            subtitle:
+              error instanceof Error ? error.message : "The update service did not respond.",
+          });
+        }
+      } finally {
+        setChecking(false);
       }
-    } catch (error) {
-      if (announce) {
-        notify({
-          kind: "error",
-          title: "Unable to check for updates",
-          subtitle: error instanceof Error ? error.message : "The update service did not respond.",
-        });
-      }
-    } finally {
-      setChecking(false);
-    }
-  };
+    },
+    [notify],
+  );
 
   useEffect(() => {
     void check(false);
-  }, []);
+  }, [check]);
 
   const waitForUpdate = async (noticeId: string, action: "update" | "rollback") => {
     const deadline = Date.now() + 5 * 60 * 1000;
@@ -181,10 +187,6 @@ function About() {
               <div className="wfm-definition-list__row">
                 <dt>Database</dt>
                 <dd>Local SQLite</dd>
-              </div>
-              <div className="wfm-definition-list__row">
-                <dt>Account model</dt>
-                <dd>Single administrator</dd>
               </div>
               <div className="wfm-definition-list__row">
                 <dt>Interface</dt>
