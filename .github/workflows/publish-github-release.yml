@@ -119,11 +119,11 @@ jobs:
           cat > release-notes.md <<EOF
           wFileManager $VERSION is a prebuilt Linux runtime release.
 
-          - Desktop-style multi-selection, keyboard shortcuts and right-click context menu.
-          - Multi-item copy, move, trash and permanent-delete operations with conflict handling.
-          - Sortable and paginated directories, server-side search, hidden files and drag-and-drop upload.
-          - ZIP and TAR.GZ creation plus safe ZIP, TAR, RAR and 7z-family extraction via libarchive.
-          - Text, image, audio, video and PDF previews plus Linux mode, UID and GID properties.
+          - Fixed legitimate same-origin sign-in requests on direct IP access.
+          - Improved public-origin detection behind reverse proxies.
+          - Expanded complete removal of dedicated wFileManager Nginx and firewall configuration.
+          - Removes unshared Let's Encrypt certificates while protecting certificates used by other services.
+          - Keeps Node.js, Nginx, Certbot and unrelated server configuration installed.
           - Prebuilt deployment with verified atomic updates and rollback.
 
           SHA-256: \`$SHA256\`
