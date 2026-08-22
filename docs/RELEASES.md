@@ -1,5 +1,14 @@
 # wFileManager release procedure
 
+## 0.11.9
+
+- Reworked File Explorer selection and keyboard behavior to match familiar desktop file managers.
+- Added context actions, multi-item copy/move/trash, destination browsing and conflict policies.
+- Added sortable directory details, server-side search pagination, hidden files and drag-and-drop upload.
+- Added ZIP/TAR.GZ creation and safe libarchive-based extraction for ZIP/TAR/RAR/7z formats.
+- Added media previews and editable Linux mode, UID and GID properties.
+- Removed the obsolete duplicate in-memory operation-job implementation.
+
 wFileManager production servers install prebuilt releases. They never run `bun install`, TypeScript,
 Vite or a local application build.
 

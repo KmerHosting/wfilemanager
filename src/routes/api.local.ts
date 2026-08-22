@@ -40,6 +40,9 @@ async function operationRuntime() {
 async function downloadRuntime() {
   return import("@/lib/server/download-runtime");
 }
+async function archiveRuntime() {
+  return import("@/lib/server/archive-runtime");
+}
 async function handleError(error: unknown) {
   const { LocalApiError } = await runtime();
   if (error instanceof LocalApiError) return json({ error: error.message }, error.status);
@@ -236,6 +239,83 @@ export const Route = createFileRoute("/api/local")({
             return json(await api.moveToTrash(user, target), 201);
           }
 
+          if (action === "trash-move-many") {
+            const paths = Array.isArray(body.paths) ? body.paths : [];
+            if (!paths.length) return json({ error: "Select at least one item" }, 400);
+            if (paths.length > 1_000) return json({ error: "Too many selected items" }, 413);
+            const items = [];
+            for (const input of paths) {
+              const target = await safe.assertSafeExistingMutation(
+                await policy.assertExistingPathAllowed(user, input),
+              );
+              items.push(await api.moveToTrash(user, target));
+            }
+            return json({ items }, 201);
+          }
+
+          if (action === "chmod") {
+            const target = await safe.assertSafeExistingMutation(
+              await policy.assertExistingPathAllowed(user, body.path),
+            );
+            return json(await api.changeMode(target, body.mode));
+          }
+
+          if (action === "chown") {
+            const target = await safe.assertSafeExistingMutation(
+              await policy.assertExistingPathAllowed(user, body.path),
+            );
+            return json(await api.changeOwnership(target, body.uid, body.gid));
+          }
+
+          if (action === "archive-create") {
+            const sourcesInput = Array.isArray(body.sources) ? body.sources : [];
+            if (!sourcesInput.length || sourcesInput.length > 1_000)
+              return json({ error: "Select between 1 and 1000 items" }, 400);
+            const sources = [];
+            for (const input of sourcesInput) {
+              sources.push(
+                await safe.assertSafeExistingMutation(
+                  await policy.assertExistingPathAllowed(user, input),
+                ),
+              );
+            }
+            const destinationDirectory = await safe.assertSafeDirectory(
+              await policy.assertDirectoryPathAllowed(user, body.destination),
+            );
+            const format =
+              body.format === "tar.gz" ? "tar.gz" : body.format === "zip" ? "zip" : null;
+            if (!format) return json({ error: "Unsupported archive format" }, 400);
+            const archives = await archiveRuntime();
+            return json(
+              await archives.createArchive({
+                sources,
+                destinationDirectory,
+                name: body.name,
+                format,
+              }),
+              201,
+            );
+          }
+
+          if (action === "archive-extract") {
+            const archive = await safe.assertSafeExistingMutation(
+              await policy.assertExistingPathAllowed(user, body.archive),
+            );
+            const destinationDirectory = await safe.assertSafeDirectory(
+              await policy.assertDirectoryPathAllowed(user, body.destination),
+            );
+            const mode =
+              body.mode === "subfolder" ? "subfolder" : body.mode === "here" ? "here" : null;
+            const conflict = ["skip", "replace", "keep-both"].includes(String(body.conflict))
+              ? (body.conflict as "skip" | "replace" | "keep-both")
+              : null;
+            if (!mode || !conflict) return json({ error: "Invalid extraction options" }, 400);
+            const archives = await archiveRuntime();
+            return json(
+              await archives.extractArchive({ archive, destinationDirectory, mode, conflict }),
+            );
+          }
+
           if (action === "trash-restore") {
             const trash = await api.listTrash(user);
             const item = trash.items.find((candidate) => candidate.id === String(body.id || ""));
@@ -274,6 +354,9 @@ export const Route = createFileRoute("/api/local")({
                   operation as "copy" | "move" | "delete",
                   source,
                   destination,
+                  ["skip", "replace", "keep-both"].includes(String(body.conflict))
+                    ? (body.conflict as "skip" | "replace" | "keep-both")
+                    : "error",
                 ),
               },
               202,

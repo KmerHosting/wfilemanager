@@ -101,6 +101,41 @@ test("long file operations report progress to Carbon-owned frontend feedback", a
   expect(notifications).toContain("ToastNotification");
 });
 
+test("File Explorer exposes familiar desktop selection and keyboard behavior", async () => {
+  const explorer = await read("src/routes/_app.explorer.tsx");
+  const selection = await read("src/components/explorer/use-explorer-selection.ts");
+
+  expect(selection).toContain("event.ctrlKey || event.metaKey");
+  expect(selection).toContain("event.shiftKey && anchorPath");
+  expect(explorer).toContain('event.key.toLowerCase() === "a"');
+  expect(explorer).toContain('event.key.toLowerCase() === "c"');
+  expect(explorer).toContain('event.key.toLowerCase() === "x"');
+  expect(explorer).toContain('event.key.toLowerCase() === "v"');
+  expect(explorer).toContain('event.key === "Delete"');
+  expect(explorer).toContain('event.key === "F2"');
+  expect(explorer).toContain('event.key === "Enter"');
+  expect(explorer).toContain("onDoubleClick");
+  expect(explorer).toContain("onContextMenu");
+  expect(explorer).toContain('aria-multiselectable="true"');
+});
+
+test("File Explorer supports large directories and archive workflows", async () => {
+  const explorer = await read("src/routes/_app.explorer.tsx");
+  const api = await read("src/routes/api.local.ts");
+  const archive = await read("src/lib/server/archive-runtime.ts");
+
+  expect(explorer).toContain("nextCursor");
+  expect(explorer).toContain("Load more");
+  expect(explorer).toContain("archive.create");
+  expect(explorer).toContain("archive.extract");
+  expect(api).toContain('action === "archive-create"');
+  expect(api).toContain('action === "archive-extract"');
+  expect(archive).toContain('BSDTAR, ["-tf", input.archive]');
+  expect(archive).toContain("validateArchiveMemberName");
+  expect(archive).toContain("--no-same-owner");
+  expect(archive).not.toContain("exec(");
+});
+
 test("About shows GitHub as installation metadata", async () => {
   const about = await read("src/routes/_app.about.tsx");
   expect(about).toContain("<dt>Source</dt>");

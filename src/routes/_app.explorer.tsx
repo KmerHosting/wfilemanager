@@ -1,18 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import {
   Add,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Copy,
+  Cut,
   Document,
-  Download,
   Edit,
   Folder,
-  Move,
+  Information,
+  Paste,
   Renew,
   TrashCan,
   Upload,
+  Zip,
 } from "@carbon/icons-react";
 import {
   Button,
@@ -21,6 +32,8 @@ import {
   Modal,
   ProgressBar,
   Search,
+  Select,
+  SelectItem,
   Table,
   TableBody,
   TableCell,
@@ -30,20 +43,20 @@ import {
   TableRow,
   TextArea,
   TextInput,
+  Toggle,
 } from "@carbon/react";
 import { formatBytes, formatDate } from "@/lib/format";
 import {
   localApi,
+  type ConflictPolicy,
   type LocalFileEntry,
   type OperationJob,
   type ProgressState,
 } from "@/lib/local-api";
 import { useNotifications } from "@/lib/notifications";
+import { useExplorerSelection } from "@/components/explorer/use-explorer-selection";
 
-const searchSchema = z.object({
-  path: z.string().optional(),
-  q: z.string().optional(),
-});
+const searchSchema = z.object({ path: z.string().optional(), q: z.string().optional() });
 
 export const Route = createFileRoute("/_app/explorer")({
   validateSearch: searchSchema,
@@ -53,6 +66,14 @@ export const Route = createFileRoute("/_app/explorer")({
 
 type CreateKind = "file" | "directory";
 type TransferKind = "copy" | "move";
+type SortKey = "name" | "size" | "modifiedAt" | "kind";
+type SortDirection = "asc" | "desc";
+type ClipboardState = { kind: TransferKind; entries: LocalFileEntry[] } | null;
+type ContextState = { x: number; y: number } | null;
+type ArchiveState =
+  { kind: "create"; entries: LocalFileEntry[] } | { kind: "extract"; entry: LocalFileEntry } | null;
+
+const ARCHIVE_PATTERN = /\.(?:zip|tar|tar\.gz|tgz|tar\.bz2|tbz2?|tar\.xz|txz|7z|rar)$/i;
 
 function normalizePath(value: string) {
   const parts = value.split("/").filter(Boolean);
@@ -71,43 +92,105 @@ function parentPath(value: string) {
   return `/${parts.join("/")}` || "/";
 }
 
+function isTypingTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function mediaKind(entry: LocalFileEntry) {
+  if (entry.mime.startsWith("image/")) return "image";
+  if (entry.mime.startsWith("audio/")) return "audio";
+  if (entry.mime.startsWith("video/")) return "video";
+  if (entry.mime === "application/pdf") return "pdf";
+  return "text";
+}
+
+function fileUrl(entry: LocalFileEntry) {
+  return `/api/local?${new URLSearchParams({ action: "download", path: entry.path })}`;
+}
+
 function Explorer() {
   const { path = "/", q = "" } = Route.useSearch();
   const navigate = useNavigate({ from: "/explorer" });
   const { notify } = useNotifications();
   const currentPath = normalizePath(path);
   const uploadInput = useRef<HTMLInputElement>(null);
+  const pathInputRef = useRef<HTMLInputElement>(null);
+  const explorerRef = useRef<HTMLDivElement>(null);
+  const requestId = useRef(0);
 
   const [entries, setEntries] = useState<LocalFileEntry[]>([]);
   const [pathInput, setPathInput] = useState(currentPath);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [showHidden, setShowHidden] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [clipboard, setClipboard] = useState<ClipboardState>(null);
+  const [contextMenu, setContextMenu] = useState<ContextState>(null);
   const [createKind, setCreateKind] = useState<CreateKind | null>(null);
   const [createName, setCreateName] = useState("");
   const [renameEntry, setRenameEntry] = useState<LocalFileEntry | null>(null);
   const [renameName, setRenameName] = useState("");
-  const [deleteEntry, setDeleteEntry] = useState<LocalFileEntry | null>(null);
-  const [transfer, setTransfer] = useState<{ kind: TransferKind; entry: LocalFileEntry } | null>(
-    null,
-  );
+  const [deleteEntries, setDeleteEntries] = useState<LocalFileEntry[]>([]);
+  const [permanentDelete, setPermanentDelete] = useState(false);
+  const [transfer, setTransfer] = useState<{
+    kind: TransferKind;
+    entries: LocalFileEntry[];
+  } | null>(null);
   const [destination, setDestination] = useState(currentPath);
+  const [conflict, setConflict] = useState<ConflictPolicy>("keep-both");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerPath, setPickerPath] = useState(currentPath);
+  const [pickerEntries, setPickerEntries] = useState<LocalFileEntry[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
   const [previewEntry, setPreviewEntry] = useState<LocalFileEntry | null>(null);
   const [editorContent, setEditorContent] = useState("");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [propertiesEntry, setPropertiesEntry] = useState<LocalFileEntry | null>(null);
+  const [propertyMode, setPropertyMode] = useState("");
+  const [propertyUid, setPropertyUid] = useState("");
+  const [propertyGid, setPropertyGid] = useState("");
+  const [archive, setArchive] = useState<ArchiveState>(null);
+  const [archiveName, setArchiveName] = useState("archive");
+  const [archiveFormat, setArchiveFormat] = useState<"zip" | "tar.gz">("zip");
+  const [extractMode, setExtractMode] = useState<"here" | "subfolder">("subfolder");
+  const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<ProgressState | null>(null);
+  const [activeJob, setActiveJob] = useState<OperationJob | null>(null);
 
-  const setPath = (value: string) => {
-    navigate({
-      search: (previous: { path?: string; q?: string }) => ({
-        ...previous,
-        path: normalizePath(value),
-      }),
-    });
-  };
+  useEffect(() => {
+    setShowHidden(window.localStorage.getItem("wfm:show-hidden") === "true");
+    const storedSort = window.localStorage.getItem("wfm:sort-key");
+    if (["name", "size", "modifiedAt", "kind"].includes(storedSort || ""))
+      setSortKey(storedSort as SortKey);
+    setSortDirection(window.localStorage.getItem("wfm:sort-direction") === "desc" ? "desc" : "asc");
+  }, []);
+
+  const setPath = useCallback(
+    (value: string) => {
+      navigate({
+        search: (previous: { path?: string; q?: string }) => ({
+          ...previous,
+          path: normalizePath(value),
+          q: undefined,
+        }),
+      });
+    },
+    [navigate],
+  );
 
   const setSearch = (value: string) => {
     navigate({
+      replace: true,
       search: (previous: { path?: string; q?: string }) => ({
         ...previous,
         q: value || undefined,
@@ -115,57 +198,343 @@ function Explorer() {
     });
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    const id = ++requestId.current;
     setLoading(true);
     setError(null);
     try {
-      const result = await localApi.list(currentPath);
+      const result = await localApi.list(currentPath, undefined, q || undefined, 500);
+      if (id !== requestId.current) return;
       setEntries(result.entries);
       setPathInput(result.path);
+      setNextCursor(result.nextCursor || null);
+      setTotal(result.total ?? result.entries.length);
     } catch (cause) {
+      if (id !== requestId.current) return;
       setEntries([]);
       setError(cause instanceof Error ? cause.message : "Unable to load this directory");
     } finally {
-      setLoading(false);
+      if (id === requestId.current) setLoading(false);
     }
-  };
+  }, [currentPath, q]);
 
   useEffect(() => {
-    void load();
-  }, [currentPath]);
+    const timer = window.setTimeout(() => void load(), q ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [load, q]);
 
-  const visibleEntries = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return entries.filter((entry) => !needle || entry.name.toLowerCase().includes(needle));
-  }, [entries, q]);
+  useEffect(() => {
+    let disposed = false;
+    const refreshJobs = async () => {
+      try {
+        const result = await localApi.jobs.list();
+        if (disposed) return;
+        const running = result.jobs.find((job) =>
+          ["queued", "running", "cancelling"].includes(job.status),
+        );
+        setActiveJob(running || null);
+      } catch {
+        // Directory operations still surface their own request errors.
+      }
+    };
+    void refreshJobs();
+    const timer = window.setInterval(() => void refreshJobs(), 2_000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, []);
 
-  const openEntry = async (entry: LocalFileEntry) => {
-    if (entry.kind === "directory") {
-      setPath(entry.path);
-      return;
-    }
-
-    setPreviewEntry(entry);
-    setPreviewLoading(true);
-    setEditorContent("");
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
     try {
-      const result = await localApi.read(entry.path);
-      setEditorContent(result.content);
+      const result = await localApi.list(currentPath, nextCursor, q || undefined, 500);
+      setEntries((current) => [...current, ...result.entries]);
+      setNextCursor(result.nextCursor || null);
+      setTotal(result.total ?? total);
     } catch (cause) {
       notify({
         kind: "error",
-        title: "Unable to open file",
-        subtitle: cause instanceof Error ? cause.message : "This file cannot be previewed as text.",
+        title: "Unable to load more items",
+        subtitle:
+          cause instanceof Error ? cause.message : "The next directory page could not be loaded.",
       });
-      setPreviewEntry(null);
     } finally {
-      setPreviewLoading(false);
+      setLoadingMore(false);
     }
   };
+
+  const visibleEntries = useMemo(() => {
+    const filtered = showHidden ? entries : entries.filter((entry) => !entry.hidden);
+    return [...filtered].sort((left, right) => {
+      if (sortKey === "name" && left.kind !== right.kind) {
+        if (left.kind === "directory") return -1;
+        if (right.kind === "directory") return 1;
+      }
+      let comparison = 0;
+      if (sortKey === "size") comparison = left.size - right.size;
+      else if (sortKey === "modifiedAt")
+        comparison = left.modifiedAt.localeCompare(right.modifiedAt);
+      else if (sortKey === "kind") comparison = left.kind.localeCompare(right.kind);
+      else
+        comparison = left.name.localeCompare(right.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [entries, showHidden, sortDirection, sortKey]);
+
+  const {
+    selected,
+    setSelected,
+    selectedEntries,
+    anchorPath,
+    focusedPath,
+    selectOnly,
+    selectEntry,
+    clearSelection,
+  } = useExplorerSelection(visibleEntries);
+
+  useEffect(() => {
+    clearSelection();
+  }, [clearSelection, currentPath, q]);
+
+  const openEntry = useCallback(
+    async (entry: LocalFileEntry) => {
+      if (
+        entry.kind === "directory" ||
+        (entry.kind === "symlink" && entry.linkKind === "directory")
+      ) {
+        setPath(entry.path);
+        return;
+      }
+      if (entry.kind !== "file" && entry.kind !== "symlink") {
+        notify({
+          kind: "error",
+          title: "Unable to open item",
+          subtitle: "This filesystem entry type is not supported.",
+        });
+        return;
+      }
+      setPreviewEntry(entry);
+      if (mediaKind(entry) !== "text") return;
+      setPreviewLoading(true);
+      setEditorContent("");
+      try {
+        const result = await localApi.read(entry.path);
+        setEditorContent(result.content);
+      } catch (cause) {
+        notify({
+          kind: "error",
+          title: "Unable to open file",
+          subtitle:
+            cause instanceof Error ? cause.message : "This file cannot be previewed as text.",
+        });
+        setPreviewEntry(null);
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [notify, setPath],
+  );
+
+  const startCreate = useCallback((kind: CreateKind) => {
+    setCreateKind(kind);
+    setCreateName("");
+  }, []);
+
+  const startRename = useCallback((entry: LocalFileEntry) => {
+    setRenameEntry(entry);
+    setRenameName(entry.name);
+  }, []);
+
+  const startProperties = useCallback((entry: LocalFileEntry) => {
+    setPropertiesEntry(entry);
+    setPropertyMode(entry.mode);
+    setPropertyUid(String(entry.uid));
+    setPropertyGid(String(entry.gid));
+  }, []);
+
+  const runPaste = useCallback(
+    async (state = clipboard, target = currentPath) => {
+      if (!state?.entries.length) return;
+      const title = state.kind === "copy" ? "Copy" : "Move";
+      const noticeId = notify({
+        kind: "info",
+        title: `${title} started`,
+        subtitle: `${state.entries.length} item(s)`,
+        timeout: 0,
+      });
+      try {
+        const report = (job: OperationJob) => {
+          setActiveJob(job);
+          notify({
+            id: noticeId,
+            kind: "info",
+            title: `${title} · ${job.progress}%`,
+            subtitle: job.currentItem || job.source,
+            timeout: 0,
+          });
+        };
+        if (state.kind === "copy")
+          await localApi.copyMany(
+            state.entries.map((entry) => entry.path),
+            target,
+            conflict,
+            report,
+          );
+        else
+          await localApi.moveMany(
+            state.entries.map((entry) => entry.path),
+            target,
+            conflict,
+            report,
+          );
+        notify({
+          id: noticeId,
+          kind: "success",
+          title: `${title} completed`,
+          subtitle: `${state.entries.length} item(s)`,
+          timeout: 3500,
+        });
+        if (state.kind === "move") setClipboard(null);
+        setTransfer(null);
+        setActiveJob(null);
+        await load();
+      } catch (cause) {
+        notify({
+          id: noticeId,
+          kind: "error",
+          title: "Operation failed",
+          subtitle: cause instanceof Error ? cause.message : "The operation did not complete.",
+          timeout: 0,
+        });
+      }
+    },
+    [clipboard, conflict, currentPath, load, notify],
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!explorerRef.current?.contains(document.activeElement) || isTypingTarget(event.target))
+        return;
+      const ctrl = event.ctrlKey || event.metaKey;
+      const currentIndex = visibleEntries.findIndex((entry) => entry.path === focusedPath);
+      const focused = currentIndex >= 0 ? visibleEntries[currentIndex] : null;
+      if (ctrl && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        setSelected(new Set(visibleEntries.map((entry) => entry.path)));
+      } else if (ctrl && event.key.toLowerCase() === "c" && selectedEntries.length) {
+        event.preventDefault();
+        setClipboard({ kind: "copy", entries: selectedEntries });
+      } else if (ctrl && event.key.toLowerCase() === "x" && selectedEntries.length) {
+        event.preventDefault();
+        setClipboard({ kind: "move", entries: selectedEntries });
+      } else if (ctrl && event.key.toLowerCase() === "v" && clipboard) {
+        event.preventDefault();
+        void runPaste();
+      } else if (ctrl && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        pathInputRef.current?.focus();
+        pathInputRef.current?.select();
+      } else if (ctrl && event.shiftKey && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        startCreate("directory");
+      } else if (event.altKey && event.key === "ArrowUp") {
+        event.preventDefault();
+        setPath(parentPath(currentPath));
+      } else if (event.altKey && event.key === "ArrowLeft") {
+        event.preventDefault();
+        window.history.back();
+      } else if (event.altKey && event.key === "ArrowRight") {
+        event.preventDefault();
+        window.history.forward();
+      } else if (event.key === "F5") {
+        event.preventDefault();
+        void load();
+      } else if (event.key === "Delete" && selectedEntries.length) {
+        event.preventDefault();
+        setPermanentDelete(event.shiftKey);
+        setDeleteEntries(selectedEntries);
+      } else if (event.key === "F2" && selectedEntries.length === 1) {
+        event.preventDefault();
+        startRename(selectedEntries[0]);
+      } else if (event.key === "Enter" && selectedEntries.length === 1) {
+        event.preventDefault();
+        void openEntry(selectedEntries[0]);
+      } else if (event.key === "Escape") {
+        setSelected(new Set());
+        setContextMenu(null);
+      } else if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+        event.preventDefault();
+        const rect = explorerRef.current.getBoundingClientRect();
+        setContextMenu({ x: rect.left + 48, y: rect.top + 96 });
+      } else if (
+        ["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft", "Home", "End"].includes(event.key) &&
+        visibleEntries.length
+      ) {
+        event.preventDefault();
+        let nextIndex = currentIndex < 0 ? 0 : currentIndex;
+        if (event.key === "ArrowDown" || event.key === "ArrowRight")
+          nextIndex = Math.min(visibleEntries.length - 1, nextIndex + 1);
+        if (event.key === "ArrowUp" || event.key === "ArrowLeft")
+          nextIndex = Math.max(0, nextIndex - 1);
+        if (event.key === "Home") nextIndex = 0;
+        if (event.key === "End") nextIndex = visibleEntries.length - 1;
+        const next = visibleEntries[nextIndex];
+        if (event.shiftKey && anchorPath) {
+          const anchorIndex = visibleEntries.findIndex((entry) => entry.path === anchorPath);
+          const range = visibleEntries.slice(
+            Math.min(anchorIndex, nextIndex),
+            Math.max(anchorIndex, nextIndex) + 1,
+          );
+          setSelected(new Set(range.map((entry) => entry.path)));
+        } else selectOnly(next);
+      } else if (event.key === " " && focused) {
+        event.preventDefault();
+        setSelected((current) => {
+          const next = new Set(current);
+          if (next.has(focused.path)) next.delete(focused.path);
+          else next.add(focused.path);
+          return next;
+        });
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [
+    anchorPath,
+    clipboard,
+    currentPath,
+    focusedPath,
+    load,
+    openEntry,
+    runPaste,
+    selectOnly,
+    selectedEntries,
+    setPath,
+    setSelected,
+    startCreate,
+    startRename,
+    visibleEntries,
+  ]);
+
+  useEffect(() => {
+    const close = () => setContextMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("blur", close);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("blur", close);
+    };
+  }, []);
 
   const create = async () => {
     const name = createName.trim();
     if (!createKind || !name) return;
+    setBusy(true);
     try {
       if (createKind === "file") await localApi.createFile(currentPath, name);
       else await localApi.createDirectory(currentPath, name);
@@ -175,7 +544,6 @@ function Explorer() {
         subtitle: name,
       });
       setCreateKind(null);
-      setCreateName("");
       await load();
     } catch (cause) {
       notify({
@@ -183,11 +551,14 @@ function Explorer() {
         title: "Creation failed",
         subtitle: cause instanceof Error ? cause.message : "Unable to create the item.",
       });
+    } finally {
+      setBusy(false);
     }
   };
 
   const rename = async () => {
     if (!renameEntry || !renameName.trim()) return;
+    setBusy(true);
     try {
       await localApi.rename(renameEntry.path, renameName.trim());
       notify({ kind: "success", title: "Renamed", subtitle: renameName.trim() });
@@ -199,67 +570,39 @@ function Explorer() {
         title: "Rename failed",
         subtitle: cause instanceof Error ? cause.message : "Unable to rename the item.",
       });
+    } finally {
+      setBusy(false);
     }
   };
 
   const remove = async () => {
-    if (!deleteEntry) return;
+    if (!deleteEntries.length) return;
+    setBusy(true);
     try {
-      await localApi.trash.move(deleteEntry.path);
-      notify({ kind: "success", title: "Moved to trash", subtitle: deleteEntry.name });
-      setDeleteEntry(null);
+      if (permanentDelete) {
+        await localApi.deleteMany(
+          deleteEntries.map((entry) => entry.path),
+          setActiveJob,
+        );
+      } else {
+        await localApi.trash.moveMany(deleteEntries.map((entry) => entry.path));
+      }
+      notify({
+        kind: "success",
+        title: permanentDelete ? "Permanently deleted" : "Moved to trash",
+        subtitle: `${deleteEntries.length} item(s)`,
+      });
+      setDeleteEntries([]);
+      setPermanentDelete(false);
       await load();
     } catch (cause) {
       notify({
         kind: "error",
         title: "Delete failed",
-        subtitle: cause instanceof Error ? cause.message : "Unable to move the item to trash.",
+        subtitle: cause instanceof Error ? cause.message : "Unable to move the selection to trash.",
       });
-    }
-  };
-
-  const transferEntry = async () => {
-    if (!transfer || !destination.trim()) return;
-    const action = transfer.kind === "copy" ? "Copy" : "Move";
-    const noticeId = notify({
-      kind: "info",
-      title: `${action} started`,
-      subtitle: transfer.entry.name,
-      timeout: 0,
-    });
-    const report = (job: OperationJob) => {
-      notify({
-        id: noticeId,
-        kind: "info",
-        title: `${action} in progress · ${Math.max(0, Math.min(100, job.progress))}%`,
-        subtitle: job.currentItem || transfer.entry.name,
-        timeout: 0,
-      });
-    };
-
-    try {
-      if (transfer.kind === "copy") {
-        await localApi.copy(transfer.entry.path, destination.trim(), report);
-      } else {
-        await localApi.move(transfer.entry.path, destination.trim(), report);
-      }
-      notify({
-        id: noticeId,
-        kind: "success",
-        title: `${action} completed`,
-        subtitle: transfer.entry.name,
-        timeout: 3500,
-      });
-      setTransfer(null);
-      await load();
-    } catch (cause) {
-      notify({
-        id: noticeId,
-        kind: "error",
-        title: `${action} failed`,
-        subtitle: cause instanceof Error ? cause.message : "The operation did not complete.",
-        timeout: 0,
-      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -318,8 +661,125 @@ function Explorer() {
     }
   };
 
+  const saveProperties = async () => {
+    if (!propertiesEntry) return;
+    setBusy(true);
+    try {
+      if (propertyMode !== propertiesEntry.mode)
+        await localApi.chmod(propertiesEntry.path, propertyMode);
+      if (
+        Number(propertyUid) !== propertiesEntry.uid ||
+        Number(propertyGid) !== propertiesEntry.gid
+      )
+        await localApi.chown(propertiesEntry.path, Number(propertyUid), Number(propertyGid));
+      notify({ kind: "success", title: "Properties updated", subtitle: propertiesEntry.name });
+      setPropertiesEntry(null);
+      await load();
+    } catch (cause) {
+      notify({
+        kind: "error",
+        title: "Properties update failed",
+        subtitle: cause instanceof Error ? cause.message : "Unable to update this item.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runArchive = async () => {
+    if (!archive) return;
+    setBusy(true);
+    const noticeId = notify({
+      kind: "info",
+      title: archive.kind === "create" ? "Creating archive" : "Extracting archive",
+      timeout: 0,
+    });
+    try {
+      if (archive.kind === "create") {
+        await localApi.archive.create({
+          sources: archive.entries.map((entry) => entry.path),
+          destination: currentPath,
+          name: archiveName,
+          format: archiveFormat,
+        });
+      } else {
+        await localApi.archive.extract({
+          archive: archive.entry.path,
+          destination: currentPath,
+          mode: extractMode,
+          conflict: conflict === "error" ? "keep-both" : conflict,
+        });
+      }
+      notify({
+        id: noticeId,
+        kind: "success",
+        title: archive.kind === "create" ? "Archive created" : "Archive extracted",
+        timeout: 3500,
+      });
+      setArchive(null);
+      await load();
+    } catch (cause) {
+      notify({
+        id: noticeId,
+        kind: "error",
+        title: "Archive operation failed",
+        subtitle:
+          cause instanceof Error ? cause.message : "The archive operation did not complete.",
+        timeout: 0,
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loadPicker = useCallback(
+    async (target: string) => {
+      setPickerLoading(true);
+      try {
+        const result = await localApi.list(target, undefined, undefined, 500);
+        setPickerPath(result.path);
+        setPickerEntries(result.entries.filter((entry) => entry.kind === "directory"));
+      } catch (cause) {
+        notify({
+          kind: "error",
+          title: "Unable to browse destination",
+          subtitle: cause instanceof Error ? cause.message : "This folder cannot be opened.",
+        });
+      } finally {
+        setPickerLoading(false);
+      }
+    },
+    [notify],
+  );
+
+  useEffect(() => {
+    if (pickerOpen) void loadPicker(destination);
+  }, [destination, loadPicker, pickerOpen]);
+
+  const toggleSort = (key: SortKey) => {
+    const direction = key === sortKey && sortDirection === "asc" ? "desc" : "asc";
+    setSortKey(key);
+    setSortDirection(direction);
+    localStorage.setItem("wfm:sort-key", key);
+    localStorage.setItem("wfm:sort-direction", direction);
+  };
+
+  const openContextMenu = (event: ReactMouseEvent, entry?: LocalFileEntry) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (entry && !selected.has(entry.path)) selectOnly(entry);
+    if (!entry) setSelected(new Set());
+    setContextMenu({
+      x: Math.max(8, Math.min(event.clientX, window.innerWidth - 232)),
+      y: Math.max(8, Math.min(event.clientY, window.innerHeight - 360)),
+    });
+  };
+
+  const selectedSingle = selectedEntries.length === 1 ? selectedEntries[0] : null;
+  const canExtract = selectedSingle?.kind === "file" && ARCHIVE_PATTERN.test(selectedSingle.name);
+
   return (
-    <section className="wfm-page" aria-labelledby="explorer-title">
+    <section className="wfm-page wfm-page--explorer" aria-labelledby="explorer-title">
       <header className="wfm-page__header">
         <div>
           <h1 id="explorer-title" className="wfm-page__heading">
@@ -337,22 +797,11 @@ function Explorer() {
             kind="tertiary"
             size="sm"
             renderIcon={Folder}
-            onClick={() => {
-              setCreateKind("directory");
-              setCreateName("");
-            }}
+            onClick={() => startCreate("directory")}
           >
             New folder
           </Button>
-          <Button
-            kind="tertiary"
-            size="sm"
-            renderIcon={Add}
-            onClick={() => {
-              setCreateKind("file");
-              setCreateName("");
-            }}
-          >
+          <Button kind="tertiary" size="sm" renderIcon={Add} onClick={() => startCreate("file")}>
             New file
           </Button>
           <Button size="sm" renderIcon={Upload} onClick={() => uploadInput.current?.click()}>
@@ -376,22 +825,39 @@ function Explorer() {
             setPath(pathInput);
           }}
         >
-          <Button
-            type="button"
-            kind="ghost"
-            size="md"
-            renderIcon={ArrowUp}
-            disabled={currentPath === "/"}
-            onClick={() => setPath(parentPath(currentPath))}
-          >
-            Up
-          </Button>
+          <div className="wfm-history-controls">
+            <Button
+              hasIconOnly
+              iconDescription="Back"
+              kind="ghost"
+              size="md"
+              renderIcon={ArrowLeft}
+              onClick={() => window.history.back()}
+            />
+            <Button
+              hasIconOnly
+              iconDescription="Forward"
+              kind="ghost"
+              size="md"
+              renderIcon={ArrowRight}
+              onClick={() => window.history.forward()}
+            />
+            <Button
+              hasIconOnly
+              iconDescription="Up"
+              kind="ghost"
+              size="md"
+              renderIcon={ArrowUp}
+              disabled={currentPath === "/"}
+              onClick={() => setPath(parentPath(currentPath))}
+            />
+          </div>
           <TextInput
+            ref={pathInputRef}
             id="current-path"
             labelText="Path"
             value={pathInput}
             onChange={(event) => setPathInput(event.target.value)}
-            onBlur={() => setPathInput(normalizePath(pathInput))}
           />
           <Button type="submit" kind="secondary" size="md">
             Go
@@ -406,6 +872,100 @@ function Explorer() {
         />
       </div>
 
+      <div className="wfm-command-bar" aria-label="File actions">
+        <span className="wfm-selection-summary">
+          {selectedEntries.length ? `${selectedEntries.length} selected` : `${total} item(s)`}
+        </span>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Cut}
+          disabled={!selectedEntries.length}
+          onClick={() => setClipboard({ kind: "move", entries: selectedEntries })}
+        >
+          Cut
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Copy}
+          disabled={!selectedEntries.length}
+          onClick={() => setClipboard({ kind: "copy", entries: selectedEntries })}
+        >
+          Copy
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Paste}
+          disabled={!clipboard}
+          onClick={() => void runPaste()}
+        >
+          Paste
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Edit}
+          disabled={!selectedSingle}
+          onClick={() => selectedSingle && startRename(selectedSingle)}
+        >
+          Rename
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Zip}
+          disabled={!selectedEntries.length}
+          onClick={() => {
+            setArchive({ kind: "create", entries: selectedEntries });
+            setArchiveName(selectedSingle?.name || "archive");
+          }}
+        >
+          Compress
+        </Button>
+        <Button
+          kind="ghost"
+          size="sm"
+          renderIcon={Information}
+          disabled={!selectedSingle}
+          onClick={() => selectedSingle && startProperties(selectedSingle)}
+        >
+          Properties
+        </Button>
+        <Button
+          kind="danger--ghost"
+          size="sm"
+          renderIcon={TrashCan}
+          disabled={!selectedEntries.length}
+          onClick={() => {
+            setPermanentDelete(false);
+            setDeleteEntries(selectedEntries);
+          }}
+        >
+          Trash
+        </Button>
+        <Toggle
+          id="show-hidden"
+          size="sm"
+          labelText="Hidden files"
+          labelA="Hide"
+          labelB="Show"
+          toggled={showHidden}
+          onToggle={(value) => {
+            setShowHidden(value);
+            localStorage.setItem("wfm:show-hidden", String(value));
+          }}
+        />
+      </div>
+
+      {clipboard ? (
+        <div className="wfm-clipboard-banner">
+          <strong>{clipboard.kind === "copy" ? "Copying" : "Moving"}:</strong>{" "}
+          {clipboard.entries.length} item(s). Navigate to a destination and paste.
+        </div>
+      ) : null}
+
       {progress ? (
         <div className="wfm-progress-block">
           <ProgressBar
@@ -414,6 +974,26 @@ function Explorer() {
             max={100}
             helperText={`${progress.percent}%`}
           />
+        </div>
+      ) : null}
+
+      {activeJob &&
+      !["completed", "failed", "cancelled", "interrupted"].includes(activeJob.status) ? (
+        <div className="wfm-progress-block wfm-operation-progress">
+          <ProgressBar
+            label={activeJob.currentItem || activeJob.operation}
+            value={activeJob.progress}
+            max={100}
+            helperText={`${activeJob.progress}%`}
+          />
+          <Button
+            kind="ghost"
+            size="sm"
+            disabled={!activeJob.cancellable}
+            onClick={() => void localApi.jobs.cancel(activeJob.id)}
+          >
+            Cancel
+          </Button>
         </div>
       ) : null}
 
@@ -427,116 +1007,319 @@ function Explorer() {
         />
       ) : null}
 
-      <div className="wfm-table-wrap">
-        <TableContainer
-          title={currentPath}
-          description={`${visibleEntries.length} visible item(s)`}
-        >
+      <div
+        ref={explorerRef}
+        className="wfm-table-wrap wfm-file-grid"
+        tabIndex={0}
+        role="grid"
+        aria-multiselectable="true"
+        aria-label={`Files in ${currentPath}`}
+        onContextMenu={(event) => openContextMenu(event)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setSelected(new Set());
+        }}
+        onDragOver={(event) => {
+          if (event.dataTransfer.types.includes("Files")) {
+            event.preventDefault();
+            event.currentTarget.classList.add("is-dragging");
+          }
+        }}
+        onDragLeave={(event) => event.currentTarget.classList.remove("is-dragging")}
+        onDrop={(event) => {
+          event.preventDefault();
+          event.currentTarget.classList.remove("is-dragging");
+          void upload(event.dataTransfer.files);
+        }}
+      >
+        <TableContainer title={currentPath} description={`${entries.length} loaded of ${total}`}>
           <Table size="lg" useZebraStyles={false}>
             <TableHead>
               <TableRow>
-                <TableHeader>Name</TableHeader>
-                <TableHeader>Size</TableHeader>
-                <TableHeader>Modified</TableHeader>
-                <TableHeader>Actions</TableHeader>
+                <TableHeader className="wfm-select-column">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all loaded items"
+                    checked={
+                      visibleEntries.length > 0 && selectedEntries.length === visibleEntries.length
+                    }
+                    onChange={(event) =>
+                      setSelected(
+                        event.target.checked
+                          ? new Set(visibleEntries.map((entry) => entry.path))
+                          : new Set(),
+                      )
+                    }
+                  />
+                </TableHeader>
+                <TableHeader>
+                  <button className="wfm-sort-button" onClick={() => toggleSort("name")}>
+                    Name {sortKey === "name" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                </TableHeader>
+                <TableHeader>
+                  <button className="wfm-sort-button" onClick={() => toggleSort("kind")}>
+                    Type {sortKey === "kind" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                </TableHeader>
+                <TableHeader>
+                  <button className="wfm-sort-button" onClick={() => toggleSort("size")}>
+                    Size {sortKey === "size" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                </TableHeader>
+                <TableHeader>
+                  <button className="wfm-sort-button" onClick={() => toggleSort("modifiedAt")}>
+                    Modified {sortKey === "modifiedAt" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                </TableHeader>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4}>
+                  <TableCell colSpan={5}>
                     <InlineLoading description="Loading directory…" />
                   </TableCell>
                 </TableRow>
               ) : visibleEntries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4}>This folder is empty.</TableCell>
+                  <TableCell colSpan={5}>This folder is empty.</TableCell>
                 </TableRow>
               ) : (
-                visibleEntries.map((entry) => (
-                  <TableRow key={entry.path}>
-                    <TableCell>
-                      <Button
-                        kind="ghost"
-                        size="sm"
-                        renderIcon={entry.kind === "directory" ? Folder : Document}
-                        onClick={() => void openEntry(entry)}
-                      >
-                        {entry.name}
-                      </Button>
-                    </TableCell>
-                    <TableCell>{entry.kind === "file" ? formatBytes(entry.size) : "—"}</TableCell>
-                    <TableCell>{formatDate(entry.modifiedAt)}</TableCell>
-                    <TableCell>
-                      <div className="wfm-table-actions">
-                        {entry.kind === "file" ? (
-                          <Button
-                            kind="ghost"
-                            size="sm"
-                            renderIcon={Download}
-                            onClick={() => void download(entry)}
-                          >
-                            Download
-                          </Button>
-                        ) : null}
-                        <Button
-                          kind="ghost"
-                          size="sm"
-                          renderIcon={Edit}
-                          onClick={() => {
-                            setRenameEntry(entry);
-                            setRenameName(entry.name);
-                          }}
-                        >
-                          Rename
-                        </Button>
-                        <Button
-                          kind="ghost"
-                          size="sm"
-                          renderIcon={Copy}
-                          onClick={() => {
-                            setTransfer({ kind: "copy", entry });
-                            setDestination(currentPath);
-                          }}
-                        >
-                          Copy
-                        </Button>
-                        <Button
-                          kind="ghost"
-                          size="sm"
-                          renderIcon={Move}
-                          onClick={() => {
-                            setTransfer({ kind: "move", entry });
-                            setDestination(currentPath);
-                          }}
-                        >
-                          Move
-                        </Button>
-                        <Button
-                          kind="danger--ghost"
-                          size="sm"
-                          renderIcon={TrashCan}
-                          onClick={() => setDeleteEntry(entry)}
-                        >
-                          Trash
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                visibleEntries.map((entry) => {
+                  const isSelected = selected.has(entry.path);
+                  const Icon =
+                    entry.kind === "directory" || entry.linkKind === "directory"
+                      ? Folder
+                      : Document;
+                  return (
+                    <TableRow
+                      key={entry.path}
+                      className={isSelected ? "wfm-file-row is-selected" : "wfm-file-row"}
+                      aria-selected={isSelected}
+                      data-path={entry.path}
+                      onClick={(event) => {
+                        explorerRef.current?.focus({ preventScroll: true });
+                        selectEntry(entry, event);
+                      }}
+                      onDoubleClick={(event) => {
+                        event.preventDefault();
+                        void openEntry(entry);
+                      }}
+                      onContextMenu={(event) => openContextMenu(event, entry)}
+                    >
+                      <TableCell className="wfm-select-column">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${entry.name}`}
+                          checked={isSelected}
+                          onChange={() => undefined}
+                          tabIndex={-1}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="wfm-file-name">
+                          <Icon size={20} />
+                          <span>{entry.name}</span>
+                          {entry.kind === "symlink" ? (
+                            <span className="wfm-symlink-badge">Link</span>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {entry.kind}
+                        {entry.mime !== "application/octet-stream" && entry.kind === "file"
+                          ? ` · ${entry.mime}`
+                          : ""}
+                      </TableCell>
+                      <TableCell>{entry.kind === "file" ? formatBytes(entry.size) : "—"}</TableCell>
+                      <TableCell>{formatDate(entry.modifiedAt)}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
         </TableContainer>
+        {nextCursor ? (
+          <div className="wfm-load-more">
+            <Button kind="ghost" disabled={loadingMore} onClick={() => void loadMore()}>
+              {loadingMore ? "Loading…" : `Load more (${entries.length} of ${total})`}
+            </Button>
+          </div>
+        ) : null}
       </div>
+
+      {contextMenu ? (
+        <div
+          className="wfm-context-menu"
+          role="menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {selectedSingle ? (
+            <button
+              role="menuitem"
+              onClick={() => {
+                void openEntry(selectedSingle);
+                setContextMenu(null);
+              }}
+            >
+              Open
+            </button>
+          ) : null}
+          {selectedEntries.length ? (
+            <>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setClipboard({ kind: "move", entries: selectedEntries });
+                  setContextMenu(null);
+                }}
+              >
+                Cut
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setClipboard({ kind: "copy", entries: selectedEntries });
+                  setContextMenu(null);
+                }}
+              >
+                Copy
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setTransfer({ kind: "copy", entries: selectedEntries });
+                  setDestination(currentPath);
+                  setContextMenu(null);
+                }}
+              >
+                Copy to…
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setTransfer({ kind: "move", entries: selectedEntries });
+                  setDestination(currentPath);
+                  setContextMenu(null);
+                }}
+              >
+                Move to…
+              </button>
+            </>
+          ) : (
+            <button
+              role="menuitem"
+              disabled={!clipboard}
+              onClick={() => {
+                void runPaste();
+                setContextMenu(null);
+              }}
+            >
+              Paste
+            </button>
+          )}
+          {selectedSingle?.kind === "file" ? (
+            <button
+              role="menuitem"
+              onClick={() => {
+                void download(selectedSingle);
+                setContextMenu(null);
+              }}
+            >
+              Download
+            </button>
+          ) : null}
+          {selectedSingle ? (
+            <button
+              role="menuitem"
+              onClick={() => {
+                startRename(selectedSingle);
+                setContextMenu(null);
+              }}
+            >
+              Rename
+            </button>
+          ) : null}
+          {selectedEntries.length ? (
+            <button
+              role="menuitem"
+              onClick={() => {
+                setArchive({ kind: "create", entries: selectedEntries });
+                setArchiveName(selectedSingle?.name || "archive");
+                setContextMenu(null);
+              }}
+            >
+              Compress…
+            </button>
+          ) : null}
+          {canExtract && selectedSingle ? (
+            <button
+              role="menuitem"
+              onClick={() => {
+                setArchive({ kind: "extract", entry: selectedSingle });
+                setContextMenu(null);
+              }}
+            >
+              Extract…
+            </button>
+          ) : null}
+          {selectedSingle ? (
+            <button
+              role="menuitem"
+              onClick={() => {
+                startProperties(selectedSingle);
+                setContextMenu(null);
+              }}
+            >
+              Properties
+            </button>
+          ) : null}
+          {selectedEntries.length ? (
+            <button
+              role="menuitem"
+              className="is-danger"
+              onClick={() => {
+                setPermanentDelete(false);
+                setDeleteEntries(selectedEntries);
+                setContextMenu(null);
+              }}
+            >
+              Move to trash
+            </button>
+          ) : (
+            <>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  startCreate("directory");
+                  setContextMenu(null);
+                }}
+              >
+                New folder
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  startCreate("file");
+                  setContextMenu(null);
+                }}
+              >
+                New file
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <Modal
         open={Boolean(createKind)}
         size="sm"
         modalHeading={`Create ${createKind === "file" ? "file" : "folder"}`}
-        primaryButtonText="Create"
+        primaryButtonText={busy ? "Creating…" : "Create"}
         secondaryButtonText="Cancel"
-        primaryButtonDisabled={!createName.trim()}
+        primaryButtonDisabled={busy || !createName.trim()}
         selectorPrimaryFocus="#create-name"
         onRequestClose={() => setCreateKind(null)}
         onRequestSubmit={() => void create()}
@@ -553,9 +1336,9 @@ function Explorer() {
         open={Boolean(renameEntry)}
         size="sm"
         modalHeading="Rename item"
-        primaryButtonText="Rename"
+        primaryButtonText={busy ? "Renaming…" : "Rename"}
         secondaryButtonText="Cancel"
-        primaryButtonDisabled={!renameName.trim()}
+        primaryButtonDisabled={busy || !renameName.trim()}
         selectorPrimaryFocus="#rename-name"
         onRequestClose={() => setRenameEntry(null)}
         onRequestSubmit={() => void rename()}
@@ -571,22 +1354,72 @@ function Explorer() {
       <Modal
         open={Boolean(transfer)}
         size="sm"
-        modalHeading={transfer?.kind === "copy" ? "Copy item" : "Move item"}
+        modalHeading={transfer?.kind === "copy" ? "Copy items" : "Move items"}
         primaryButtonText={transfer?.kind === "copy" ? "Copy" : "Move"}
         secondaryButtonText="Cancel"
-        primaryButtonDisabled={!destination.trim()}
-        selectorPrimaryFocus="#destination-path"
         onRequestClose={() => setTransfer(null)}
-        onRequestSubmit={() => void transferEntry()}
+        onRequestSubmit={() =>
+          transfer && void runPaste({ kind: transfer.kind, entries: transfer.entries }, destination)
+        }
       >
         <div className="wfm-modal-stack">
-          <p className="wfm-form-helper">Enter the destination directory.</p>
           <TextInput
             id="destination-path"
             labelText="Destination"
             value={destination}
             onChange={(event) => setDestination(event.target.value)}
           />
+          <Button kind="tertiary" onClick={() => setPickerOpen(true)}>
+            Browse folders
+          </Button>
+          <Select
+            id="conflict-policy"
+            labelText="If an item already exists"
+            value={conflict}
+            onChange={(event) => setConflict(event.target.value as ConflictPolicy)}
+          >
+            <SelectItem value="keep-both" text="Keep both" />
+            <SelectItem value="skip" text="Skip" />
+            <SelectItem value="replace" text="Replace" />
+            <SelectItem value="error" text="Stop with an error" />
+          </Select>
+        </div>
+      </Modal>
+
+      <Modal
+        open={pickerOpen}
+        size="sm"
+        modalHeading="Choose destination folder"
+        primaryButtonText="Choose this folder"
+        secondaryButtonText="Cancel"
+        onRequestClose={() => setPickerOpen(false)}
+        onRequestSubmit={() => {
+          setDestination(pickerPath);
+          setPickerOpen(false);
+        }}
+      >
+        <div className="wfm-folder-picker">
+          <div className="wfm-folder-picker__path">
+            <Button
+              hasIconOnly
+              iconDescription="Parent folder"
+              kind="ghost"
+              renderIcon={ArrowUp}
+              disabled={pickerPath === "/"}
+              onClick={() => void loadPicker(parentPath(pickerPath))}
+            />
+            <code>{pickerPath}</code>
+          </div>
+          {pickerLoading ? (
+            <InlineLoading description="Loading folders…" />
+          ) : (
+            pickerEntries.map((entry) => (
+              <button key={entry.path} onClick={() => void loadPicker(entry.path)}>
+                <Folder size={20} />
+                {entry.name}
+              </button>
+            ))
+          )}
         </div>
       </Modal>
 
@@ -594,15 +1427,36 @@ function Explorer() {
         open={Boolean(previewEntry)}
         size="lg"
         hasScrollingContent
-        modalHeading={previewEntry?.name || "File editor"}
+        modalHeading={previewEntry?.name || "File viewer"}
         modalLabel={previewEntry?.path}
-        primaryButtonText={saving ? "Saving…" : "Save"}
+        primaryButtonText={
+          previewEntry && mediaKind(previewEntry) !== "text"
+            ? "Download"
+            : saving
+              ? "Saving…"
+              : "Save"
+        }
         secondaryButtonText="Close"
         primaryButtonDisabled={saving || previewLoading}
         onRequestClose={() => setPreviewEntry(null)}
-        onRequestSubmit={() => void save()}
+        onRequestSubmit={() =>
+          previewEntry &&
+          (mediaKind(previewEntry) === "text" ? void save() : void download(previewEntry))
+        }
       >
-        {previewLoading ? (
+        {previewEntry && mediaKind(previewEntry) === "image" ? (
+          <img className="wfm-media-preview" src={fileUrl(previewEntry)} alt={previewEntry.name} />
+        ) : previewEntry && mediaKind(previewEntry) === "audio" ? (
+          <audio className="wfm-media-preview" src={fileUrl(previewEntry)} controls />
+        ) : previewEntry && mediaKind(previewEntry) === "video" ? (
+          <video className="wfm-media-preview" src={fileUrl(previewEntry)} controls />
+        ) : previewEntry && mediaKind(previewEntry) === "pdf" ? (
+          <iframe
+            className="wfm-pdf-preview"
+            src={fileUrl(previewEntry)}
+            title={previewEntry.name}
+          />
+        ) : previewLoading ? (
           <InlineLoading description="Loading file…" />
         ) : (
           <TextArea
@@ -617,17 +1471,143 @@ function Explorer() {
       </Modal>
 
       <Modal
-        open={Boolean(deleteEntry)}
+        open={deleteEntries.length > 0}
         danger
         size="sm"
-        modalHeading="Move this item to trash?"
-        modalLabel={deleteEntry?.path}
-        primaryButtonText="Move to trash"
+        modalHeading={
+          permanentDelete
+            ? `Permanently delete ${deleteEntries.length} item(s)?`
+            : `Move ${deleteEntries.length} item(s) to trash?`
+        }
+        primaryButtonText={
+          busy ? "Working…" : permanentDelete ? "Delete permanently" : "Move to trash"
+        }
         secondaryButtonText="Cancel"
-        onRequestClose={() => setDeleteEntry(null)}
+        primaryButtonDisabled={busy}
+        onRequestClose={() => {
+          setDeleteEntries([]);
+          setPermanentDelete(false);
+        }}
         onRequestSubmit={() => void remove()}
       >
-        The item can be restored later from Trash until it is permanently deleted.
+        {permanentDelete
+          ? "This action cannot be undone. The selected items will not be moved to Trash."
+          : "The selection can be restored later from Trash."}
+      </Modal>
+
+      <Modal
+        open={Boolean(propertiesEntry)}
+        size="sm"
+        modalHeading="Properties"
+        modalLabel={propertiesEntry?.path}
+        primaryButtonText={busy ? "Saving…" : "Save changes"}
+        secondaryButtonText="Cancel"
+        primaryButtonDisabled={
+          busy ||
+          !/^[0-7]{3,4}$/.test(propertyMode) ||
+          !/^\d+$/.test(propertyUid) ||
+          !/^\d+$/.test(propertyGid)
+        }
+        onRequestClose={() => setPropertiesEntry(null)}
+        onRequestSubmit={() => void saveProperties()}
+      >
+        {propertiesEntry ? (
+          <div className="wfm-modal-stack">
+            <dl className="wfm-properties">
+              <dt>Type</dt>
+              <dd>
+                {propertiesEntry.kind} · {propertiesEntry.mime}
+              </dd>
+              <dt>Size</dt>
+              <dd>{formatBytes(propertiesEntry.size)}</dd>
+              <dt>Modified</dt>
+              <dd>{formatDate(propertiesEntry.modifiedAt)}</dd>
+              <dt>Accessed</dt>
+              <dd>{formatDate(propertiesEntry.accessedAt)}</dd>
+              {propertiesEntry.linkTarget ? (
+                <>
+                  <dt>Link target</dt>
+                  <dd>{propertiesEntry.linkTarget}</dd>
+                </>
+              ) : null}
+            </dl>
+            <TextInput
+              id="property-mode"
+              labelText="Permissions (octal)"
+              value={propertyMode}
+              onChange={(event) => setPropertyMode(event.target.value)}
+            />
+            <TextInput
+              id="property-uid"
+              labelText="Owner UID"
+              value={propertyUid}
+              onChange={(event) => setPropertyUid(event.target.value)}
+            />
+            <TextInput
+              id="property-gid"
+              labelText="Group GID"
+              value={propertyGid}
+              onChange={(event) => setPropertyGid(event.target.value)}
+            />
+          </div>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(archive)}
+        size="sm"
+        modalHeading={archive?.kind === "create" ? "Compress selected items" : "Extract archive"}
+        primaryButtonText={
+          busy ? "Working…" : archive?.kind === "create" ? "Create archive" : "Extract"
+        }
+        secondaryButtonText="Cancel"
+        primaryButtonDisabled={busy || (archive?.kind === "create" && !archiveName.trim())}
+        onRequestClose={() => setArchive(null)}
+        onRequestSubmit={() => void runArchive()}
+      >
+        <div className="wfm-modal-stack">
+          {archive?.kind === "create" ? (
+            <>
+              <TextInput
+                id="archive-name"
+                labelText="Archive name"
+                value={archiveName}
+                onChange={(event) => setArchiveName(event.target.value)}
+              />
+              <Select
+                id="archive-format"
+                labelText="Format"
+                value={archiveFormat}
+                onChange={(event) => setArchiveFormat(event.target.value as "zip" | "tar.gz")}
+              >
+                <SelectItem value="zip" text="ZIP" />
+                <SelectItem value="tar.gz" text="TAR.GZ" />
+              </Select>
+            </>
+          ) : (
+            <>
+              <Select
+                id="extract-mode"
+                labelText="Destination"
+                value={extractMode}
+                onChange={(event) => setExtractMode(event.target.value as "here" | "subfolder")}
+              >
+                <SelectItem value="subfolder" text="New subfolder" />
+                <SelectItem value="here" text="Extract here" />
+              </Select>
+              <Select
+                id="extract-conflict"
+                labelText="If an item already exists"
+                value={conflict === "error" ? "keep-both" : conflict}
+                onChange={(event) => setConflict(event.target.value as ConflictPolicy)}
+              >
+                <SelectItem value="keep-both" text="Keep both" />
+                <SelectItem value="skip" text="Skip" />
+                <SelectItem value="replace" text="Replace" />
+              </Select>
+            </>
+          )}
+        </div>
       </Modal>
     </section>
   );
