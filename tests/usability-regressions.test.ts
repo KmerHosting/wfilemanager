@@ -86,6 +86,12 @@ test("authentication focuses on file-manager capabilities without a condensed ed
   expect(authShell).toContain("<Column");
   expect(styles).toContain('.wfm-auth-shell > [class*="cds--col"]');
   expect(styles).toContain("padding: 0");
+  expect(styles).toMatch(
+    /\.wfm-auth-shell\s*\{[^}]*margin-inline:\s*0;[^}]*background:\s*var\(--cds-background-inverse\);/s,
+  );
+  expect(styles).toMatch(
+    /\.wfm-auth-main\s*\{[^}]*background:\s*var\(--cds-background\);/s,
+  );
 });
 
 test("Account exposes the current role and Carbon-based user management", async () => {
