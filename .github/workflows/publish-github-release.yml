@@ -119,13 +119,9 @@ jobs:
           cat > release-notes.md <<EOF
           wFileManager $VERSION is a prebuilt Linux runtime release.
 
-          - Adds local standard-user accounts with full file-management access.
-          - Adds administrator-only account creation, password reset, suspension and deletion.
-          - Migrates the existing administrator credentials and sessions without resetting them.
-          - Revokes user sessions after password reset, suspension or deletion.
-          - Renames Administrator to Account and shows the current account type.
-          - Moves Website, Documentation and Support links from the sidebar to About.
-          - Removes the implementation-focused interface row from About.
+          - Removes the remaining light one-pixel edge from setup and sign-in screens.
+          - Extends the inverse authentication background fully to the viewport edge.
+          - Keeps the form area on the standard Carbon page background.
           - Prebuilt deployment with verified atomic updates and rollback.
 
           SHA-256: \`$SHA256\`
