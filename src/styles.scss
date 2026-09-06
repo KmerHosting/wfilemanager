@@ -45,7 +45,20 @@ kbd,
 
 @include breakpoint.breakpoint("lg") {
   .wfm-app-content {
+    margin-inline-start: 3rem;
+  }
+
+  .wfm-app-content:has(~ .wfm-carbon-sidenav) {
     margin-inline-start: 16rem;
+  }
+
+  .wfm-carbon-sidenav {
+    inline-size: 16rem;
+  }
+
+  .wfm-carbon-sidenav .cds--side-nav__link-text {
+    display: inline;
+    opacity: 1;
   }
 
   .wfm-carbon-header .cds--header__menu {
