@@ -48,7 +48,7 @@ kbd,
     margin-inline-start: 3rem;
   }
 
-  .wfm-app-content:has(~ .wfm-carbon-sidenav) {
+  .wfm-carbon-sidenav ~ .wfm-app-content {
     margin-inline-start: 16rem;
   }
 
