@@ -47,6 +47,23 @@ kbd,
   .wfm-app-content {
     margin-inline-start: 3rem;
   }
+
+  .wfm-carbon-sidenav ~ .wfm-app-content {
+    margin-inline-start: 16rem;
+  }
+
+  .wfm-carbon-sidenav {
+    inline-size: 16rem;
+  }
+
+  .wfm-carbon-sidenav .cds--side-nav__link-text {
+    display: inline;
+    opacity: 1;
+  }
+
+  .wfm-carbon-header .cds--header__menu {
+    display: none;
+  }
 }
 
 .wfm-page {
@@ -778,20 +795,11 @@ audio.wfm-media-preview {
   gap: spacing.$spacing-03;
 }
 
-.wfm-rail-hint {
-  @include type.type-style("helper-text-01");
-  margin: spacing.$spacing-05 spacing.$spacing-05 0;
-  color: var(--cds-text-helper);
-}
-
-.cds--side-nav--rail:not(.cds--side-nav--expanded) .wfm-rail-hint {
-  display: none;
-}
-
-.wfm-carbon-sidenav {
-  transition-property: inline-size;
-  transition-duration: motion.$duration-fast-02;
-  transition-timing-function: motion.motion(standard, productive);
+.wfm-sidenav-label {
+  display: block;
+  margin: spacing.$spacing-05 spacing.$spacing-05 spacing.$spacing-02;
+  color: var(--cds-text-secondary);
+  @include type.type-style("label-01");
 }
 
 @media (prefers-reduced-motion: reduce) {
