@@ -56,6 +56,7 @@ export function AppSidebar({
 
   return (
     <SideNav
+      isRail
       expanded={expanded}
       isChildOfHeader
       aria-label="wFileManager navigation"
