@@ -56,7 +56,6 @@ export function AppSidebar({
 
   return (
     <SideNav
-      isRail
       expanded={expanded}
       isChildOfHeader
       aria-label="wFileManager navigation"
@@ -64,10 +63,11 @@ export function AppSidebar({
       onOverlayClick={onOverlayClick}
     >
       <SideNavItems>
+        <p className="wfm-sidenav-label">Workspace</p>
         <NavLinks items={FILE_ITEMS} pathname={pathname} />
         <SideNavDivider />
+        <p className="wfm-sidenav-label">Account</p>
         <NavLinks items={ADMIN_ITEMS} pathname={pathname} />
-        <p className="wfm-rail-hint">Hover or focus the rail to expand navigation.</p>
       </SideNavItems>
     </SideNav>
   );
