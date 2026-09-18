@@ -10,7 +10,7 @@
 ![Node.js](https://img.shields.io/badge/Node.js-24+-339933?logo=nodedotjs&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04+-E95420?logo=ubuntu&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-blue)
+![License](https://img.shields.io/badge/License-GPLv3-blue)
 
 </div>
 
@@ -64,3 +64,9 @@ configuration or certificates shared with other services.
 > Do not expose port `1973` directly to the public Internet. Put wFileManager behind HTTPS and appropriate access controls.
 >
 > File deletion or modification can damage applications or the operating system. Keep backups of important data.
+
+## License
+
+wFileManager is licensed under the **GNU General Public License v3.0 only (GPL-3.0-only)**. See [LICENSE](LICENSE).
+
+Versions previously released under the MIT License remain available under the rights granted at the time of their release. See [NOTICE](NOTICE).
